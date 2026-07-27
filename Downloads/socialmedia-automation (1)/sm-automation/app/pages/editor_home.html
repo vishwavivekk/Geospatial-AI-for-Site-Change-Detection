@@ -1,0 +1,468 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Stories — NICDC Social Studio</title>
+    <script src="https://unpkg.com/konva@9/konva.min.js"></script>
+    <link rel="stylesheet" href="/static/app.css">
+</head>
+<body>
+    <nav class="nav">
+        <a class="brand" href="/">
+            <span class="logo">N</span>
+            <span class="product">NICDC Social Studio<small>Editor workspace</small></span>
+        </a>
+        <div class="spacer"></div>
+        <span class="role-chip editor">Editor</span>
+        <div class="divider-v"></div>
+        <div class="user-block">
+            <span class="avatar" id="navAvatar"></span>
+            <span class="name">__USER_NAME__</span>
+        </div>
+        <button class="btn btn-ghost btn-sm" onclick="logout()" id="logoutBtn">Sign out</button>
+    </nav>
+
+    <div class="container">
+        <div class="page-head">
+            <div class="titles">
+                <h1>Content workspace</h1>
+                <p>Add stories, design posts, and track their approval status.</p>
+            </div>
+            <button class="btn btn-primary" onclick="openStoryModal()" id="addStoryBtn">Add story</button>
+        </div>
+
+        <div class="stats" id="statsRow"></div>
+
+        <div class="tabs" id="mainTabs">
+            <button class="tab active" data-tab="stories">Stories</button>
+            <button class="tab" data-tab="designs">My designs <span class="count" id="designCount">0</span></button>
+        </div>
+
+        <div id="pane-stories">
+            <div style="display:flex;align-items:center;gap:12px;margin-bottom:20px;flex-wrap:wrap;">
+                <div class="tabs" style="margin-bottom:0;" id="categoryTabs">
+                    <button class="tab active" data-category="News">News</button>
+                    <button class="tab" data-category="Hiring">Hiring</button>
+                    <button class="tab" data-category="Events">Events</button>
+                </div>
+                <div style="flex:1;"></div>
+                <div class="search-box">
+                    <input id="storySearch" type="text" placeholder="Search stories...">
+                </div>
+            </div>
+            <div id="stories-list"></div>
+        </div>
+
+        <div id="pane-designs" style="display:none;">
+            <div id="designs-list"></div>
+        </div>
+    </div>
+
+    <!-- Add story modal -->
+    <div id="storyModal" class="modal-overlay">
+        <div class="modal" onclick="event.stopPropagation()">
+            <h2>Add a story</h2>
+            <p class="sub">Stories are the source material for your social media posts.</p>
+            <div id="storyFeedback" class="feedback-msg"></div>
+            <form id="storyForm">
+                <label for="storyTopic">Topic</label>
+                <input id="storyTopic" name="topic" type="text" required placeholder="e.g. PM Modi Kurnool Visit">
+                <label for="storyInfo">Information</label>
+                <textarea id="storyInfo" name="information" required placeholder="Full text content of the story..."></textarea>
+                <label>Category</label>
+                <div class="radio-group">
+                    <label><input type="radio" name="category" value="News" checked> News</label>
+                    <label><input type="radio" name="category" value="Hiring"> Hiring</label>
+                    <label><input type="radio" name="category" value="Events"> Events</label>
+                </div>
+                <label for="storyImages">Images (optional)</label>
+                <input id="storyImages" name="images" type="file" multiple accept=".jpg,.jpeg,.png,.webp,.gif">
+                <div class="modal-actions">
+                    <button type="button" class="btn" onclick="closeStoryModal()">Cancel</button>
+                    <button type="submit" id="storySubmitBtn" class="btn btn-primary">
+                        <span class="spinner" style="display:none;"></span>
+                        <span class="btn-text">Add story</span>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Edit story modal -->
+    <div id="editStoryModal" class="modal-overlay">
+        <div class="modal" onclick="event.stopPropagation()">
+            <h2>Edit story</h2>
+            <p class="sub">Changes apply to future designs generated from this story.</p>
+            <div id="editFeedback" class="feedback-msg"></div>
+            <form id="editForm">
+                <label for="editTopic">Topic</label>
+                <input id="editTopic" name="new_topic" type="text" required>
+                <label for="editInfo">Information</label>
+                <textarea id="editInfo" name="information" required></textarea>
+                <label>Category</label>
+                <div class="radio-group" id="editCategoryGroup">
+                    <label><input type="radio" name="editCategory" value="News"> News</label>
+                    <label><input type="radio" name="editCategory" value="Hiring"> Hiring</label>
+                    <label><input type="radio" name="editCategory" value="Events"> Events</label>
+                </div>
+                <label>Existing images</label>
+                <div id="editImagesContainer" class="thumbs" style="margin-bottom:16px;"></div>
+                <label for="editImages">Add new images (optional)</label>
+                <input id="editImages" name="images" type="file" multiple accept=".jpg,.jpeg,.png,.webp,.gif">
+                <div class="modal-actions">
+                    <button type="button" class="btn" onclick="closeEditStoryModal()">Cancel</button>
+                    <button type="submit" id="editSubmitBtn" class="btn btn-primary">
+                        <span class="spinner" style="display:none;"></span>
+                        <span class="btn-text">Save changes</span>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div id="lightbox" class="lightbox">
+        <button class="lightbox-close">&times;</button>
+        <img id="lightbox-img" src="" alt="">
+    </div>
+
+    <script src="/static/app.js"></script>
+    <script>
+        let _allStories = null;
+        let _allDesigns = null;
+        let _designTopics = {};
+        let _searchTerm = '';
+
+        document.getElementById('navAvatar').textContent = initials('__USER_NAME__');
+        document.getElementById('addStoryBtn').insertAdjacentHTML('afterbegin', icon('plus', 15));
+        document.getElementById('logoutBtn').insertAdjacentHTML('afterbegin', icon('logout', 14));
+        document.querySelector('#storySearch').closest('.search-box').insertAdjacentHTML('afterbegin', icon('search', 15));
+
+        /* ── Stats ── */
+        function renderStats() {
+            const stories = _allStories || [];
+            const designs = _allDesigns || [];
+            const count = st => designs.filter(d => d.status === st).length;
+            document.getElementById('statsRow').innerHTML =
+                '<div class="stat tone-plain"><span class="k">' + stories.length + '</span><span class="l">' + icon('file', 13) + ' Stories</span></div>' +
+                '<div class="stat tone-pending"><span class="k">' + count('pending') + '</span><span class="l">' + icon('clock', 13) + ' Waiting for review</span></div>' +
+                '<div class="stat tone-feedback"><span class="k">' + count('feedback') + '</span><span class="l">' + icon('comment', 13) + ' Changes requested</span></div>' +
+                '<div class="stat tone-published"><span class="k">' + count('published') + '</span><span class="l">' + icon('rocket', 13) + ' Published</span></div>';
+        }
+
+        /* ── Tabs ── */
+        document.getElementById('mainTabs').addEventListener('click', function (e) {
+            const tab = e.target.closest('.tab');
+            if (!tab) return;
+            document.querySelectorAll('#mainTabs .tab').forEach(t => t.classList.remove('active'));
+            tab.classList.add('active');
+            document.getElementById('pane-stories').style.display = tab.dataset.tab === 'stories' ? '' : 'none';
+            document.getElementById('pane-designs').style.display = tab.dataset.tab === 'designs' ? '' : 'none';
+            if (tab.dataset.tab === 'designs') loadDesigns();
+        });
+
+        document.getElementById('categoryTabs').addEventListener('click', function (e) {
+            const tab = e.target.closest('.tab');
+            if (!tab) return;
+            document.querySelectorAll('#categoryTabs .tab').forEach(t => t.classList.remove('active'));
+            tab.classList.add('active');
+            renderStories(tab.dataset.category);
+        });
+
+        document.getElementById('storySearch').addEventListener('input', function () {
+            _searchTerm = this.value.trim().toLowerCase();
+            renderStories(getActiveCategory());
+        });
+
+        function getActiveCategory() {
+            const active = document.querySelector('#categoryTabs .tab.active');
+            return active ? active.dataset.category : 'News';
+        }
+
+        /* ── Stories ── */
+        async function loadStories(force) {
+            if (_allStories !== null && !force) { renderStories(getActiveCategory()); return; }
+            const list = document.getElementById('stories-list');
+            list.innerHTML = skeletonCards(2);
+            try {
+                const resp = await fetch('/api/stories');
+                if (!resp.ok) throw new Error(await resp.text());
+                _allStories = await resp.json();
+                const topics = _allStories.map(s => s.topic).join(',');
+                if (topics) {
+                    const dr = await fetch('/api/designs/check?topics=' + encodeURIComponent(topics));
+                    if (dr.ok) _designTopics = await dr.json();
+                }
+                renderStories(getActiveCategory());
+                renderStats();
+            } catch (e) {
+                list.innerHTML = '<div class="error-box">Error loading stories: ' + escHtml(e.message) + '</div>';
+            }
+        }
+
+        function renderStories(category) {
+            const list = document.getElementById('stories-list');
+            let filtered = (_allStories || []).filter(s => s.category === category);
+            if (_searchTerm) {
+                filtered = filtered.filter(s =>
+                    s.topic.toLowerCase().includes(_searchTerm) || s.text.toLowerCase().includes(_searchTerm));
+            }
+            if (!filtered.length) {
+                list.innerHTML = _searchTerm
+                    ? emptyState('search', 'No matches', 'No ' + escHtml(category) + ' stories match "' + escHtml(_searchTerm) + '".')
+                    : emptyState('file', 'No ' + escHtml(category) + ' stories yet', 'Click <b>Add story</b> to create your first one.');
+                return;
+            }
+            list.innerHTML = filtered.map(function (s) {
+                const isLong = s.text.length > 260;
+                const imgs = (s.images || []).map(f =>
+                    '<img src="/images/' + f + '" data-img-src="/images/' + f + '" loading="lazy">'
+                ).join('');
+                const info = _designTopics[s.topic];
+                return '<div class="card hoverable">' +
+                    '<h3>' + escHtml(s.topic) + '</h3>' +
+                    '<div class="card-meta">' +
+                        catBadge(s.category) +
+                        (info ? statusBadge(info.status) : '') +
+                        '<span>' + escHtml(s.date || '') + '</span>' +
+                    '</div>' +
+                    (imgs ? '<div class="thumbs">' + imgs + '</div>' : '') +
+                    '<div class="story-text' + (isLong ? ' collapsed' : '') + '" id="stext-' + escId(s.topic) + '">' + escHtml(s.text) + '</div>' +
+                    (isLong ? '<button class="toggle-text" data-text-id="' + escId(s.topic) + '">Show more</button>' : '') +
+                    '<div class="card-actions">' +
+                        '<button class="btn btn-primary btn-sm btn-open-editor" data-topic="' + escHtml(s.topic) + '" data-category="' + escHtml(s.category) + '">' +
+                            icon(info ? 'edit' : 'sparkles', 14) + (info ? 'Open design' : 'Design post') + '</button>' +
+                        '<button class="btn btn-sm btn-edit-story" data-topic="' + escHtml(s.topic) + '">Edit story</button>' +
+                        '<button class="btn btn-danger-ghost btn-sm btn-delete-story" data-topic="' + escHtml(s.topic) + '">' + icon('trash', 13) + 'Delete</button>' +
+                    '</div>' +
+                '</div>';
+            }).join('');
+        }
+
+        document.getElementById('stories-list').addEventListener('click', function (e) {
+            const img = e.target.closest('img[data-img-src]');
+            if (img) { openLightbox(img.dataset.imgSrc); return; }
+            const toggle = e.target.closest('.toggle-text');
+            if (toggle) {
+                const el = document.getElementById('stext-' + toggle.dataset.textId);
+                if (el) {
+                    el.classList.toggle('collapsed');
+                    toggle.textContent = el.classList.contains('collapsed') ? 'Show more' : 'Show less';
+                }
+                return;
+            }
+            const open = e.target.closest('.btn-open-editor');
+            if (open) {
+                window.location.href = '/create?topic=' + encodeURIComponent(open.dataset.topic) + '&category=' + encodeURIComponent(open.dataset.category || 'News');
+                return;
+            }
+            const edit = e.target.closest('.btn-edit-story');
+            if (edit) { openEditStoryModal(edit.dataset.topic); return; }
+            const del = e.target.closest('.btn-delete-story');
+            if (del) deleteStory(del.dataset.topic);
+        });
+
+        /* ── My designs ── */
+        async function loadDesigns(silent) {
+            const list = document.getElementById('designs-list');
+            if (!silent) list.innerHTML = skeletonCards(2);
+            try {
+                const resp = await fetch('/api/designs');
+                if (!resp.ok) throw new Error(await resp.text());
+                _allDesigns = await resp.json();
+                document.getElementById('designCount').textContent = _allDesigns.length;
+                renderDesigns();
+                renderStats();
+            } catch (e) {
+                list.innerHTML = '<div class="error-box">Error loading designs: ' + escHtml(e.message) + '</div>';
+            }
+        }
+
+        function renderDesigns() {
+            const list = document.getElementById('designs-list');
+            if (!_allDesigns || !_allDesigns.length) {
+                list.innerHTML = emptyState('layers', 'No designs yet', 'Open a story and click <b>Design post</b> to get started.');
+                return;
+            }
+            const sorted = [..._allDesigns].reverse();
+            list.innerHTML = sorted.map(function (d) {
+                const comments = d.comments || [];
+                const needsFix = d.status === 'feedback';
+                return '<div class="card hoverable">' +
+                    '<div class="design-row">' +
+                        '<div class="preview-frame" id="preview-' + d.id + '"></div>' +
+                        '<div class="design-info">' +
+                            '<h3>' + escHtml(d.topic) + '</h3>' +
+                            '<div class="card-meta">' +
+                                catBadge(d.category) +
+                                statusBadge(d.status) +
+                                '<span>Revision ' + (d.revision || 1) + '</span>' +
+                                '<span>&middot; ' + fmtTime(d.submitted_at) + '</span>' +
+                            '</div>' +
+                            (needsFix
+                                ? '<div class="error-box" style="margin-bottom:12px;">' +
+                                    '<b>' + comments.length + ' comment' + (comments.length !== 1 ? 's' : '') + ' from the approver.</b>' +
+                                    (d.reviewer_note ? '<br>Note: ' + escHtml(d.reviewer_note) : '') +
+                                  '</div>'
+                                : '') +
+                            (d.status === 'published' && d.publish_results ? publishPills(d.publish_results) : '') +
+                            '<div class="card-actions">' +
+                                '<button class="btn ' + (needsFix ? 'btn-warning' : 'btn-primary') + ' btn-sm btn-open-editor" data-topic="' + escHtml(d.topic) + '" data-category="' + escHtml(d.category) + '">' +
+                                    icon('edit', 14) + (needsFix ? 'Fix design' : 'Open in editor') + '</button>' +
+                            '</div>' +
+                        '</div>' +
+                    '</div>' +
+                '</div>';
+            }).join('');
+            sorted.forEach(d => renderMiniPreview('preview-' + d.id, d.design_state));
+        }
+
+        document.getElementById('designs-list').addEventListener('click', function (e) {
+            const open = e.target.closest('.btn-open-editor');
+            if (open) {
+                window.location.href = '/create?topic=' + encodeURIComponent(open.dataset.topic) + '&category=' + encodeURIComponent(open.dataset.category || 'News');
+            }
+        });
+
+        /* ── Story modal ── */
+        function openStoryModal() {
+            document.getElementById('storyModal').classList.add('open');
+            document.getElementById('storyFeedback').className = 'feedback-msg';
+            document.getElementById('storyForm').reset();
+            setTimeout(() => document.getElementById('storyTopic').focus(), 60);
+        }
+        function closeStoryModal() { document.getElementById('storyModal').classList.remove('open'); }
+
+        document.getElementById('storyForm').addEventListener('submit', async function (e) {
+            e.preventDefault();
+            const fb = document.getElementById('storyFeedback');
+            const btn = document.getElementById('storySubmitBtn');
+            btn.disabled = true;
+            btn.querySelector('.spinner').style.display = '';
+            const fd = new FormData(document.getElementById('storyForm'));
+            if (!document.getElementById('storyImages').files.length) fd.delete('images');
+            try {
+                const resp = await fetch('/ingest/story', { method: 'POST', body: fd });
+                const data = await resp.json();
+                if (!resp.ok) throw new Error(data.detail || 'Upload failed');
+                closeStoryModal();
+                toast('Story added', 'success');
+                loadStories(true);
+            } catch (ex) {
+                fb.className = 'feedback-msg error';
+                fb.textContent = 'Error: ' + ex.message;
+            } finally {
+                btn.disabled = false;
+                btn.querySelector('.spinner').style.display = 'none';
+            }
+        });
+
+        /* ── Edit story modal ── */
+        let _editOriginalTopic = '';
+        let _editKeepImages = [];
+
+        async function openEditStoryModal(topic) {
+            const modal = document.getElementById('editStoryModal');
+            const fb = document.getElementById('editFeedback');
+            fb.className = 'feedback-msg';
+            modal.classList.add('open');
+            _editOriginalTopic = topic;
+            try {
+                const resp = await fetch('/api/stories/' + encodeURIComponent(topic));
+                if (!resp.ok) throw new Error('Story not found');
+                const story = await resp.json();
+                document.getElementById('editTopic').value = story.topic;
+                document.getElementById('editInfo').value = story.text;
+                document.querySelectorAll('#editCategoryGroup input').forEach(r => { r.checked = r.value === story.category; });
+                _editKeepImages = story.images || [];
+                renderEditImages(_editKeepImages);
+            } catch (ex) {
+                fb.className = 'feedback-msg error';
+                fb.textContent = 'Error: ' + ex.message;
+            }
+        }
+        function closeEditStoryModal() { document.getElementById('editStoryModal').classList.remove('open'); }
+
+        function renderEditImages(filenames) {
+            const container = document.getElementById('editImagesContainer');
+            if (!filenames.length) {
+                container.innerHTML = '<span style="font-size:13px;color:var(--muted);">None</span>';
+                return;
+            }
+            container.innerHTML = filenames.map(f =>
+                '<div style="position:relative;" id="editImg-' + f + '">' +
+                    '<img src="/images/' + f + '" style="cursor:default;">' +
+                    '<button type="button" class="remove-img" data-img="' + f + '" style="position:absolute;top:-7px;right:-7px;width:22px;height:22px;border-radius:50%;background:var(--danger);color:white;border:2px solid white;font-size:12px;cursor:pointer;line-height:1;">&times;</button>' +
+                '</div>'
+            ).join('');
+        }
+
+        document.getElementById('editImagesContainer').addEventListener('click', function (e) {
+            const btn = e.target.closest('.remove-img');
+            if (!btn) return;
+            const el = document.getElementById('editImg-' + btn.dataset.img);
+            if (el) el.style.display = 'none';
+            _editKeepImages = _editKeepImages.filter(f => f !== btn.dataset.img);
+        });
+
+        document.getElementById('editForm').addEventListener('submit', async function (e) {
+            e.preventDefault();
+            const fb = document.getElementById('editFeedback');
+            const btn = document.getElementById('editSubmitBtn');
+            btn.disabled = true;
+            btn.querySelector('.spinner').style.display = '';
+            try {
+                const fd = new FormData(document.getElementById('editForm'));
+                fd.delete('editCategory');
+                fd.append('category', document.querySelector('#editCategoryGroup input:checked').value);
+                fd.append('keep_images', JSON.stringify(_editKeepImages));
+                if (!document.getElementById('editImages').files.length) fd.delete('images');
+                const resp = await fetch('/api/stories/' + encodeURIComponent(_editOriginalTopic), { method: 'PUT', body: fd });
+                const data = await resp.json();
+                if (!resp.ok) throw new Error(data.detail || 'Update failed');
+                closeEditStoryModal();
+                toast('Story updated', 'success');
+                loadStories(true);
+            } catch (ex) {
+                fb.className = 'feedback-msg error';
+                fb.textContent = 'Error: ' + ex.message;
+            } finally {
+                btn.disabled = false;
+                btn.querySelector('.spinner').style.display = 'none';
+            }
+        });
+
+        async function deleteStory(topic) {
+            if (!confirm('Delete story "' + topic + '" and its images?')) return;
+            try {
+                const resp = await fetch('/api/stories/' + encodeURIComponent(topic), { method: 'DELETE' });
+                if (!resp.ok) throw new Error((await resp.json()).detail || 'Delete failed');
+                toast('Story deleted', 'success');
+                loadStories(true);
+            } catch (e) {
+                toast('Error deleting story: ' + e.message, 'error');
+            }
+        }
+
+        /* ── Lightbox / overlays ── */
+        function openLightbox(src) {
+            document.getElementById('lightbox-img').src = src;
+            document.getElementById('lightbox').classList.add('open');
+        }
+        document.getElementById('lightbox').addEventListener('click', function (e) {
+            if (e.target === e.currentTarget || e.target.classList.contains('lightbox-close')) {
+                e.currentTarget.classList.remove('open');
+            }
+        });
+        document.querySelectorAll('.modal-overlay').forEach(function (m) {
+            m.addEventListener('click', function (e) {
+                if (e.target === m) m.classList.remove('open');
+            });
+        });
+
+        renderStats();
+        loadStories();
+        loadDesigns(true);
+    </script>
+</body>
+</html>

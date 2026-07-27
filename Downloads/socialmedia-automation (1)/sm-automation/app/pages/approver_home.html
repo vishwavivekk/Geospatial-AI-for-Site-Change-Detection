@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Review queue — NICDC Social Studio</title>
+    <script src="https://unpkg.com/konva@9/konva.min.js"></script>
+    <link rel="stylesheet" href="/static/app.css">
+</head>
+<body>
+    <nav class="nav">
+        <a class="brand" href="/review">
+            <span class="logo">N</span>
+            <span class="product">NICDC Social Studio<small>Approval workspace</small></span>
+        </a>
+        <div class="spacer"></div>
+        <span class="role-chip approver">Approver</span>
+        <div class="divider-v"></div>
+        <div class="user-block">
+            <span class="avatar" id="navAvatar"></span>
+            <span class="name">__USER_NAME__</span>
+        </div>
+        <button class="btn btn-ghost btn-sm" onclick="logout()" id="logoutBtn">Sign out</button>
+    </nav>
+
+    <div class="container">
+        <div class="page-head">
+            <div class="titles">
+                <h1>Review queue</h1>
+                <p>Review submitted designs, leave feedback, and approve for automatic publishing.</p>
+            </div>
+        </div>
+
+        <div class="stats" id="statsRow"></div>
+
+        <div class="tabs" id="filterTabs">
+            <button class="tab active" data-filter="pending">Needs review <span class="count" id="cnt-pending">0</span></button>
+            <button class="tab" data-filter="feedback">With editor <span class="count" id="cnt-feedback">0</span></button>
+            <button class="tab" data-filter="published">Published <span class="count" id="cnt-published">0</span></button>
+            <button class="tab" data-filter="all">All</button>
+        </div>
+
+        <div id="designs-list"></div>
+    </div>
+
+    <script src="/static/app.js"></script>
+    <script>
+        let _allDesigns = null;
+
+        document.getElementById('navAvatar').textContent = initials('__USER_NAME__');
+        document.getElementById('logoutBtn').insertAdjacentHTML('afterbegin', icon('logout', 14));
+
+        document.getElementById('filterTabs').addEventListener('click', function (e) {
+            const tab = e.target.closest('.tab');
+            if (!tab) return;
+            document.querySelectorAll('#filterTabs .tab').forEach(t => t.classList.remove('active'));
+            tab.classList.add('active');
+            renderDesigns(tab.dataset.filter);
+        });
+
+        async function loadDesigns() {
+            const list = document.getElementById('designs-list');
+            list.innerHTML = skeletonCards(2);
+            try {
+                const resp = await fetch('/api/designs');
+                if (!resp.ok) throw new Error(await resp.text());
+                _allDesigns = await resp.json();
+                updateCounts();
+                const active = document.querySelector('#filterTabs .tab.active');
+                renderDesigns(active ? active.dataset.filter : 'pending');
+            } catch (e) {
+                list.innerHTML = '<div class="error-box">Error loading designs: ' + escHtml(e.message) + '</div>';
+            }
+        }
+
+        function updateCounts() {
+            const count = st => _allDesigns.filter(d => d.status === st).length;
+            document.getElementById('cnt-pending').textContent = count('pending');
+            document.getElementById('cnt-feedback').textContent = count('feedback');
+            document.getElementById('cnt-published').textContent = count('published') + count('approved');
+            document.getElementById('statsRow').innerHTML =
+                '<div class="stat tone-pending"><span class="k">' + count('pending') + '</span><span class="l">' + icon('inbox', 13) + ' Needs review</span></div>' +
+                '<div class="stat tone-feedback"><span class="k">' + count('feedback') + '</span><span class="l">' + icon('comment', 13) + ' With editor</span></div>' +
+                '<div class="stat tone-published"><span class="k">' + (count('published') + count('approved')) + '</span><span class="l">' + icon('rocket', 13) + ' Published</span></div>' +
+                '<div class="stat tone-plain"><span class="k">' + _allDesigns.length + '</span><span class="l">' + icon('layers', 13) + ' Total designs</span></div>';
+        }
+
+        function renderDesigns(filter) {
+            const list = document.getElementById('designs-list');
+            if (!_allDesigns) return;
+            let filtered;
+            if (filter === 'all') filtered = _allDesigns;
+            else if (filter === 'published') filtered = _allDesigns.filter(d => d.status === 'published' || d.status === 'approved');
+            else filtered = _allDesigns.filter(d => d.status === filter);
+
+            if (!filtered.length) {
+                const empties = {
+                    pending: ['inbox', 'All caught up', 'Nothing is waiting for your review.'],
+                    feedback: ['comment', 'Nothing with the editor', 'Designs you send back will appear here.'],
+                    published: ['rocket', 'Nothing published yet', 'Approved designs are published automatically.'],
+                    all: ['layers', 'No designs submitted yet', 'Designs sent by editors will appear here.'],
+                };
+                const em = empties[filter] || empties.all;
+                list.innerHTML = emptyState(em[0], em[1], em[2]);
+                return;
+            }
+            const sorted = [...filtered].reverse();
+            list.innerHTML = sorted.map(function (d) {
+                const comments = d.comments || [];
+                return '<div class="card hoverable">' +
+                    '<div class="design-row">' +
+                        '<div class="preview-frame" id="preview-' + d.id + '"></div>' +
+                        '<div class="design-info">' +
+                            '<h3>' + escHtml(d.topic) + '</h3>' +
+                            '<div class="card-meta">' +
+                                catBadge(d.category) +
+                                statusBadge(d.status) +
+                                '<span>Revision ' + (d.revision || 1) + '</span>' +
+                                (d.submitted_by ? '<span>&middot; by ' + escHtml(d.submitted_by) + '</span>' : '') +
+                                '<span>&middot; ' + fmtTime(d.submitted_at) + '</span>' +
+                            '</div>' +
+                            (comments.length
+                                ? '<div class="card-meta">' + icon('comment', 13) + ' ' + comments.length + ' comment' + (comments.length !== 1 ? 's' : '') + ' on this revision</div>'
+                                : '') +
+                            (d.status === 'published' && d.publish_results ? publishPills(d.publish_results) : '') +
+                            '<div class="card-actions">' +
+                                '<a class="btn ' + (d.status === 'pending' ? 'btn-primary' : '') + ' btn-sm" href="/review/' + d.id + '">' +
+                                    icon('eye', 14) + (d.status === 'pending' ? 'Review design' : 'Open') + '</a>' +
+                            '</div>' +
+                        '</div>' +
+                    '</div>' +
+                '</div>';
+            }).join('');
+            sorted.forEach(d => renderMiniPreview('preview-' + d.id, d.design_state));
+        }
+
+        loadDesigns();
+    </script>
+</body>
+</html>

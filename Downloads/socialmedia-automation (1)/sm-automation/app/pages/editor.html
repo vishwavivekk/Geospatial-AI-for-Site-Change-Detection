@@ -1,0 +1,1334 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Design editor — NICDC Social Studio</title>
+    <script src="https://unpkg.com/konva@9/konva.min.js"></script>
+    <link rel="stylesheet" href="/static/app.css">
+    <style>
+        body { height: 100vh; overflow: hidden; }
+        .app { display: flex; flex-direction: column; height: 100vh; }
+        .toolbar {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 16px;
+            background: var(--card);
+            border-bottom: 1px solid var(--border);
+            flex-shrink: 0;
+            flex-wrap: wrap;
+        }
+        .toolbar .divider { width: 1px; height: 24px; background: var(--border); margin: 0 4px; }
+        .toolbar select {
+            padding: 7px 10px;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            font-size: 13px;
+            font-weight: 600;
+            font-family: inherit;
+            color: var(--text);
+            background: white;
+            cursor: pointer;
+            outline: none;
+        }
+        .topic-label { font-size: 13px; color: var(--muted); font-weight: 600; }
+        .main { display: flex; flex: 1; overflow: hidden; }
+        .canvas-area {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #1e2433 radial-gradient(circle, #2d3547 1px, transparent 1px);
+            background-size: 22px 22px;
+            overflow: hidden;
+            position: relative;
+        }
+        #canvas-container { background: white; border-radius: 4px; box-shadow: 0 4px 24px rgba(0,0,0,0.4); }
+        .feedback-banner {
+            display: none;
+            align-items: center;
+            gap: 10px;
+            padding: 10px 16px;
+            background: #fff4e5;
+            border-bottom: 1px solid #fbd9a5;
+            color: #9a5b00;
+            font-size: 13.5px;
+            flex-shrink: 0;
+        }
+        .feedback-banner.visible { display: flex; }
+        .feedback-banner b { color: #7c4a00; }
+        .sidebar {
+            width: 310px;
+            background: var(--card);
+            border-left: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+            flex-shrink: 0;
+            overflow-y: auto;
+        }
+        .panel { padding: 14px 16px; border-bottom: 1px solid var(--border); }
+        .panel h3 {
+            font-size: 11.5px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: var(--muted);
+            margin-bottom: 10px;
+        }
+        .prop-row { display: flex; align-items: center; gap: 8px; margin-bottom: 7px; }
+        .prop-row label { font-size: 12px; color: var(--muted); width: 56px; flex-shrink: 0; }
+        .prop-row input, .prop-row select, .prop-row textarea {
+            flex: 1;
+            padding: 5px 8px;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            background: white;
+            color: var(--text);
+            font-size: 13px;
+            font-family: inherit;
+            outline: none;
+            min-width: 0;
+        }
+        .prop-row input:focus, .prop-row select:focus, .prop-row textarea:focus { border-color: var(--primary); }
+        .prop-row input[type="color"] { padding: 0; width: 34px; height: 26px; flex: none; cursor: pointer; }
+        .prop-row input[type="range"] { padding: 0; }
+        .prop-row textarea { min-height: 56px; resize: vertical; }
+        .no-select { text-align: center; padding: 16px; color: var(--muted); font-size: 13px; }
+        .layers-list { list-style: none; }
+        .layers-list li {
+            display: flex; align-items: center; gap: 8px;
+            padding: 6px 8px; border-radius: 6px;
+            cursor: pointer; font-size: 13px;
+        }
+        .layers-list li:hover { background: #f1f4f9; }
+        .layers-list li.selected { background: var(--primary); color: white; }
+        .layers-list li .layer-type {
+            font-size: 10px; text-transform: uppercase;
+            color: var(--muted); background: #eef1f6;
+            padding: 1px 6px; border-radius: 4px;
+        }
+        .layers-list li.selected .layer-type { background: rgba(255,255,255,0.25); color: white; }
+        .layers-list li .layer-del { margin-left: auto; opacity: 0.45; font-size: 15px; }
+        .layers-list li .layer-del:hover { opacity: 1; }
+        .editor-comments-list { max-height: 260px; overflow-y: auto; }
+        .editor-comment-card {
+            padding: 10px; margin-bottom: 8px;
+            background: #f8fafd; border: 1px solid var(--border);
+            border-radius: 8px; cursor: pointer;
+        }
+        .editor-comment-card:hover { background: #f1f5fb; }
+        .editor-comment-card.linked { border-left: 3px solid var(--primary); }
+        .editor-comment-tag {
+            display: inline-block; font-size: 10px; padding: 2px 7px;
+            border-radius: 4px; background: var(--primary); color: white; margin-bottom: 4px;
+        }
+        .editor-comment-tag.general { background: #dde3ec; color: var(--muted); }
+        .editor-comment-text { font-size: 12.5px; line-height: 1.45; margin-top: 3px; }
+        .editor-comment-time { font-size: 10px; color: var(--muted); margin-left: 6px; }
+        .btn-send-agent {
+            display: inline-block; margin-top: 6px;
+            padding: 3px 10px; border: none; border-radius: 5px;
+            background: var(--primary); color: white;
+            font-size: 11px; font-weight: 600; cursor: pointer; font-family: inherit;
+        }
+        .btn-send-agent:hover { background: var(--primary-dark); }
+        .panel-tabs { display: flex; gap: 4px; margin-bottom: 10px; }
+        .panel-tab {
+            flex: 1; padding: 6px 10px;
+            border: none; border-radius: 6px;
+            font-size: 12px; font-weight: 600; font-family: inherit;
+            cursor: pointer; background: #eef1f6; color: var(--muted);
+        }
+        .panel-tab:hover { color: var(--text); }
+        .panel-tab.active { background: var(--primary); color: white; }
+        .chat-messages { max-height: 300px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; margin-bottom: 10px; }
+        .chat-msg { padding: 8px 12px; border-radius: 10px; font-size: 13px; line-height: 1.45; max-width: 95%; word-wrap: break-word; }
+        .chat-msg.user { background: var(--primary); color: white; align-self: flex-end; border-bottom-right-radius: 2px; }
+        .chat-msg.assistant { background: #f1f4f9; color: var(--text); align-self: flex-start; border-bottom-left-radius: 2px; }
+        .chat-msg.assistant .design-badge {
+            display: inline-block; font-size: 10px; font-weight: 700;
+            padding: 1px 6px; border-radius: 4px;
+            background: var(--success); color: white; margin-top: 4px;
+        }
+        .chat-input-row { display: flex; gap: 6px; align-items: flex-end; }
+        .chat-input-row textarea {
+            flex: 1; padding: 7px 9px;
+            border: 1px solid var(--border); border-radius: 7px;
+            background: white; color: var(--text);
+            font-size: 13px; font-family: inherit;
+            outline: none; resize: none; min-height: 36px; max-height: 80px;
+        }
+        .chat-input-row textarea:focus { border-color: var(--primary); }
+        .chat-thinking { font-size: 12px; color: var(--muted); font-style: italic; }
+        .status-bar {
+            padding: 6px 16px;
+            background: var(--card);
+            border-top: 1px solid var(--border);
+            font-size: 12px; color: var(--muted);
+            flex-shrink: 0;
+        }
+        .loading-overlay {
+            display: none; position: fixed; inset: 0;
+            background: rgba(15, 23, 42, 0.55);
+            z-index: 1000; justify-content: center; align-items: center;
+            flex-direction: column; gap: 14px; color: white; font-size: 14px;
+        }
+        .loading-overlay.open { display: flex; }
+        .loading-overlay .big-spinner {
+            width: 40px; height: 40px;
+            border: 4px solid rgba(255,255,255,0.25);
+            border-top-color: white; border-radius: 50%;
+            animation: spin 0.7s linear infinite;
+        }
+    </style>
+</head>
+<body>
+    <div class="app">
+        <nav class="nav" style="height:54px;">
+            <a class="brand" href="/">
+                <span class="logo">N</span>
+                <span class="product">NICDC Social Studio<small>Design editor</small></span>
+            </a>
+            <a href="/" class="btn btn-ghost btn-sm" id="backBtn">Stories</a>
+            <div class="spacer"></div>
+            <span class="topic-label" id="topicLabel">Topic: __TOPIC__</span>
+            <span id="categoryData" style="display:none">__CATEGORY__</span>
+            <div class="divider-v"></div>
+            <span class="role-chip editor">Editor</span>
+            <div class="user-block">
+                <span class="avatar" id="navAvatar"></span>
+            </div>
+            <button class="btn btn-ghost btn-sm" onclick="logout()">Sign out</button>
+        </nav>
+        <div class="feedback-banner" id="feedbackBanner">
+            <span id="feedbackBannerText"></span>
+            <button class="btn btn-warning btn-sm" onclick="switchPanel('feedback')" style="margin-left:auto;flex-shrink:0;">View comments</button>
+        </div>
+        <div class="toolbar">
+            <button class="btn btn-primary btn-sm" id="generateBtn" onclick="generateLayout()">Generate with AI</button>
+            <select id="addSelect" onchange="addElement(this.value);this.value=this.options[0].value">
+                <option value="">+ Add element</option>
+                <option value="text">Text</option>
+                <option value="rect">Rectangle</option>
+                <option value="circle">Circle</option>
+                <option value="ellipse">Ellipse</option>
+                <option value="line">Line</option>
+                <option value="star">Star</option>
+                <option value="ring">Ring</option>
+                <option value="polygon">Polygon</option>
+            </select>
+            <div class="divider"></div>
+            <button class="btn btn-sm" id="undoBtn" onclick="undo()" disabled>Undo</button>
+            <button class="btn btn-sm" id="redoBtn" onclick="redo()" disabled>Redo</button>
+            <button class="btn btn-danger-ghost btn-sm" id="deleteBtn" onclick="deleteSelected()" disabled>Delete</button>
+            <div class="divider"></div>
+            <button class="btn btn-sm" id="exportBtn" onclick="exportPNG()">Export PNG</button>
+            <div style="flex:1;"></div>
+            <button class="btn btn-success btn-sm" id="approvalBtn" onclick="sendForApproval()">Send for approval</button>
+        </div>
+        <div class="main">
+            <div class="canvas-area" id="canvasArea">
+                <div id="canvas-container"></div>
+            </div>
+            <div class="sidebar" id="sidebar">
+                <div class="panel" id="propertiesPanel">
+                    <h3>Properties</h3>
+                    <div id="propertiesContent" class="no-select">Select an element</div>
+                </div>
+                <div class="panel">
+                    <h3>Layers</h3>
+                    <ul id="layersList" class="layers-list"></ul>
+                </div>
+                <div class="panel" id="chatFeedbackPanel">
+                    <div class="panel-tabs">
+                        <button class="panel-tab active" id="panelTabChat" onclick="switchPanel('chat')">AI Chat</button>
+                        <button class="panel-tab" id="panelTabFeedback" onclick="switchPanel('feedback')">Feedback <span id="editorCommentsCount"></span></button>
+                    </div>
+                    <div id="chatPanel">
+                        <div id="chatMessages" class="chat-messages"></div>
+                        <div class="chat-input-row">
+                            <textarea id="chatInput" placeholder="Describe your changes..." rows="1" onkeydown="chatKeydown(event)"></textarea>
+                            <button class="btn btn-primary btn-sm" id="chatSendBtn" onclick="sendChatMessage()">Send</button>
+                        </div>
+                    </div>
+                    <div id="feedbackPanelContent" style="display:none">
+                        <div id="editorCommentsList" class="editor-comments-list"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="status-bar" id="statusBar">Ready</div>
+    </div>
+
+    <div class="loading-overlay" id="loadingOverlay">
+        <div class="big-spinner"></div>
+        <span id="loadingText">Working...</span>
+    </div>
+
+    <script src="/static/app.js"></script>
+    <script>
+        /* ── State ── */
+        let state = {
+            canvas: { width: 1080, height: 1080, background: '#F3F7FA' },
+            elements: []
+        };
+        const history = [JSON.stringify(state)];
+        let historyStep = 0;
+        let selectedNodeId = null;
+        let selectedNode = null;
+        let stage, layer, tr, trLayer;
+        let isGenerating = false;
+        let imageCache = {};
+        let _editorComments = [];
+        let _editorDesignId = null;
+        let _designStatus = null;
+        let _reviewerNote = '';
+        let _badgeLayer = null;
+        let _chatHistory = [];
+        let _chatMode = 'chat';
+        let _chatSending = false;
+
+        /* ── Feedback Comments (editor) ── */
+        function renderCommentsPanel() {
+            const list = document.getElementById('editorCommentsList');
+            const countEl = document.getElementById('editorCommentsCount');
+            const tabBtn = document.getElementById('panelTabFeedback');
+            if (!_editorComments.length) {
+                tabBtn.style.display = 'none';
+                if (_chatMode === 'feedback') switchPanel('chat');
+                return;
+            }
+            tabBtn.style.display = '';
+            countEl.textContent = '(' + _editorComments.length + ')';
+            list.innerHTML = _editorComments.map(function(c, idx) {
+                const tagHtml = c.element_id
+                    ? '<span class="editor-comment-tag">&#128204; ' + escHtml(c.element_id) + '</span>'
+                    : '<span class="editor-comment-tag general">General</span>';
+                const time = c.created_at ? new Date(c.created_at).toLocaleString() : '';
+                return '<div class="editor-comment-card' + (c.element_id ? ' linked' : '') + '"' +
+                    (c.element_id ? ' data-element-id="' + escHtml(c.element_id) + '"' : '') + '>' +
+                    '<div>' + tagHtml + '<span class="editor-comment-time">' + time + '</span></div>' +
+                    '<div class="editor-comment-text">' + escHtml(c.text) + '</div>' +
+                    '<button class="btn-send-agent" data-comment-idx="' + idx + '">Fix with AI</button>' +
+                '</div>';
+            }).join('');
+        }
+
+        function updateFeedbackBanner() {
+            const banner = document.getElementById('feedbackBanner');
+            if (_designStatus === 'feedback' && _editorComments.length) {
+                document.getElementById('feedbackBannerText').innerHTML =
+                    '<b>Changes requested by the approver</b> &mdash; ' + _editorComments.length +
+                    ' comment' + (_editorComments.length !== 1 ? 's' : '') +
+                    (_reviewerNote ? ' &middot; Note: ' + escHtml(_reviewerNote) : '') +
+                    '. Fix the design and resubmit.';
+                banner.classList.add('visible');
+                document.getElementById('approvalBtn').innerHTML = icon('send', 13) + 'Resubmit for approval';
+            } else if (_designStatus === 'published') {
+                document.getElementById('feedbackBannerText').innerHTML =
+                    '<b>This design is already published.</b> Editing here will not change the published post.';
+                banner.classList.add('visible');
+            }
+        }
+
+        function renderCommentBadges() {
+            if (!_badgeLayer) return;
+            _badgeLayer.destroyChildren();
+            if (!_editorComments.length) { _badgeLayer.draw(); return; }
+            const commentCounts = {};
+            _editorComments.forEach(function(c) {
+                if (c.element_id) commentCounts[c.element_id] = (commentCounts[c.element_id] || 0) + 1;
+            });
+            Object.keys(commentCounts).forEach(function(elId) {
+                const node = layer.findOne('#' + elId);
+                if (!node) return;
+                const rect = node.getClientRect({ relativeTo: stage });
+                if (!rect || rect.width === 0) return;
+                const badgeX = rect.x + rect.width - 4;
+                const badgeY = rect.y - 4;
+                const count = commentCounts[elId];
+                const text = String(count);
+                const radius = text.length > 1 ? 12 : 10;
+                const group = new Konva.Group({ x: badgeX, y: badgeY, listening: false });
+                group.add(new Konva.Circle({ radius: radius, fill: '#dc2626' }));
+                group.add(new Konva.Text({
+                    text: text, fontSize: 11, fontFamily: 'sans-serif',
+                    fontStyle: 'bold', fill: 'white',
+                    align: 'center', verticalAlign: 'middle',
+                    width: radius * 2, height: radius * 2,
+                    offsetX: radius, offsetY: radius
+                }));
+                _badgeLayer.add(group);
+            });
+            _badgeLayer.draw();
+        }
+
+        function highlightEditorElement(elementId) {
+            const node = layer.findOne('#' + elementId);
+            if (!node) return;
+            selectNode(node);
+            const origScaleX = node.scaleX();
+            const origScaleY = node.scaleY();
+            node.to({
+                scaleX: origScaleX * 1.08, scaleY: origScaleY * 1.08,
+                duration: 0.15, easing: Konva.Easings.EaseOut,
+                onFinish: function() {
+                    node.to({ scaleX: origScaleX, scaleY: origScaleY, duration: 0.15, easing: Konva.Easings.EaseIn });
+                }
+            });
+        }
+
+        /* ── Chat Panel ── */
+        function switchPanel(mode) {
+            _chatMode = mode;
+            const chatContent = document.getElementById('chatPanel');
+            const feedbackContent = document.getElementById('feedbackPanelContent');
+            const chatTab = document.getElementById('panelTabChat');
+            const feedbackTab = document.getElementById('panelTabFeedback');
+            if (mode === 'chat') {
+                chatContent.style.display = '';
+                feedbackContent.style.display = 'none';
+                chatTab.classList.add('active');
+                feedbackTab.classList.remove('active');
+            } else {
+                chatContent.style.display = 'none';
+                feedbackContent.style.display = '';
+                chatTab.classList.remove('active');
+                feedbackTab.classList.add('active');
+            }
+        }
+
+        function renderChatMessage(role, text, hasDesign) {
+            const container = document.getElementById('chatMessages');
+            const div = document.createElement('div');
+            div.className = 'chat-msg ' + role;
+            let html = escHtml(text).replace(/\n/g, '<br>');
+            if (hasDesign) {
+                html += '<br><span class="design-badge">Design updated</span>';
+            }
+            div.innerHTML = html;
+            container.appendChild(div);
+            container.scrollTop = container.scrollHeight;
+        }
+
+        function chatKeydown(e) {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                sendChatMessage();
+            }
+        }
+
+        async function sendChatMessage() {
+            if (_chatSending) return;
+            const input = document.getElementById('chatInput');
+            const msg = input.value.trim();
+            if (!msg) return;
+
+            _chatSending = true;
+            input.value = '';
+            document.getElementById('chatSendBtn').disabled = true;
+
+            renderChatMessage('user', msg, false);
+
+            const thinkingDiv = document.createElement('div');
+            thinkingDiv.className = 'chat-msg assistant';
+            thinkingDiv.innerHTML = '<span class="chat-thinking">Thinking...</span>';
+            document.getElementById('chatMessages').appendChild(thinkingDiv);
+            document.getElementById('chatMessages').scrollTop = document.getElementById('chatMessages').scrollHeight;
+
+            try {
+                syncState();
+                const resp = await fetch('/api/chat-edit', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        topic: TOPIC,
+                        message: msg,
+                        design_state: state,
+                        history: _chatHistory
+                    })
+                });
+                if (!resp.ok) throw new Error(await resp.text());
+                const data = await resp.json();
+
+                thinkingDiv.remove();
+
+                _chatHistory.push({ role: 'user', content: msg });
+                _chatHistory.push({ role: 'assistant', content: data.text });
+
+                renderChatMessage('assistant', data.text, !!data.design);
+
+                if (data.design) {
+                    saveLayoutToHistory(data.design);
+                    setStatus('Design updated via chat');
+                }
+            } catch (e) {
+                thinkingDiv.remove();
+                renderChatMessage('assistant', 'Error: ' + e.message, false);
+                setStatus('Chat error: ' + e.message);
+            } finally {
+                _chatSending = false;
+                document.getElementById('chatSendBtn').disabled = false;
+                input.focus();
+            }
+        }
+
+        function sendCommentToAgent(commentText, elementId, elementType) {
+            switchPanel('chat');
+            const input = document.getElementById('chatInput');
+            let msg = 'Apply this feedback to the design: ' + commentText;
+            if (elementId) {
+                msg += ' (Target element: id=' + elementId + (elementType ? ', type=' + elementType : '') + ')';
+            }
+            input.value = msg;
+            input.focus();
+            sendChatMessage();
+        }
+
+        /* ── Init ── */
+        const TOPIC = document.getElementById('topicLabel').textContent.replace('Topic: ', '');
+
+        document.getElementById('navAvatar').textContent = initials('__USER_NAME__');
+        document.getElementById('backBtn').insertAdjacentHTML('afterbegin', icon('back', 13));
+        document.getElementById('generateBtn').insertAdjacentHTML('afterbegin', icon('sparkles', 14));
+        document.getElementById('undoBtn').insertAdjacentHTML('afterbegin', icon('undo', 13));
+        document.getElementById('redoBtn').insertAdjacentHTML('afterbegin', icon('redo', 13));
+        document.getElementById('deleteBtn').insertAdjacentHTML('afterbegin', icon('trash', 13));
+        document.getElementById('exportBtn').insertAdjacentHTML('afterbegin', icon('download', 13));
+        document.getElementById('approvalBtn').insertAdjacentHTML('afterbegin', icon('send', 13));
+
+        function initStage() {
+            const container = document.getElementById('canvas-container');
+            const area = document.getElementById('canvasArea');
+            const maxW = area.clientWidth - 40;
+            const maxH = area.clientHeight - 40;
+            const scale = Math.min(maxW / 1080, maxH / 1080, 1);
+
+            stage = new Konva.Stage({
+                container: 'canvas-container',
+                width: 1080,
+                height: 1080
+            });
+            stage.scale({ x: scale, y: scale });
+
+            container.style.width = (1080 * scale) + 'px';
+            container.style.height = (1080 * scale) + 'px';
+
+            layer = new Konva.Layer({ name: 'mainLayer' });
+            stage.add(layer);
+
+            _badgeLayer = new Konva.Layer({ name: 'badgeLayer' });
+            stage.add(_badgeLayer);
+
+            trLayer = new Konva.Layer({ name: 'trLayer' });
+            stage.add(trLayer);
+
+            tr = new Konva.Transformer({
+                enabledAnchors: ['top-left','top-center','top-right','middle-left','middle-right','bottom-left','bottom-center','bottom-right'],
+                keepRatio: false,
+                rotateEnabled: true,
+                borderStroke: '#0d99ff',
+                borderStrokeWidth: 1.5,
+                borderDash: [5, 3],
+                anchorFill: '#ffffff',
+                anchorStroke: '#0d99ff',
+                anchorStrokeWidth: 1.5,
+                anchorSize: 10,
+                anchorCornerRadius: 2,
+                rotateAnchorOffset: 40,
+                padding: 6,
+                anchorStyleFunc: function(anchor) {
+                    if (anchor.hasName('rotater')) {
+                        anchor.setAttrs({ radius: 6, fill: '#0d99ff', stroke: '#ffffff', strokeWidth: 2 });
+                    } else {
+                        anchor.setAttrs({ cornerRadius: 2 });
+                    }
+                }
+            });
+            trLayer.add(tr);
+
+            stage.on('click tap', function(e) {
+                if (e.target === stage) {
+                    selectNode(null);
+                    return;
+                }
+                if (e.target.getParent() === tr || e.target === tr) return;
+                let node = e.target.findAncestor('.draggable') || e.target;
+                if (node.getParent() === trLayer) return;
+                selectNode(node);
+            });
+
+            stage.on('dblclick dbltap', function(e) {
+                let node = e.target.findAncestor('.draggable') || e.target;
+                if (node.name() && node.name().startsWith('text-')) {
+                    editTextNode(node);
+                }
+            });
+
+            window.addEventListener('resize', resizeStage);
+        }
+
+        function resizeStage() {
+            const container = document.getElementById('canvas-container');
+            const area = document.getElementById('canvasArea');
+            const maxW = area.clientWidth - 40;
+            const maxH = area.clientHeight - 40;
+            const scale = Math.min(maxW / 1080, maxH / 1080, 1);
+            stage.scale({ x: scale, y: scale });
+            container.style.width = (1080 * scale) + 'px';
+            container.style.height = (1080 * scale) + 'px';
+        }
+
+        /* ── Render ── */
+        function render(stateData) {
+            state = JSON.parse(JSON.stringify(stateData));
+            layer.destroyChildren();
+            tr.nodes([]);
+            trLayer.batchDraw();
+
+            if (state.canvas.background) {
+                const bg = new Konva.Rect({
+                    x: 0, y: 0,
+                    width: state.canvas.width,
+                    height: state.canvas.height,
+                    fill: state.canvas.background,
+                    listening: false,
+                    name: 'bg'
+                });
+                layer.add(bg);
+                bg.moveToBottom();
+            }
+
+            const elems = state.elements || [];
+
+            elems.forEach((el) => {
+                if (el.type === 'image') {
+                    const imgNode = createImageNode(el);
+                    if (imgNode) {
+                        imgNode.then(n => { if (n) layer.add(n); }).catch(() => {});
+                    }
+                } else {
+                    const node = createNode(el);
+                    if (node) layer.add(node);
+                }
+            });
+
+            selectedNodeId = null;
+            selectedNode = null;
+            updateUI();
+            updateLayers();
+            renderCommentBadges();
+            setStatus('Canvas rendered (' + elems.length + ' elements)');
+        }
+
+        function createNode(el) {
+            const a = el.attrs || {};
+            const isDraggable = !el.locked;
+            const name = el.type + '-' + (el.id || 'unknown');
+
+            let node;
+            switch (el.type) {
+                case 'rect':
+                    node = new Konva.Rect({
+                        x: a.x || 0, y: a.y || 0,
+                        width: a.width || 100, height: a.height || 100,
+                        fill: a.fill || '#ccc',
+                        stroke: a.stroke, strokeWidth: a.strokeWidth,
+                        cornerRadius: a.cornerRadius,
+                        opacity: a.opacity != null ? a.opacity : 1,
+                        shadowBlur: a.shadowBlur, shadowColor: a.shadowColor,
+                        draggable: isDraggable,
+                        name: name, id: el.id
+                    });
+                    break;
+                case 'text':
+                    node = new Konva.Text({
+                        x: a.x || 0, y: a.y || 0,
+                        text: a.text || 'Text',
+                        fontSize: a.fontSize || 32,
+                        fontFamily: a.fontFamily || 'Inter, sans-serif',
+                        fontStyle: a.fontStyle,
+                        fontVariant: a.fontVariant,
+                        fill: a.fill || '#000',
+                        align: a.align || 'left',
+                        width: a.width || 200,
+                        wrap: a.wrap || 'word',
+                        padding: a.padding,
+                        lineHeight: a.lineHeight,
+                        draggable: isDraggable,
+                        name: name, id: el.id
+                    });
+                    break;
+                case 'circle':
+                    node = new Konva.Circle({
+                        x: a.x || 100, y: a.y || 100,
+                        radius: a.radius || 50,
+                        fill: a.fill || '#ccc',
+                        stroke: a.stroke, strokeWidth: a.strokeWidth,
+                        opacity: a.opacity != null ? a.opacity : 1,
+                        draggable: isDraggable,
+                        name: name, id: el.id
+                    });
+                    break;
+                case 'ellipse':
+                    node = new Konva.Ellipse({
+                        x: a.x || 100, y: a.y || 100,
+                        radiusX: a.radiusX || 80, radiusY: a.radiusY || 50,
+                        fill: a.fill || '#ccc',
+                        stroke: a.stroke, strokeWidth: a.strokeWidth,
+                        opacity: a.opacity != null ? a.opacity : 1,
+                        draggable: isDraggable,
+                        name: name, id: el.id
+                    });
+                    break;
+                case 'line':
+                    node = new Konva.Line({
+                        points: a.points || [0, 0, 100, 100],
+                        stroke: a.stroke || '#000',
+                        strokeWidth: a.strokeWidth || 2,
+                        closed: a.closed || false,
+                        fill: a.fill,
+                        tension: a.tension,
+                        opacity: a.opacity != null ? a.opacity : 1,
+                        draggable: isDraggable,
+                        name: name, id: el.id
+                    });
+                    break;
+                case 'path':
+                    node = new Konva.Path({
+                        data: a.data || 'M10,10 L100,10 L100,100 Z',
+                        fill: a.fill || '#ccc',
+                        stroke: a.stroke,
+                        strokeWidth: a.strokeWidth,
+                        scaleX: a.scaleX, scaleY: a.scaleY,
+                        opacity: a.opacity != null ? a.opacity : 1,
+                        draggable: isDraggable,
+                        name: name, id: el.id
+                    });
+                    break;
+                case 'star':
+                    node = new Konva.Star({
+                        x: a.x || 150, y: a.y || 150,
+                        numPoints: a.numPoints || 5,
+                        innerRadius: a.innerRadius || 30,
+                        outerRadius: a.outerRadius || 60,
+                        fill: a.fill || '#ccc',
+                        stroke: a.stroke, strokeWidth: a.strokeWidth,
+                        opacity: a.opacity != null ? a.opacity : 1,
+                        draggable: isDraggable,
+                        name: name, id: el.id
+                    });
+                    break;
+                case 'ring':
+                    node = new Konva.Ring({
+                        x: a.x || 150, y: a.y || 150,
+                        innerRadius: a.innerRadius || 40,
+                        outerRadius: a.outerRadius || 80,
+                        fill: a.fill || '#ccc',
+                        stroke: a.stroke, strokeWidth: a.strokeWidth,
+                        opacity: a.opacity != null ? a.opacity : 1,
+                        draggable: isDraggable,
+                        name: name, id: el.id
+                    });
+                    break;
+                case 'polygon':
+                    node = new Konva.Line({
+                        points: a.points || [0, 0, 100, 0, 50, 86],
+                        closed: true,
+                        fill: a.fill || '#ccc',
+                        stroke: a.stroke, strokeWidth: a.strokeWidth,
+                        opacity: a.opacity != null ? a.opacity : 1,
+                        draggable: isDraggable,
+                        name: name, id: el.id
+                    });
+                    break;
+                case 'group':
+                    node = new Konva.Group({
+                        x: a.x || 0, y: a.y || 0,
+                        draggable: isDraggable,
+                        name: name, id: el.id
+                    });
+                    break;
+                default:
+                    return null;
+            }
+
+            if (node) {
+                node.on('dragend', function() { syncState(); });
+                node.on('transformend', function() {
+                    const n = this;
+                    if (n.getClassName() !== 'Text') {
+                        const w = n.width() * n.scaleX();
+                        const h = n.height() * n.scaleY();
+                        n.setAttrs({ width: w, height: h, scaleX: 1, scaleY: 1 });
+                    }
+                    syncState();
+                });
+                node.on('dragmove transform', function() { updateProps(); });
+                node.addName('draggable');
+            }
+            return node;
+        }
+
+        function createImageNode(el) {
+            const a = el.attrs || {};
+            return new Promise((resolve) => {
+                const img = new window.Image();
+                if (!a.src || a.src.startsWith('/')) {
+                    // same-origin — no CORS needed
+                } else {
+                    img.crossOrigin = 'anonymous';
+                }
+                img.onload = function() {
+                    const node = new Konva.Image({
+                        x: a.x || 0, y: a.y || 0,
+                        width: a.width || img.naturalWidth,
+                        height: a.height || img.naturalHeight,
+                        image: img,
+                        src: a.src,
+                        cornerRadius: a.cornerRadius || 0,
+                        opacity: a.opacity != null ? a.opacity : 1,
+                        draggable: !el.locked,
+                        name: 'image-' + (el.id || 'unknown'),
+                        id: el.id
+                    });
+                    node.on('dragend', function() { syncState(); });
+                    node.on('transformend', function() {
+                        const w = node.width() * node.scaleX();
+                        const h = node.height() * node.scaleY();
+                        node.setAttrs({ width: w, height: h, scaleX: 1, scaleY: 1 });
+                        syncState();
+                    });
+                    node.addName('draggable');
+                    imageCache[a.src] = node;
+                    updateLayers();
+                    resolve(node);
+                };
+                img.onerror = function() {
+                    const placeholder = new Konva.Rect({
+                        x: a.x || 0, y: a.y || 0,
+                        width: a.width || 200,
+                        height: a.height || 200,
+                        fill: '#e1e8ed',
+                        stroke: '#cfd9de',
+                        strokeWidth: 1,
+                        cornerRadius: a.cornerRadius || 0,
+                        opacity: 0.6,
+                        draggable: !el.locked,
+                        name: 'placeholder-' + (el.id || 'unknown'),
+                        id: el.id
+                    });
+                    placeholder.addName('draggable');
+                    resolve(placeholder);
+                };
+                img.src = a.src || '';
+            });
+        }
+
+        /* ── History ── */
+        function saveHistory() {
+            syncState();
+            history.length = historyStep + 1;
+            history.push(JSON.stringify(state));
+            historyStep = history.length - 1;
+            updateUI();
+        }
+
+        function undo() {
+            if (historyStep <= 0) return;
+            historyStep--;
+            render(JSON.parse(history[historyStep]));
+            updateUI();
+            setStatus('Undo');
+        }
+
+        function redo() {
+            if (historyStep >= history.length - 1) return;
+            historyStep++;
+            render(JSON.parse(history[historyStep]));
+            updateUI();
+            setStatus('Redo');
+        }
+
+        /* ── Sync ── */
+        function syncState() {
+            const children = layer.children;
+            const elems = [];
+            children.forEach(child => {
+                if (child.getClassName() === 'Transformer') return;
+                if (child.name() === 'bg') return;
+                const type = child.name().split('-')[0];
+                const el = {
+                    id: child.id(),
+                    type: type,
+                    locked: !child.draggable(),
+                    attrs: {}
+                };
+                const a = child.getAttrs();
+                switch (type) {
+                    case 'rect':
+                        el.attrs = { x: a.x, y: a.y, width: a.width, height: a.height, fill: a.fill, stroke: a.stroke, strokeWidth: a.strokeWidth, cornerRadius: a.cornerRadius, opacity: a.opacity, shadowBlur: a.shadowBlur, shadowColor: a.shadowColor };
+                        break;
+                    case 'text':
+                        el.attrs = { x: a.x, y: a.y, text: a.text, fontSize: a.fontSize, fontFamily: a.fontFamily, fontStyle: a.fontStyle, fontVariant: a.fontVariant, fill: a.fill, align: a.align, width: a.width, wrap: a.wrap, padding: a.padding, lineHeight: a.lineHeight };
+                        break;
+                    case 'image':
+                        var src = a.src;
+                        if (!src && child.image() && child.image().src) {
+                            var imgSrc = child.image().src;
+                            var idx = imgSrc.indexOf('/images/');
+                            if (idx !== -1) src = imgSrc.substring(idx);
+                        }
+                        el.attrs = { x: a.x, y: a.y, width: a.width, height: a.height, src: src, cornerRadius: a.cornerRadius, opacity: a.opacity };
+                        break;
+                    case 'circle':
+                        el.attrs = { x: a.x, y: a.y, radius: a.radius, fill: a.fill, stroke: a.stroke, strokeWidth: a.strokeWidth, opacity: a.opacity };
+                        break;
+                    case 'ellipse':
+                        el.attrs = { x: a.x, y: a.y, radiusX: a.radiusX, radiusY: a.radiusY, fill: a.fill, stroke: a.stroke, strokeWidth: a.strokeWidth, opacity: a.opacity };
+                        break;
+                    case 'line':
+                        el.attrs = { points: a.points, stroke: a.stroke, strokeWidth: a.strokeWidth, closed: a.closed, fill: a.fill, tension: a.tension, opacity: a.opacity };
+                        break;
+                    case 'path':
+                        el.attrs = { data: a.data, fill: a.fill, stroke: a.stroke, strokeWidth: a.strokeWidth, scaleX: a.scaleX, scaleY: a.scaleY, opacity: a.opacity };
+                        break;
+                    case 'star':
+                        el.attrs = { x: a.x, y: a.y, numPoints: a.numPoints, innerRadius: a.innerRadius, outerRadius: a.outerRadius, fill: a.fill, stroke: a.stroke, strokeWidth: a.strokeWidth, opacity: a.opacity };
+                        break;
+                    case 'ring':
+                        el.attrs = { x: a.x, y: a.y, innerRadius: a.innerRadius, outerRadius: a.outerRadius, fill: a.fill, stroke: a.stroke, strokeWidth: a.strokeWidth, opacity: a.opacity };
+                        break;
+                    case 'polygon':
+                        el.attrs = { points: a.points, fill: a.fill, stroke: a.stroke, strokeWidth: a.strokeWidth, opacity: a.opacity };
+                        break;
+                }
+                for (const k in el.attrs) {
+                    if (el.attrs[k] === undefined || el.attrs[k] === null) delete el.attrs[k];
+                }
+                elems.push(el);
+            });
+            state.elements = elems;
+        }
+
+        /* ── Selection ── */
+        function selectNode(node) {
+            selectedNode = node;
+            selectedNodeId = node ? node.id() : null;
+
+            if (node && node.getClassName() !== 'Transformer') {
+                tr.nodes([node]);
+                trLayer.moveToTop();
+            } else {
+                tr.nodes([]);
+            }
+
+            updateUI();
+            updateProps();
+            updateLayers();
+        }
+
+        /* ── UI Updates ── */
+        function updateUI() {
+            document.getElementById('undoBtn').disabled = historyStep <= 0;
+            document.getElementById('redoBtn').disabled = historyStep >= history.length - 1;
+            document.getElementById('deleteBtn').disabled = !selectedNode;
+        }
+
+        function updateProps() {
+            const container = document.getElementById('propertiesContent');
+            if (!selectedNode || selectedNode === tr) {
+                container.innerHTML = '<div class="no-select">Select an element</div>';
+                return;
+            }
+            const a = selectedNode.getAttrs();
+            const typeName = selectedNode.getClassName().toLowerCase();
+            let html = '<div class="prop-row"><label>Type</label><span style="font-size:13px;color:var(--muted);">' + typeName + '</span></div>';
+
+            const addProp = (label, key, inputType, opts) => {
+                const val = a[key] != null ? a[key] : '';
+                html += `<div class="prop-row"><label>${label}</label>`;
+                if (inputType === 'select') {
+                    html += `<select onchange="setProp('${key}',this.value)">`;
+                    opts.forEach(o => html += `<option value="${o}"${val === o ? ' selected' : ''}>${o}</option>`);
+                    html += '</select>';
+                } else if (inputType === 'color') {
+                    html += `<input type="color" value="${val || '#000000'}" oninput="setProp('${key}',this.value)">`;
+                } else if (inputType === 'range') {
+                    html += `<input type="range" min="0" max="1" step="0.05" value="${val != null ? val : 1}" oninput="setProp('${key}',parseFloat(this.value))">`;
+                    html += `<span style="font-size:11px;color:var(--muted);width:30px;text-align:right;">${val != null ? val : 1}</span>`;
+                } else if (inputType === 'textarea') {
+                    html += `<textarea onchange="setProp('${key}',this.value)">${val != null ? escHtml(String(val)) : ''}</textarea>`;
+                } else if (inputType === 'number') {
+                    html += `<input type="number" value="${val != null ? val : 0}" onchange="setProp('${key}',parseFloat(this.value))">`;
+                } else if (inputType === 'comma-sep') {
+                    html += `<input type="text" value="${Array.isArray(val) ? val.join(', ') : val}" onchange="setProp('${key}',this.value.split(',').map(Number))">`;
+                } else if (inputType === 'checkbox') {
+                    html += `<input type="checkbox" ${val ? 'checked' : ''} onchange="setProp('${key}',this.checked)">`;
+                } else {
+                    html += `<input type="text" value="${escHtml(String(val))}" onchange="setProp('${key}',this.value)">`;
+                }
+                html += '</div>';
+            };
+
+            addProp('X', 'x', 'number');
+            addProp('Y', 'y', 'number');
+            addProp('Rotation', 'rotation', 'number');
+            addProp('Opacity', 'opacity', 'range');
+
+            if (typeName === 'rect') {
+                addProp('W', 'width', 'number');
+                addProp('H', 'height', 'number');
+                addProp('Fill', 'fill', 'color');
+                addProp('Stroke', 'stroke', 'color');
+                addProp('StrokeW', 'strokeWidth', 'number');
+                addProp('Corner', 'cornerRadius', 'comma-sep');
+            } else if (typeName === 'text') {
+                addProp('Text', 'text', 'textarea');
+                addProp('Size', 'fontSize', 'number');
+                addProp('Family', 'fontFamily', 'select', ['Inter, sans-serif', 'Georgia, serif', 'Arial, sans-serif', 'Times New Roman, serif', 'Courier New, monospace']);
+                addProp('Style', 'fontStyle', 'select', ['normal', 'bold', 'italic', 'bold italic']);
+                addProp('Color', 'fill', 'color');
+                addProp('Align', 'align', 'select', ['left', 'center', 'right']);
+                addProp('Width', 'width', 'number');
+                addProp('LineH', 'lineHeight', 'number');
+            } else if (typeName === 'circle') {
+                addProp('Radius', 'radius', 'number');
+                addProp('Fill', 'fill', 'color');
+                addProp('Stroke', 'stroke', 'color');
+                addProp('StrokeW', 'strokeWidth', 'number');
+            } else if (typeName === 'ellipse') {
+                addProp('RX', 'radiusX', 'number');
+                addProp('RY', 'radiusY', 'number');
+                addProp('Fill', 'fill', 'color');
+                addProp('Stroke', 'stroke', 'color');
+                addProp('StrokeW', 'strokeWidth', 'number');
+            } else if (typeName === 'line') {
+                addProp('Stroke', 'stroke', 'color');
+                addProp('StrokeW', 'strokeWidth', 'number');
+            } else if (typeName === 'path') {
+                addProp('Fill', 'fill', 'color');
+                addProp('Stroke', 'stroke', 'color');
+                addProp('StrokeW', 'strokeWidth', 'number');
+            } else if (typeName === 'star') {
+                addProp('Points', 'numPoints', 'number');
+                addProp('InnerR', 'innerRadius', 'number');
+                addProp('OuterR', 'outerRadius', 'number');
+                addProp('Fill', 'fill', 'color');
+                addProp('Stroke', 'stroke', 'color');
+                addProp('StrokeW', 'strokeWidth', 'number');
+            } else if (typeName === 'ring') {
+                addProp('InnerR', 'innerRadius', 'number');
+                addProp('OuterR', 'outerRadius', 'number');
+                addProp('Fill', 'fill', 'color');
+                addProp('Stroke', 'stroke', 'color');
+                addProp('StrokeW', 'strokeWidth', 'number');
+            } else if (typeName === 'image' || typeName === 'konva image') {
+                addProp('W', 'width', 'number');
+                addProp('H', 'height', 'number');
+                if (a.src) {
+                    html += '<div class="prop-row"><label>Src</label><span style="font-size:11px;color:var(--muted);word-break:break-all;">' + escHtml(String(a.src)) + '</span></div>';
+                }
+            }
+
+            container.innerHTML = html;
+        }
+
+        function updateLayers() {
+            const list = document.getElementById('layersList');
+            const children = layer.children;
+            const reversed = [...children].reverse().filter(c => c.name() !== 'bg');
+            list.innerHTML = reversed.map(child => {
+                const cls = child.id() === selectedNodeId ? 'selected' : '';
+                const ctype = child.name().split('-')[0] || 'unknown';
+                const label = child.id() || ctype;
+                const cid = child.id() || '';
+                return `<li class="${cls}" onclick="selectById('${cid}')">` +
+                    `<span class="layer-type">${ctype}</span>` +
+                    `<span>${escHtml(label)}</span>` +
+                    `<span class="layer-del" onclick="event.stopPropagation();deleteElement('${cid}')">&times;</span>` +
+                    '</li>';
+            }).join('');
+        }
+
+        function selectById(id) {
+            const child = layer.findOne('#' + id);
+            if (child) selectNode(child);
+        }
+
+        /* ── Property Changes ── */
+        function setProp(key, val) {
+            if (!selectedNode) return;
+            selectedNode.setAttr(key, val);
+            selectedNode.getLayer().batchDraw();
+            if (key === 'text') {
+                const el = state.elements.find(e => e.id === selectedNode.id());
+                if (el) el.attrs[key] = val;
+            }
+            saveHistory();
+            updateProps();
+        }
+
+        /* ── Actions ── */
+        async function generateLayout() {
+            if (isGenerating) return;
+            isGenerating = true;
+            document.getElementById('loadingText').textContent = 'Generating layout with AI...';
+            document.getElementById('loadingOverlay').classList.add('open');
+            setStatus('Generating layout from AI...');
+
+            try {
+                const storyResp = await fetch('/api/stories/' + encodeURIComponent(TOPIC));
+                let body;
+                if (!storyResp.ok) {
+                    body = { topic: TOPIC, text: 'Generate a social media post about ' + TOPIC, images: [], category: 'News' };
+                } else {
+                    const story = await storyResp.json();
+                    body = { topic: story.topic, text: story.text, images: story.images || [], category: story.category || 'News' };
+                }
+                const resp = await fetch('/api/generate-layout', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(body)
+                });
+                if (!resp.ok) throw new Error(await resp.text());
+                const layout = await resp.json();
+                saveLayoutToHistory(layout);
+            } catch (e) {
+                setStatus('Error: ' + e.message);
+                toast('Generation failed: ' + e.message, 'error');
+            } finally {
+                isGenerating = false;
+                document.getElementById('loadingOverlay').classList.remove('open');
+            }
+        }
+
+        function saveLayoutToHistory(layout) {
+            state = {
+                canvas: layout.canvas || { width: 1080, height: 1080, background: '#F3F7FA' },
+                elements: layout.elements || []
+            };
+            history.length = 0;
+            history.push(JSON.stringify(state));
+            historyStep = 0;
+            render(state);
+            setStatus('Layout generated with ' + state.elements.length + ' elements');
+        }
+
+        function exportPNG() {
+            tr.nodes([]);
+            const uri = stage.toDataURL({ pixelRatio: 2, mimeType: 'image/png' });
+            const link = document.createElement('a');
+            link.download = 'nicdc-post.png';
+            link.href = uri;
+            link.click();
+            setStatus('Exported PNG');
+        }
+
+        let isSubmitting = false;
+
+        async function sendForApproval() {
+            if (isSubmitting) return;
+            syncState();
+            if (!state.elements.length) {
+                toast('The canvas is empty — add elements or generate a layout first.', 'error');
+                return;
+            }
+            isSubmitting = true;
+            document.getElementById('loadingText').textContent = 'Submitting for approval...';
+            document.getElementById('loadingOverlay').classList.add('open');
+            setStatus('Submitting design for approval...');
+
+            try {
+                const category = document.getElementById('categoryData').textContent || 'News';
+                const resp = await fetch('/api/designs/submit', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        topic: TOPIC,
+                        category: category,
+                        design_state: state
+                    })
+                });
+                if (!resp.ok) {
+                    const errText = await resp.text();
+                    let detail;
+                    try { detail = JSON.parse(errText).detail; } catch { detail = errText; }
+                    throw new Error(detail || 'Submission failed');
+                }
+                await resp.json();
+                document.getElementById('loadingOverlay').classList.remove('open');
+                document.getElementById('feedbackBanner').classList.remove('visible');
+                _editorComments = [];
+                renderCommentsPanel();
+                renderCommentBadges();
+                setStatus('Design submitted for approval');
+                toast('Design sent to the approver for review', 'success');
+                setTimeout(function () { window.location.href = '/'; }, 900);
+            } catch (e) {
+                setStatus('Error: ' + e.message);
+                toast('Submission failed: ' + e.message, 'error');
+                document.getElementById('loadingOverlay').classList.remove('open');
+            } finally {
+                isSubmitting = false;
+            }
+        }
+
+        function deleteSelected() {
+            if (!selectedNode) return;
+            const id = selectedNode.id();
+            deleteElement(id);
+        }
+
+        function deleteElement(id) {
+            const child = layer.findOne('#' + id);
+            if (child) {
+                child.destroy();
+                if (selectedNode === child) {
+                    selectedNode = null;
+                    selectedNodeId = null;
+                    tr.nodes([]);
+                }
+                saveHistory();
+                updateUI();
+                updateProps();
+                updateLayers();
+                setStatus('Deleted element');
+            }
+        }
+
+        function addElement(type) {
+            if (!type) return;
+            const defaults = {
+                rect: { x: 100, y: 100, width: 200, height: 150, fill: '#1565C0', opacity: 1 },
+                text: { x: 100, y: 100, text: 'Double-click to edit', fontSize: 32, fontFamily: 'Inter, sans-serif', fill: '#0f1419', width: 400, wrap: 'word' },
+                circle: { x: 200, y: 200, radius: 60, fill: '#E65100', opacity: 1 },
+                ellipse: { x: 200, y: 200, radiusX: 100, radiusY: 60, fill: '#2E7D32', opacity: 1 },
+                line: { points: [50, 50, 200, 150], stroke: '#1d9bf0', strokeWidth: 3 },
+                star: { x: 200, y: 200, numPoints: 5, innerRadius: 30, outerRadius: 70, fill: '#F9A825', opacity: 1 },
+                ring: { x: 200, y: 200, innerRadius: 40, outerRadius: 80, fill: '#1565C0', opacity: 0.6 },
+                polygon: { points: [100, 0, 200, 86, 150, 173, 50, 173, 0, 86], fill: '#092240', opacity: 1, closed: true }
+            };
+            const attrs = defaults[type] || defaults.rect;
+            const id = 'el-' + Date.now();
+            const el = { id: id, type: type, locked: false, attrs: attrs };
+            state.elements.push(el);
+            history.length = historyStep + 1;
+            history.push(JSON.stringify(state));
+            historyStep = history.length - 1;
+            updateUI();
+            render(state);
+            setTimeout(() => {
+                const node = layer.findOne('#' + id);
+                if (node) selectNode(node);
+            }, 50);
+            setStatus('Added ' + type);
+        }
+
+        /* ── Text Editing ── */
+        function editTextNode(node) {
+            const textarea = document.createElement('textarea');
+            textarea.style.position = 'fixed';
+            textarea.style.zIndex = '1001';
+            textarea.style.background = 'white';
+            textarea.style.color = '#0f1419';
+            textarea.style.border = '2px solid #2563eb';
+            textarea.style.borderRadius = '6px';
+            textarea.style.padding = '6px';
+            textarea.style.fontSize = node.fontSize() + 'px';
+            textarea.style.fontFamily = node.fontFamily();
+            textarea.style.fontStyle = node.fontStyle();
+            textarea.style.fontWeight = node.fontStyle().includes('bold') ? 'bold' : 'normal';
+            textarea.style.textAlign = node.align();
+            textarea.style.width = '400px';
+            textarea.style.minHeight = '60px';
+            textarea.style.resize = 'both';
+            textarea.style.outline = 'none';
+            textarea.style.boxShadow = '0 4px 16px rgba(0,0,0,0.3)';
+            textarea.style.overflow = 'auto';
+
+            const area = document.getElementById('canvasArea');
+            const areaRect = area.getBoundingClientRect();
+            textarea.style.left = (areaRect.left + 40) + 'px';
+            textarea.style.top = (areaRect.top + 40) + 'px';
+
+            textarea.value = node.text();
+            document.body.appendChild(textarea);
+            textarea.focus();
+
+            function removeTextarea() {
+                if (textarea.parentNode) textarea.parentNode.removeChild(textarea);
+            }
+
+            textarea.addEventListener('keydown', function(e) {
+                if (e.key === 'Escape') {
+                    removeTextarea();
+                }
+            });
+
+            textarea.addEventListener('blur', function() {
+                const newText = textarea.value;
+                node.text(newText);
+                node.getLayer().batchDraw();
+                saveHistory();
+                node.show();
+                tr.nodes([node]);
+                removeTextarea();
+            });
+        }
+
+        /* ── Status ── */
+        function setStatus(msg) {
+            document.getElementById('statusBar').textContent = msg;
+        }
+
+        /* ── Init ── */
+        document.addEventListener('DOMContentLoaded', async function() {
+            initStage();
+            render(state);
+            let loaded = false;
+            if (TOPIC) {
+                try {
+                    const resp = await fetch('/api/designs/by-topic/' + encodeURIComponent(TOPIC));
+                    if (resp.ok) {
+                        const design = await resp.json();
+                        if (design.design_state) {
+                            saveLayoutToHistory(design.design_state);
+                            _editorComments = design.comments || [];
+                            _editorDesignId = design.id;
+                            _designStatus = design.status;
+                            _reviewerNote = design.reviewer_note || '';
+                            renderCommentsPanel();
+                            renderCommentBadges();
+                            updateFeedbackBanner();
+                            if (_designStatus === 'feedback' && _editorComments.length) switchPanel('feedback');
+                            loaded = true;
+                            const count = _editorComments.length;
+                            setStatus('Loaded saved design (' + state.elements.length + ' elements' + (count ? ', ' + count + ' comment(s) from approver' : '') + ')');
+                        }
+                    }
+                } catch (e) {}
+            }
+            if (!loaded) {
+                setStatus('Ready — click "Generate with AI" to create a layout, or add elements manually');
+            }
+
+            document.getElementById('editorCommentsList').addEventListener('click', function(e) {
+                const agentBtn = e.target.closest('.btn-send-agent');
+                if (agentBtn) {
+                    const idx = parseInt(agentBtn.dataset.commentIdx, 10);
+                    if (_editorComments[idx]) {
+                        const c = _editorComments[idx];
+                        sendCommentToAgent(c.text, c.element_id || null, c.element_type || null);
+                    }
+                    return;
+                }
+                const card = e.target.closest('.editor-comment-card');
+                if (card && card.dataset.elementId) {
+                    highlightEditorElement(card.dataset.elementId);
+                }
+            });
+        });
+    </script>
+</body>
+</html>

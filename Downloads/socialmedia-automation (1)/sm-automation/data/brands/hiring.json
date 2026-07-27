@@ -1,0 +1,13 @@
+{
+  "name": "Hiring",
+  "palette": {
+    "primary": "#0D3B2E",
+    "accent": "#2E7D32",
+    "highlight": "#F9A825",
+    "success": "#1B5E20",
+    "background": "#F1F8E9"
+  },
+  "fonts": { "heading": "Georgia, serif", "body": "Inter, sans-serif" },
+  "logo": "/images/nicdc-logo.png",
+  "tone": "opportunity-driven, growth-focused, welcoming"
+}

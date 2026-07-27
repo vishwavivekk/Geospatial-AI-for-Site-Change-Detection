@@ -1,0 +1,13 @@
+{
+  "name": "Events",
+  "palette": {
+    "primary": "#1A237E",
+    "accent": "#F9A825",
+    "highlight": "#E65100",
+    "success": "#2E7D32",
+    "background": "#FFF8E1"
+  },
+  "fonts": { "heading": "Georgia, serif", "body": "Inter, sans-serif" },
+  "logo": "/images/nicdc-logo.png",
+  "tone": "celebratory, milestone-oriented, community-first"
+}

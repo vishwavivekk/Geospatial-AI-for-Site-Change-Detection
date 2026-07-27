@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sign in — NICDC Social Studio</title>
+    <link rel="stylesheet" href="/static/app.css">
+    <style>
+        body { display: flex; min-height: 100vh; background: white; }
+        .brand-panel {
+            flex: 1;
+            background:
+                radial-gradient(1200px 700px at -10% -20%, rgba(168, 85, 247, 0.35), transparent 55%),
+                radial-gradient(900px 600px at 110% 110%, rgba(59, 130, 246, 0.4), transparent 55%),
+                linear-gradient(150deg, #312e81 0%, #4f46e5 55%, #6d28d9 100%);
+            color: white;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            padding: 64px;
+            position: relative;
+            overflow: hidden;
+        }
+        .brand-panel .mark {
+            width: 52px; height: 52px;
+            border-radius: 14px;
+            background: rgba(255,255,255,0.14);
+            border: 1px solid rgba(255,255,255,0.25);
+            backdrop-filter: blur(4px);
+            display: flex; align-items: center; justify-content: center;
+            font-size: 24px; font-weight: 800;
+            margin-bottom: 28px;
+        }
+        .brand-panel h1 { font-size: 32px; font-weight: 800; letter-spacing: -0.03em; line-height: 1.15; margin-bottom: 12px; }
+        .brand-panel .lede { font-size: 15.5px; color: rgba(255,255,255,0.82); max-width: 440px; line-height: 1.65; margin-bottom: 40px; }
+        .flow-steps { display: flex; flex-direction: column; gap: 18px; max-width: 420px; }
+        .flow-step { display: flex; gap: 14px; align-items: flex-start; }
+        .flow-step .n {
+            width: 30px; height: 30px; flex-shrink: 0;
+            border-radius: 9px;
+            background: rgba(255,255,255,0.14);
+            border: 1px solid rgba(255,255,255,0.22);
+            display: flex; align-items: center; justify-content: center;
+            font-size: 13px; font-weight: 700;
+        }
+        .flow-step .t { font-size: 14px; font-weight: 700; margin-bottom: 1px; }
+        .flow-step .d { font-size: 13px; color: rgba(255,255,255,0.72); line-height: 1.5; }
+        .form-panel {
+            width: 480px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            padding: 48px 56px;
+            border-left: 1px solid var(--border);
+        }
+        .form-panel h2 { font-size: 22px; font-weight: 800; letter-spacing: -0.025em; margin-bottom: 6px; }
+        .form-panel .sub { color: var(--muted); font-size: 14px; margin-bottom: 30px; }
+        .field { margin-bottom: 18px; }
+        .field label { display: block; font-size: 13px; font-weight: 600; margin-bottom: 7px; }
+        .field input {
+            width: 100%; padding: 11px 14px;
+            border: 1px solid var(--border-strong); border-radius: 10px;
+            font-size: 14.5px; font-family: inherit;
+            outline: none;
+            transition: border-color 0.15s, box-shadow 0.15s;
+        }
+        .field input:focus { border-color: var(--primary); box-shadow: var(--ring); }
+        .btn-login { width: 100%; margin-top: 6px; }
+        .login-error {
+            display: none;
+            background: var(--danger-soft); color: var(--danger);
+            border: 1px solid var(--danger-border);
+            font-size: 13px; font-weight: 500; padding: 11px 14px;
+            border-radius: 10px; margin-bottom: 18px;
+        }
+        .login-error.visible { display: block; }
+        .demo-box { margin-top: 34px; border-top: 1px solid var(--border); padding-top: 22px; }
+        .demo-box p { font-size: 11px; color: var(--muted); margin-bottom: 12px; text-transform: uppercase; letter-spacing: 0.08em; font-weight: 700; }
+        .demo-accounts { display: flex; gap: 10px; }
+        .demo-btn {
+            flex: 1; padding: 13px 10px;
+            border: 1px solid var(--border-strong); border-radius: 12px;
+            background: white; cursor: pointer;
+            font-family: inherit; text-align: left;
+            transition: border-color 0.15s, background 0.15s, box-shadow 0.15s;
+            display: flex; align-items: center; gap: 10px;
+        }
+        .demo-btn:hover { border-color: var(--primary); background: var(--primary-soft); box-shadow: var(--shadow-xs); }
+        .demo-btn .ic-wrap {
+            width: 34px; height: 34px; border-radius: 9px; flex-shrink: 0;
+            display: flex; align-items: center; justify-content: center;
+        }
+        .demo-btn.editor .ic-wrap { background: var(--primary-soft); color: var(--primary); }
+        .demo-btn.approver .ic-wrap { background: var(--violet-soft); color: var(--violet); }
+        .demo-btn .t { font-size: 13.5px; font-weight: 700; display: block; line-height: 1.2; }
+        .demo-btn .d { font-size: 11.5px; color: var(--muted); }
+        @media (max-width: 900px) {
+            .brand-panel { display: none; }
+            .form-panel { width: 100%; border: none; }
+        }
+    </style>
+</head>
+<body>
+    <div class="brand-panel">
+        <div class="mark">N</div>
+        <h1>NICDC Social Studio</h1>
+        <p class="lede">Turn press releases into polished social media posts — designed with AI, reviewed by your team, and published automatically.</p>
+        <div class="flow-steps">
+            <div class="flow-step">
+                <div class="n">1</div>
+                <div><div class="t">Design</div><div class="d">Editors craft 1080×1080 posts on a visual canvas with AI assistance.</div></div>
+            </div>
+            <div class="flow-step">
+                <div class="n">2</div>
+                <div><div class="t">Review</div><div class="d">Approvers pin comments to exact elements and request changes.</div></div>
+            </div>
+            <div class="flow-step">
+                <div class="n">3</div>
+                <div><div class="t">Publish</div><div class="d">One approval posts to Instagram, X and LinkedIn automatically.</div></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="form-panel">
+        <h2>Welcome back</h2>
+        <p class="sub">Sign in to your workspace</p>
+
+        <div class="login-error" id="loginError"></div>
+
+        <form id="loginForm">
+            <div class="field">
+                <label for="username">Username</label>
+                <input id="username" type="text" autocomplete="username" placeholder="Enter your username" required>
+            </div>
+            <div class="field">
+                <label for="password">Password</label>
+                <input id="password" type="password" autocomplete="current-password" placeholder="Enter your password" required>
+            </div>
+            <button type="submit" class="btn btn-primary btn-lg btn-login" id="loginBtn">Sign in</button>
+        </form>
+
+        <div class="demo-box">
+            <p>Demo accounts — click to sign in</p>
+            <div class="demo-accounts">
+                <button type="button" class="demo-btn editor" onclick="fillDemo('editor','editor123')">
+                    <span class="ic-wrap" id="editorIcon"></span>
+                    <span><span class="t">Editor</span><span class="d">creates &amp; fixes designs</span></span>
+                </button>
+                <button type="button" class="demo-btn approver" onclick="fillDemo('approver','approver123')">
+                    <span class="ic-wrap" id="approverIcon"></span>
+                    <span><span class="t">Approver</span><span class="d">reviews &amp; publishes</span></span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script src="/static/app.js"></script>
+    <script>
+        document.getElementById('editorIcon').innerHTML = icon('edit', 17);
+        document.getElementById('approverIcon').innerHTML = icon('check', 17);
+
+        function fillDemo(u, p) {
+            document.getElementById('username').value = u;
+            document.getElementById('password').value = p;
+            document.getElementById('loginForm').requestSubmit();
+        }
+
+        document.getElementById('loginForm').addEventListener('submit', async function (e) {
+            e.preventDefault();
+            const btn = document.getElementById('loginBtn');
+            const err = document.getElementById('loginError');
+            err.classList.remove('visible');
+            btn.disabled = true;
+            btn.textContent = 'Signing in...';
+            try {
+                const resp = await fetch('/api/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        username: document.getElementById('username').value.trim(),
+                        password: document.getElementById('password').value,
+                    }),
+                });
+                const data = await resp.json();
+                if (!resp.ok) throw new Error(data.detail || 'Login failed');
+                window.location.href = data.role === 'approver' ? '/review' : '/';
+            } catch (ex) {
+                err.textContent = ex.message;
+                err.classList.add('visible');
+                btn.disabled = false;
+                btn.textContent = 'Sign in';
+            }
+        });
+    </script>
+</body>
+</html>
