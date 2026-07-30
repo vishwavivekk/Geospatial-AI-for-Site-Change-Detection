@@ -27,9 +27,9 @@ scp -i $KeyPath $tarball "${User}@${ServerIp}:/tmp/sm-automation.tar.gz"
 if ($LASTEXITCODE -ne 0) { throw "scp failed" }
 
 Write-Host "== Running server setup =="
-ssh -i $KeyPath "${User}@${ServerIp}" "tar -xzf /tmp/sm-automation.tar.gz -C /tmp ./deploy/setup-server.sh && sudo bash /tmp/deploy/setup-server.sh http://${ServerIp}"
+ssh -i $KeyPath "${User}@${ServerIp}" "tar -xzf /tmp/sm-automation.tar.gz -C /tmp ./deploy/setup-server.sh && sudo bash /tmp/deploy/setup-server.sh https://${ServerIp}"
 if ($LASTEXITCODE -ne 0) { throw "remote setup failed" }
 
 Write-Host ""
-Write-Host "Done. App is live at:  http://${ServerIp}" -ForegroundColor Green
-Write-Host "Mock API inspector:    http://${ServerIp}/mock/published"
+Write-Host "Done. App is live at:  https://${ServerIp}" -ForegroundColor Green
+Write-Host "Mock API inspector:    https://${ServerIp}/mock/published"

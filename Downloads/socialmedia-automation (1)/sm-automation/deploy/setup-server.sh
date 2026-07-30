@@ -31,10 +31,19 @@ systemctl daemon-reload
 systemctl enable --now sm-mock-apis sm-studio
 systemctl restart sm-mock-apis sm-studio
 
-echo "== Configuring nginx =="
+echo "== Configuring nginx (HTTP redirects to HTTPS) =="
+mkdir -p /etc/nginx/ssl
+if [ ! -f /etc/nginx/ssl/sm-studio.crt ]; then
+    SERVER_IP=$(echo "$PUBLIC_BASE_URL" | sed -E 's|https?://||; s|[:/].*||')
+    openssl req -x509 -nodes -days 1095 -newkey rsa:2048 \
+        -keyout /etc/nginx/ssl/sm-studio.key -out /etc/nginx/ssl/sm-studio.crt \
+        -subj "/CN=${SERVER_IP}/O=NICDC Social Studio" \
+        -addext "subjectAltName=IP:${SERVER_IP}" 2>/dev/null
+    echo "  self-signed certificate created for ${SERVER_IP}"
+fi
 cp "$APP_DIR/deploy/nginx-sm-studio.conf" /etc/nginx/sites-available/sm-studio
 ln -sf /etc/nginx/sites-available/sm-studio /etc/nginx/sites-enabled/sm-studio
-rm -f /etc/nginx/sites-enabled/default
+rm -f /etc/nginx/sites-enabled/default /etc/nginx/sites-enabled/sm-studio-ssl
 nginx -t
 systemctl reload nginx
 
