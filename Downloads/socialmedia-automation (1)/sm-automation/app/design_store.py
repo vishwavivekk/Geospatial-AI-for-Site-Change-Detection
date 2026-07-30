@@ -123,12 +123,14 @@ class DesignStore:
         self.save()
         return design
 
-    def set_published(self, design_id: str, publish_results: dict) -> dict | None:
+    def set_published(self, design_id: str, publish_results: dict, image_url: str = "") -> dict | None:
         design = self.get_one(design_id)
         if not design:
             return None
         all_ok = all(r.get("status") == "published" for r in publish_results.values())
         design["publish_results"] = publish_results
+        if image_url:
+            design["published_image_url"] = image_url
         if all_ok:
             design["status"] = "published"
             design["published_at"] = _now()

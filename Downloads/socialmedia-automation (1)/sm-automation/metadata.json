@@ -62,5 +62,20 @@
       "topic": "E2E Test Story",
       "category": "News"
     }
+  },
+  {
+    "text": "NICDC announces a new industrial corridor milestone for testing purposes. NICDC announces a new industrial corridor milestone for testing purposes. NICDC announces a new industrial corridor milestone for testing purposes.",
+    "metadata": {
+      "type": "story",
+      "title": "E2E Test Story 1785393905",
+      "date": "2026-07-30",
+      "source": "user-submitted",
+      "prid": null,
+      "url": null,
+      "filepath": "user-submitted",
+      "images": [],
+      "topic": "E2E Test Story 1785393905",
+      "category": "News"
+    }
   }
 ]

@@ -535,13 +535,13 @@ async def approve_design(design_id: str, req: ApproveRequest, user: dict = Depen
         raise HTTPException(400, detail="Invalid PNG data")
 
     design = design_store.update_status(design_id, "approved", req.note, reviewed_by=user["display_name"])
-    publish_results = await publish_design(design, png_filename)
-    design = design_store.set_published(design_id, publish_results)
+    publish_results, image_url = await publish_design(design, png_filename)
+    design = design_store.set_published(design_id, publish_results, image_url=image_url)
 
     return {
         "status": design["status"],
         "publish_results": publish_results,
-        "image": f"/published/{png_filename}",
+        "image": image_url,
     }
 
 

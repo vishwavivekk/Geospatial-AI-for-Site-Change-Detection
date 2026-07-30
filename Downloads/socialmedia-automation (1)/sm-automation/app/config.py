@@ -1,6 +1,9 @@
 import os
 
+from dotenv import load_dotenv
+
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+load_dotenv(os.path.join(BASE_DIR, ".env"))
 CONTENT_DIR = os.path.join(BASE_DIR, "nicdc-content")
 TEMPLATE_PATH = os.path.join(BASE_DIR, "base_design.html")
 PROMPT_TEMPLATE_DIR = os.path.join(os.path.dirname(__file__), "templates")
@@ -36,3 +39,7 @@ PUBLIC_BASE_URL = os.environ.get("PUBLIC_BASE_URL", "http://localhost:8000")
 SOCIAL_ACCESS_TOKEN = os.environ.get("SOCIAL_ACCESS_TOKEN", "mock-access-token")
 IG_USER_ID = os.environ.get("IG_USER_ID", "17841400000000000")
 LINKEDIN_AUTHOR = os.environ.get("LINKEDIN_AUTHOR", "urn:li:organization:900001")
+
+# ── Zernio media hosting (public image URLs for publishing) ──
+ZERNIO_API_KEY = os.environ.get("ZERNIO_API_KEY", "")
+ZERNIO_API_BASE = os.environ.get("ZERNIO_API_BASE", "https://zernio.com/api")

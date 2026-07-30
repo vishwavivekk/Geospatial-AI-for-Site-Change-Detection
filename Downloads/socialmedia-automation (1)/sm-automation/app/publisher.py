@@ -181,14 +181,21 @@ async def _publish_linkedin(client: httpx.AsyncClient, png_bytes: bytes, text: s
     return {"platform": "linkedin", "post_id": post_urn, "status": "published"}
 
 
-async def publish_design(design: dict, png_filename: str) -> dict:
-    """Publish to all three platforms. Returns per-platform results;
-    each entry is either a success record or {status: failed, error}."""
+async def publish_design(design: dict, png_filename: str) -> tuple[dict, str]:
+    """Publish to all three platforms. Returns (per-platform results,
+    image URL used); each result is a success record or
+    {status: failed, error}."""
+    from app.zernio import upload_image
+
     topic = design["topic"]
     story_text = design.get("story_text", "")
-    image_url = f"{PUBLIC_BASE_URL}/published/{png_filename}"
     with open(os.path.join(PUBLISHED_DIR, png_filename), "rb") as f:
         png_bytes = f.read()
+
+    # Host the image on Zernio for a public URL; fall back to our own server
+    image_url = await upload_image(png_bytes, png_filename)
+    if not image_url:
+        image_url = f"{PUBLIC_BASE_URL}/published/{png_filename}"
 
     results: dict[str, dict] = {}
     async with httpx.AsyncClient(timeout=30) as client:
@@ -213,4 +220,4 @@ async def publish_design(design: dict, png_filename: str) -> dict:
                 }
             else:
                 results[platform] = outcome
-    return results
+    return results, image_url

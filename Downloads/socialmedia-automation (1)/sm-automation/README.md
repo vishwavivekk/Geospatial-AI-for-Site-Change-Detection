@@ -68,7 +68,8 @@ The approval workflow runs fully offline. Two AI features use external services:
 | Variable | Default | Purpose |
 |----------|---------|---------|
 | `MOCK_API_BASE` | `http://localhost:8100` | Mock social media API server |
-| `PUBLIC_BASE_URL` | `http://localhost:8000` | Base URL used for image links given to the APIs |
+| `PUBLIC_BASE_URL` | `http://localhost:8000` | Fallback base URL for image links given to the APIs |
+| `ZERNIO_API_KEY` | *(empty)* | Zernio media hosting — approved post images are uploaded there and published via the returned public URL; without a key the app falls back to serving images itself. Set it in `.env` (never committed). |
 | `LLAMA_CPP_URL` | `http://localhost:8080` | Optional embedding server |
 
 ## Deploy to a server (GCP VM / any Debian or Ubuntu box)
