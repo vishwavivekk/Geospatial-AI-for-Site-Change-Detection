@@ -12,6 +12,12 @@
       "runtimeExecutable": "venv/Scripts/python.exe",
       "runtimeArgs": ["-m", "uvicorn", "main:app", "--app-dir", "mock-apis", "--host", "127.0.0.1", "--port", "8100"],
       "port": 8100
+    },
+    {
+      "name": "rttp-web",
+      "runtimeExecutable": "C:\\tools\\start-rttp-web.cmd",
+      "runtimeArgs": [],
+      "port": 5173
     }
   ]
 }

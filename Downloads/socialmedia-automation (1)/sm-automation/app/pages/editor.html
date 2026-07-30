@@ -205,7 +205,8 @@
             <button class="btn btn-warning btn-sm" onclick="switchPanel('feedback')" style="margin-left:auto;flex-shrink:0;">View comments</button>
         </div>
         <div class="toolbar">
-            <button class="btn btn-primary btn-sm" id="generateBtn" onclick="generateLayout()">Generate with AI</button>
+            <button class="btn btn-primary btn-sm" id="templatesBtn" onclick="openTemplatesModal()">Templates</button>
+            <button class="btn btn-sm" id="generateBtn" onclick="generateLayout()">Generate with AI</button>
             <select id="addSelect" onchange="addElement(this.value);this.value=this.options[0].value">
                 <option value="">+ Add element</option>
                 <option value="text">Text</option>
@@ -263,6 +264,18 @@
     <div class="loading-overlay" id="loadingOverlay">
         <div class="big-spinner"></div>
         <span id="loadingText">Working...</span>
+    </div>
+
+    <!-- Templates modal -->
+    <div id="templatesModal" class="modal-overlay">
+        <div class="modal" style="max-width:860px;" onclick="event.stopPropagation()">
+            <h2>Start from a template</h2>
+            <p class="sub">Official ICLP post designs — pick one, then edit the text on the canvas.</p>
+            <div id="templatesGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:14px;max-height:60vh;overflow-y:auto;padding:2px;"></div>
+            <div class="modal-actions" style="margin-top:16px;">
+                <button type="button" class="btn" onclick="closeTemplatesModal()">Cancel</button>
+            </div>
+        </div>
     </div>
 
     <script src="/static/app.js"></script>
@@ -490,6 +503,7 @@
 
         document.getElementById('navAvatar').textContent = initials('__USER_NAME__');
         document.getElementById('backBtn').insertAdjacentHTML('afterbegin', icon('back', 13));
+        document.getElementById('templatesBtn').insertAdjacentHTML('afterbegin', icon('layers', 14));
         document.getElementById('generateBtn').insertAdjacentHTML('afterbegin', icon('sparkles', 14));
         document.getElementById('undoBtn').insertAdjacentHTML('afterbegin', icon('undo', 13));
         document.getElementById('redoBtn').insertAdjacentHTML('afterbegin', icon('redo', 13));
@@ -600,12 +614,19 @@
             }
 
             const elems = state.elements || [];
+            const zOffset = state.canvas.background ? 1 : 0;
 
-            elems.forEach((el) => {
+            elems.forEach((el, i) => {
                 if (el.type === 'image') {
                     const imgNode = createImageNode(el);
                     if (imgNode) {
-                        imgNode.then(n => { if (n) layer.add(n); }).catch(() => {});
+                        imgNode.then(n => {
+                            if (!n) return;
+                            layer.add(n);
+                            // restore element order — async loads must not jump on top
+                            n.zIndex(Math.min(i + zOffset, layer.children.length - 1));
+                            layer.batchDraw();
+                        }).catch(() => {});
                     }
                 } else {
                     const node = createNode(el);
@@ -986,7 +1007,7 @@
             } else if (typeName === 'text') {
                 addProp('Text', 'text', 'textarea');
                 addProp('Size', 'fontSize', 'number');
-                addProp('Family', 'fontFamily', 'select', ['Inter, sans-serif', 'Georgia, serif', 'Arial, sans-serif', 'Times New Roman, serif', 'Courier New, monospace']);
+                addProp('Family', 'fontFamily', 'select', ['Poppins, sans-serif', 'Inter, sans-serif', 'Georgia, serif', 'Arial, sans-serif', 'Times New Roman, serif', 'Courier New, monospace']);
                 addProp('Style', 'fontStyle', 'select', ['normal', 'bold', 'italic', 'bold italic']);
                 addProp('Color', 'fill', 'color');
                 addProp('Align', 'align', 'select', ['left', 'center', 'right']);
@@ -1068,6 +1089,60 @@
             saveHistory();
             updateProps();
         }
+
+        /* ── Templates ── */
+        let _templates = null;
+
+        async function openTemplatesModal() {
+            document.getElementById('templatesModal').classList.add('open');
+            const grid = document.getElementById('templatesGrid');
+            if (_templates === null) {
+                grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:20px;color:var(--muted);">Loading templates...</div>';
+                try {
+                    const resp = await fetch('/api/templates');
+                    if (!resp.ok) throw new Error(await resp.text());
+                    _templates = await resp.json();
+                } catch (e) {
+                    grid.innerHTML = '<div class="error-box" style="grid-column:1/-1;">Error loading templates: ' + escHtml(e.message) + '</div>';
+                    return;
+                }
+            }
+            if (!_templates.length) {
+                grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:20px;color:var(--muted);">No templates available.</div>';
+                return;
+            }
+            grid.innerHTML = _templates.map(function (t, i) {
+                return '<div class="tpl-card" data-tpl-idx="' + i + '" style="cursor:pointer;border:1px solid var(--border);border-radius:12px;overflow:hidden;background:white;transition:border-color 0.15s, box-shadow 0.15s;">' +
+                    '<div id="tpl-prev-' + i + '" style="width:100%;aspect-ratio:1;display:flex;align-items:center;justify-content:center;background:#f4f6fa;"></div>' +
+                    '<div style="padding:9px 11px;">' +
+                        '<div style="font-size:13px;font-weight:700;">' + escHtml(t.name) + '</div>' +
+                        '<div style="font-size:11px;color:var(--muted);line-height:1.35;margin-top:2px;">' + escHtml(t.description || '') + '</div>' +
+                    '</div>' +
+                '</div>';
+            }).join('');
+            _templates.forEach(function (t, i) {
+                renderMiniPreview('tpl-prev-' + i, t.design_state, 180);
+            });
+        }
+
+        function closeTemplatesModal() { document.getElementById('templatesModal').classList.remove('open'); }
+
+        function applyTemplate(idx) {
+            const t = _templates[idx];
+            if (!t) return;
+            if (state.elements.length && !confirm('Replace the current canvas with the "' + t.name + '" template?')) return;
+            closeTemplatesModal();
+            saveLayoutToHistory(JSON.parse(JSON.stringify(t.design_state)));
+            setStatus('Template applied: ' + t.name + ' — click any text to edit it');
+        }
+
+        document.getElementById('templatesGrid').addEventListener('click', function (e) {
+            const card = e.target.closest('.tpl-card');
+            if (card) applyTemplate(parseInt(card.dataset.tplIdx, 10));
+        });
+        document.getElementById('templatesModal').addEventListener('click', function (e) {
+            if (e.target === e.currentTarget) closeTemplatesModal();
+        });
 
         /* ── Actions ── */
         async function generateLayout() {

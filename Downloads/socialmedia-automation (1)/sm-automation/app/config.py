@@ -25,6 +25,7 @@ DEFAULT_IMAGE = "https://via.placeholder.com/600x450"
 
 IMAGES_DIR = os.path.join(BASE_DIR, "data", "images")
 PUBLISHED_DIR = os.path.join(BASE_DIR, "data", "published")
+TEMPLATES_DIR = os.path.join(BASE_DIR, "data", "templates")
 ALLOWED_IMAGE_EXTENSIONS = {".jpg", ".jpeg", ".png", ".webp", ".gif"}
 MAX_IMAGE_SIZE_MB = 10
 

@@ -1,0 +1,15 @@
+[Unit]
+Description=NICDC Social Studio (mock social media APIs)
+After=network.target
+
+[Service]
+Type=simple
+User=www-data
+Group=www-data
+WorkingDirectory=/opt/sm-automation
+ExecStart=/opt/sm-automation/venv/bin/python -m uvicorn main:app --app-dir mock-apis --host 127.0.0.1 --port 8100
+Restart=always
+RestartSec=3
+
+[Install]
+WantedBy=multi-user.target

@@ -17,7 +17,7 @@ from app.auth import (
 )
 from app.chat_handler import chat_edit
 from app.chunker import chunk_document
-from app.config import PAGES_DIR, PUBLISHED_DIR
+from app.config import PAGES_DIR, PUBLISHED_DIR, TEMPLATES_DIR
 from app.design_store import design_store
 from app.document_loader import Document, load_documents
 from app.embedder import embed_batch
@@ -312,6 +312,25 @@ async def serve_published(filename: str):
     fpath = os.path.join(PUBLISHED_DIR, os.path.basename(filename))
     if not os.path.isfile(fpath):
         raise HTTPException(404, "File not found")
+    return FileResponse(fpath)
+
+
+# ── Post templates (brand designs) ────────────────────
+
+@app.get("/api/templates")
+async def list_templates(user: dict = Depends(require_user)):
+    try:
+        with open(os.path.join(TEMPLATES_DIR, "templates.json"), encoding="utf-8") as f:
+            return json.load(f)
+    except (FileNotFoundError, json.JSONDecodeError):
+        return []
+
+
+@app.get("/templates/{filename}")
+async def serve_template_image(filename: str):
+    fpath = os.path.join(TEMPLATES_DIR, os.path.basename(filename))
+    if not os.path.isfile(fpath) or not fpath.endswith(".png"):
+        raise HTTPException(404, "Template image not found")
     return FileResponse(fpath)
 
 

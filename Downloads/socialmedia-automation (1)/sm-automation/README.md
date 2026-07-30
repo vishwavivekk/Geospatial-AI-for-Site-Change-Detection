@@ -71,6 +71,23 @@ The approval workflow runs fully offline. Two AI features use external services:
 | `PUBLIC_BASE_URL` | `http://localhost:8000` | Base URL used for image links given to the APIs |
 | `LLAMA_CPP_URL` | `http://localhost:8080` | Optional embedding server |
 
+## Deploy to a server (GCP VM / any Debian or Ubuntu box)
+
+One command from this machine (needs SSH access to the server):
+
+```bash
+powershell -File deploy/deploy.ps1 -ServerIp YOUR_VM_IP -User YOUR_SSH_USER
+```
+
+This packs the project (secrets excluded), uploads it, and runs
+`deploy/setup-server.sh` on the VM, which installs Python + nginx, creates the
+venv, and starts both apps as systemd services (`sm-studio`, `sm-mock-apis`)
+behind nginx on port 80. The mock API inspector is proxied at `/mock/published`.
+
+Requirements on the GCP side: a firewall rule allowing HTTP (port 80) — tick
+"Allow HTTP traffic" on the VM or add the `default-allow-http` tag.
+After deploying, change the demo passwords in `/opt/sm-automation/data/users.json`.
+
 ## Project layout
 
 ```
