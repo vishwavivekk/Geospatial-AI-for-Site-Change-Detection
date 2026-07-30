@@ -13,4 +13,7 @@ server.log
 data/images/
 data/published/
 data/designs.json
+data/designs/
+data/sm-automation.db
 mock-apis/published_posts.json
+template-creation/uploads/

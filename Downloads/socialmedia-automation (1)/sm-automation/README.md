@@ -46,13 +46,25 @@ Resubmit (revision +1) ─────▶   Review again
                                 └─▶ auto-posts to Instagram, X, LinkedIn
 ```
 
+- "Generate with AI" produces **two layout variations** (deterministic layout
+  engine + LLM copywriting + LLM color enhancement); the editor compares them
+  with tabs and both are submitted for review.
 - Every feedback round is archived per revision (`feedback_history`).
-- On approval the review canvas is exported as a 1080×1080 PNG
-  (`data/published/`), then published through the real multi-step API flows
-  of each platform (IG container → publish, X media upload → tweet,
-  LinkedIn image init → upload → post).
-- Published post IDs are stored on the design and shown in both dashboards.
-- Inspect published posts: http://localhost:8100/published
+- The approver edits the **caption** in the approve dialog; on approval the
+  stored design PNG is posted.
+- **Publishing modes** (`SOCIAL_MODE` env):
+  - `real` — posts to the Instagram/LinkedIn accounts connected in the
+    Zernio dashboard (post URLs stored on the design).
+  - `mock` (default) — simulates the platform APIs locally
+    (inspect at http://localhost:8100/published). Real mode falls back to
+    mock automatically if posting fails.
+- **Categories are dynamic**: editors manage them in the dashboard
+  (name + brand template + layout instructions); each carries the palette,
+  fonts, and logos used by AI generation.
+- Data lives in SQLite (`data/sm-automation.db`); embeddings stay in
+  `vectors.npy`. To migrate older JSON data: `python scripts/migrate_to_db.py`.
+- `template-creation/` is a standalone tool (port 8770) for turning layered
+  PSD exports into fillable templates: `python template-creation/server.py`.
 
 ## Optional AI services
 
@@ -69,7 +81,8 @@ The approval workflow runs fully offline. Two AI features use external services:
 |----------|---------|---------|
 | `MOCK_API_BASE` | `http://localhost:8100` | Mock social media API server |
 | `PUBLIC_BASE_URL` | `http://localhost:8000` | Fallback base URL for image links given to the APIs |
-| `ZERNIO_API_KEY` | *(empty)* | Zernio media hosting — approved post images are uploaded there and published via the returned public URL; without a key the app falls back to serving images itself. Set it in `.env` (never committed). |
+| `ZERNIO_API_KEY` | *(empty)* | Zernio API key — used for media hosting and (in real mode) posting to connected social accounts. Set it in `.env` (never committed). |
+| `SOCIAL_MODE` | `mock` | `real` posts to the social accounts connected in Zernio when a design is approved. Keep `mock` on dev machines. |
 | `LLAMA_CPP_URL` | `http://localhost:8080` | Optional embedding server |
 
 ## Deploy to a server (GCP VM / any Debian or Ubuntu box)

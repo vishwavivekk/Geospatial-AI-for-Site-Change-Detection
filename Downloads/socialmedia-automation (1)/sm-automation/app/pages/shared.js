@@ -103,13 +103,41 @@ function initials(name) {
 function publishPills(results) {
     if (!results) return '';
     const names = { instagram: 'Instagram', x: 'X (Twitter)', linkedin: 'LinkedIn' };
-    return '<div class="pub-results">' + Object.keys(results).map(function (k) {
-        const r = results[k];
-        if (r.status === 'published') {
-            return '<span class="pub-pill">' + icon('check', 13) + names[k] + ' <span class="pid">' + escHtml(r.post_id || '') + '</span></span>';
+    let pills = '';
+
+    if (results.mode === 'real') {
+        // Real posting via Zernio: linkable platform posts
+        const urls = results.post_urls || {};
+        (results.platforms || []).forEach(function (p) {
+            const platform = p.platform || 'unknown';
+            const label = names[platform] || platform;
+            const url = urls[platform];
+            if (url) {
+                pills += '<a class="pub-pill" href="' + escHtml(url) + '" target="_blank" rel="noopener">' + icon('check', 13) + label + ' <span class="pid">view post</span></a>';
+            } else {
+                pills += '<span class="pub-pill">' + icon('check', 13) + label + ' &middot; ' + escHtml(p.status || results.status || 'posted') + '</span>';
+            }
+        });
+        if (!pills && results.post_id) {
+            pills = '<span class="pub-pill">' + icon('check', 13) + 'Posted &middot; ' + escHtml(results.post_id) + '</span>';
         }
-        return '<span class="pub-pill failed">' + icon('x', 13) + names[k] + ' failed</span>';
-    }).join('') + '</div>';
+    } else {
+        // Mock platform APIs: per-platform result records
+        Object.keys(results).forEach(function (k) {
+            const r = results[k];
+            if (!r || typeof r !== 'object' || !r.status) return;
+            const label = names[k] || k;
+            if (r.status === 'published') {
+                pills += '<span class="pub-pill">' + icon('check', 13) + label + ' <span class="pid">' + escHtml(r.post_id || '') + '</span></span>';
+            } else {
+                pills += '<span class="pub-pill failed">' + icon('x', 13) + label + ' failed</span>';
+            }
+        });
+        if (results.note) {
+            pills += '<span class="pub-pill" style="background:var(--warning-soft);color:var(--warning);border-color:var(--warning-border);">' + icon('alert', 13) + 'mock mode</span>';
+        }
+    }
+    return pills ? '<div class="pub-results">' + pills + '</div>' : '';
 }
 
 function emptyState(iconName, title, sub) {

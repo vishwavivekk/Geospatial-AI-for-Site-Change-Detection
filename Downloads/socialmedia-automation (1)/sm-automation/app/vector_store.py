@@ -60,78 +60,27 @@ class VectorStore:
             self.clear()
             return False
 
-    def get_stories(self) -> list[dict]:
-        groups: dict[str, dict] = {}
-        for c in self.chunks:
-            if c.metadata.get("type") != "story":
-                continue
-            key = c.metadata.get("topic", c.metadata.get("title", ""))
-            if not key:
-                continue
-            if key not in groups:
-                groups[key] = {
-                    "topic": key,
-                    "title": c.metadata.get("title", ""),
-                    "date": c.metadata.get("date", ""),
-                    "category": c.metadata.get("category", ""),
-                    "images": [],
-                    "text_parts": [],
-                }
-            groups[key]["text_parts"].append(c.text)
-            for img in c.metadata.get("images", []):
-                if img not in groups[key]["images"]:
-                    groups[key]["images"].append(img)
-        result = []
-        for g in groups.values():
-            result.append({
-                "topic": g["topic"],
-                "title": g["title"],
-                "date": g["date"],
-                "category": g["category"],
-                "images": g["images"],
-                "text": "\n\n".join(g["text_parts"]),
-                "chunks": len(g["text_parts"]),
-            })
-        return result
+    def load_from_metadata(self, meta_list: list[dict]) -> bool:
+        """Load chunks from DB-sourced metadata (used after migration)."""
+        if self.vectors is None:
+            return False
+        self.chunks = [
+            Chunk(text=m["text"], metadata=m["metadata"])
+            for m in meta_list
+        ]
+        return True
 
-    def get_story(self, topic: str) -> dict | None:
-        chunks: list[Chunk] = []
-        images: list[str] = []
-        for c in self.chunks:
-            if c.metadata.get("type") == "story" and c.metadata.get("topic") == topic:
-                chunks.append(c)
-                for img in c.metadata.get("images", []):
-                    if img not in images:
-                        images.append(img)
-        if not chunks:
-            return None
-        meta = chunks[0].metadata
-        text = "\n\n".join(c.text for c in chunks)
-        return {
-            "topic": meta.get("topic", ""),
-            "title": meta.get("title", ""),
-            "date": meta.get("date", ""),
-            "category": meta.get("category", ""),
-            "images": images,
-            "text": text,
-            "chunks": len(chunks),
-        }
-
-    def delete_story(self, topic: str) -> list[str]:
-        keep_indices: list[int] = []
-        images_to_delete: set[str] = set()
-        for i, c in enumerate(self.chunks):
-            if c.metadata.get("type") == "story" and c.metadata.get("topic") == topic:
-                images_to_delete.update(c.metadata.get("images", []))
-            else:
-                keep_indices.append(i)
-        removed = len(self.chunks) - len(keep_indices)
-        self.chunks = [self.chunks[i] for i in keep_indices]
-        if self.vectors is not None and keep_indices:
-            self.vectors = self.vectors[keep_indices]
-        elif self.vectors is not None:
-            self.vectors = None
-        return list(images_to_delete)
+    def delete_by_topic(self, topic: str) -> None:
+        """Remove a story's chunks AND their vector rows so metadata.json
+        and vectors.npy stay row-aligned (required by load_from_metadata)."""
+        if not self.chunks:
+            return
+        keep = [i for i, c in enumerate(self.chunks) if c.metadata.get("topic") != topic]
+        if len(keep) == len(self.chunks):
+            return
+        self.chunks = [self.chunks[i] for i in keep]
+        if self.vectors is not None:
+            self.vectors = self.vectors[keep] if keep else None
 
     def get_random_chunks(self, n: int = 5) -> list[Chunk]:
         if not self.chunks:

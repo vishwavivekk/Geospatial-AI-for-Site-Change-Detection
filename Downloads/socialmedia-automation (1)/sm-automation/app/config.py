@@ -29,6 +29,9 @@ DEFAULT_IMAGE = "https://via.placeholder.com/600x450"
 IMAGES_DIR = os.path.join(BASE_DIR, "data", "images")
 PUBLISHED_DIR = os.path.join(BASE_DIR, "data", "published")
 TEMPLATES_DIR = os.path.join(BASE_DIR, "data", "templates")
+DESIGN_EXPORTS_DIR = os.path.join(BASE_DIR, "data", "designs")
+ASSETS_DIR = os.path.join(BASE_DIR, "assets")
+DATABASE_PATH = os.path.join(BASE_DIR, "data", "sm-automation.db")
 ALLOWED_IMAGE_EXTENSIONS = {".jpg", ".jpeg", ".png", ".webp", ".gif"}
 MAX_IMAGE_SIZE_MB = 10
 
@@ -43,3 +46,7 @@ LINKEDIN_AUTHOR = os.environ.get("LINKEDIN_AUTHOR", "urn:li:organization:900001"
 # ── Zernio media hosting (public image URLs for publishing) ──
 ZERNIO_API_KEY = os.environ.get("ZERNIO_API_KEY", "")
 ZERNIO_API_BASE = os.environ.get("ZERNIO_API_BASE", "https://zernio.com/api")
+
+# "real" posts to the social accounts connected in Zernio on approval.
+# Defaults to "mock" so dev machines and tests can never publish for real.
+SOCIAL_MODE = os.environ.get("SOCIAL_MODE", "mock").lower()

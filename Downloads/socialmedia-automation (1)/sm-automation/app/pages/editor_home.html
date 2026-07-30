@@ -41,11 +41,8 @@
 
         <div id="pane-stories">
             <div style="display:flex;align-items:center;gap:12px;margin-bottom:20px;flex-wrap:wrap;">
-                <div class="tabs" style="margin-bottom:0;" id="categoryTabs">
-                    <button class="tab active" data-category="News">News</button>
-                    <button class="tab" data-category="Hiring">Hiring</button>
-                    <button class="tab" data-category="Events">Events</button>
-                </div>
+                <div class="tabs" style="margin-bottom:0;" id="categoryTabs"></div>
+                <button class="btn btn-ghost btn-sm" onclick="openCategoriesModal()" id="manageCatsBtn">Categories</button>
                 <div style="flex:1;"></div>
                 <div class="search-box">
                     <input id="storySearch" type="text" placeholder="Search stories...">
@@ -71,11 +68,7 @@
                 <label for="storyInfo">Information</label>
                 <textarea id="storyInfo" name="information" required placeholder="Full text content of the story..."></textarea>
                 <label>Category</label>
-                <div class="radio-group">
-                    <label><input type="radio" name="category" value="News" checked> News</label>
-                    <label><input type="radio" name="category" value="Hiring"> Hiring</label>
-                    <label><input type="radio" name="category" value="Events"> Events</label>
-                </div>
+                <div class="radio-group" id="storyCategoryGroup"></div>
                 <label for="storyImages">Images (optional)</label>
                 <input id="storyImages" name="images" type="file" multiple accept=".jpg,.jpeg,.png,.webp,.gif">
                 <div class="modal-actions">
@@ -101,11 +94,7 @@
                 <label for="editInfo">Information</label>
                 <textarea id="editInfo" name="information" required></textarea>
                 <label>Category</label>
-                <div class="radio-group" id="editCategoryGroup">
-                    <label><input type="radio" name="editCategory" value="News"> News</label>
-                    <label><input type="radio" name="editCategory" value="Hiring"> Hiring</label>
-                    <label><input type="radio" name="editCategory" value="Events"> Events</label>
-                </div>
+                <div class="radio-group" id="editCategoryGroup"></div>
                 <label>Existing images</label>
                 <div id="editImagesContainer" class="thumbs" style="margin-bottom:16px;"></div>
                 <label for="editImages">Add new images (optional)</label>
@@ -121,6 +110,32 @@
         </div>
     </div>
 
+    <!-- Manage categories modal -->
+    <div id="categoriesModal" class="modal-overlay">
+        <div class="modal" style="max-width:620px;" onclick="event.stopPropagation()">
+            <h2>Categories</h2>
+            <p class="sub">Each category carries its own brand palette and layout style, used by AI generation.</p>
+            <div id="catList" style="margin-bottom:20px;"></div>
+            <div style="border-top:1px solid var(--border);padding-top:18px;">
+                <h2 style="font-size:15px;">Add a category</h2>
+                <div id="catFeedback" class="feedback-msg" style="margin-top:10px;"></div>
+                <form id="categoryForm" style="margin-top:12px;">
+                    <label for="catName">Name</label>
+                    <input id="catName" type="text" required placeholder="e.g. Milestones">
+                    <label for="catTemplate">Brand template</label>
+                    <select id="catTemplate" onchange="updateTemplatePreview()" style="width:100%;padding:10px 13px;border:1px solid var(--border-strong);border-radius:9px;font-size:14px;font-family:inherit;margin-bottom:10px;"></select>
+                    <div id="templatePreview" style="display:flex;gap:6px;margin-bottom:14px;"></div>
+                    <label for="catInstructions">Layout instructions (optional)</label>
+                    <textarea id="catInstructions" style="min-height:70px;" placeholder="e.g. Bold headline, generous whitespace, feature the date prominently..."></textarea>
+                    <div class="modal-actions">
+                        <button type="button" class="btn" onclick="closeCategoriesModal()">Close</button>
+                        <button type="submit" class="btn btn-primary">Add category</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
     <div id="lightbox" class="lightbox">
         <button class="lightbox-close">&times;</button>
         <img id="lightbox-img" src="" alt="">
@@ -132,8 +147,133 @@
         let _allDesigns = null;
         let _designTopics = {};
         let _searchTerm = '';
+        let _categories = [];
+        let _templates = [];
 
         document.getElementById('navAvatar').textContent = initials('__USER_NAME__');
+
+        /* ── Categories ── */
+        async function loadCategories() {
+            try {
+                const resp = await fetch('/api/categories');
+                if (!resp.ok) throw new Error(await resp.text());
+                _categories = await resp.json();
+            } catch (e) {
+                _categories = [];
+            }
+            renderCategoryTabs();
+            renderCategoryRadios('storyCategoryGroup', 'category');
+            renderCategoryRadios('editCategoryGroup', 'editCategory');
+        }
+
+        function renderCategoryTabs() {
+            const tabs = document.getElementById('categoryTabs');
+            if (!_categories.length) {
+                tabs.innerHTML = '<span style="padding:8px 14px;font-size:13px;color:var(--muted);">No categories yet</span>';
+                return;
+            }
+            const prev = document.querySelector('#categoryTabs .tab.active');
+            let current = prev ? prev.dataset.category : '';
+            if (!current || !_categories.some(c => c.name === current)) {
+                current = _categories.some(c => c.name === 'News') ? 'News' : _categories[0].name;
+            }
+            tabs.innerHTML = _categories.map(function (c) {
+                return '<button class="tab' + (c.name === current ? ' active' : '') + '" data-category="' + escHtml(c.name) + '">' + escHtml(c.name) + '</button>';
+            }).join('');
+        }
+
+        function renderCategoryRadios(containerId, radioName) {
+            const el = document.getElementById(containerId);
+            if (!el) return;
+            el.innerHTML = _categories.map(function (c, i) {
+                return '<label><input type="radio" name="' + radioName + '" value="' + escHtml(c.name) + '"' + (i === 0 ? ' checked' : '') + '> ' + escHtml(c.name) + '</label>';
+            }).join('');
+        }
+
+        function swatches(palette) {
+            return ['primary', 'accent', 'highlight', 'background'].map(function (k) {
+                const col = (palette || {})[k] || '#ccc';
+                return '<span title="' + k + '" style="width:20px;height:20px;border-radius:6px;border:1px solid var(--border);display:inline-block;background:' + escHtml(col) + ';"></span>';
+            }).join('');
+        }
+
+        async function openCategoriesModal() {
+            document.getElementById('categoriesModal').classList.add('open');
+            document.getElementById('catFeedback').className = 'feedback-msg';
+            renderCatList();
+            if (!_templates.length) {
+                try {
+                    const resp = await fetch('/api/categories/templates');
+                    if (resp.ok) _templates = await resp.json();
+                } catch (e) {}
+            }
+            const sel = document.getElementById('catTemplate');
+            sel.innerHTML = _templates.map(function (t) {
+                return '<option value="' + escHtml(t.id) + '">' + escHtml(t.id) + ' — ' + escHtml(t.tone) + '</option>';
+            }).join('');
+            updateTemplatePreview();
+        }
+        function closeCategoriesModal() { document.getElementById('categoriesModal').classList.remove('open'); }
+
+        function renderCatList() {
+            document.getElementById('catList').innerHTML = _categories.map(function (c) {
+                return '<div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--border);">' +
+                    '<b style="min-width:100px;font-size:14px;">' + escHtml(c.name) + '</b>' +
+                    '<span style="display:inline-flex;gap:4px;">' + swatches(c.palette) + '</span>' +
+                    '<span style="flex:1;font-size:12px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + escHtml(c.tone || '') + '</span>' +
+                    '<button class="btn btn-danger-ghost btn-sm" onclick="deleteCategory(\'' + escHtml(c.slug) + '\')">Delete</button>' +
+                '</div>';
+            }).join('') || '<div style="color:var(--muted);font-size:13px;">No categories.</div>';
+        }
+
+        function updateTemplatePreview() {
+            const sel = document.getElementById('catTemplate');
+            const t = _templates.find(x => x.id === sel.value);
+            document.getElementById('templatePreview').innerHTML = t ? swatches(t.palette) : '';
+        }
+
+        document.getElementById('categoryForm').addEventListener('submit', async function (e) {
+            e.preventDefault();
+            const fb = document.getElementById('catFeedback');
+            try {
+                const resp = await fetch('/api/categories', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        name: document.getElementById('catName').value.trim(),
+                        template: document.getElementById('catTemplate').value,
+                        layout_instructions: document.getElementById('catInstructions').value.trim(),
+                    }),
+                });
+                const data = await resp.json();
+                if (!resp.ok) throw new Error(data.detail || 'Failed');
+                document.getElementById('catName').value = '';
+                document.getElementById('catInstructions').value = '';
+                toast('Category added', 'success');
+                await loadCategories();
+                renderCatList();
+            } catch (ex) {
+                fb.className = 'feedback-msg error';
+                fb.textContent = 'Error: ' + ex.message;
+            }
+        });
+
+        async function deleteCategory(slug) {
+            if (!confirm('Delete this category? Stories keep their label, but AI generation for it will stop working.')) return;
+            try {
+                const resp = await fetch('/api/categories/' + encodeURIComponent(slug), { method: 'DELETE' });
+                if (!resp.ok) throw new Error((await resp.json()).detail || 'Failed');
+                toast('Category deleted', 'success');
+                await loadCategories();
+                renderCatList();
+                renderStories(getActiveCategory());
+            } catch (e) {
+                toast('Error: ' + e.message, 'error');
+            }
+        }
+        document.getElementById('categoriesModal').addEventListener('click', function (e) {
+            if (e.target === e.currentTarget) closeCategoriesModal();
+        });
         document.getElementById('addStoryBtn').insertAdjacentHTML('afterbegin', icon('plus', 15));
         document.getElementById('logoutBtn').insertAdjacentHTML('afterbegin', icon('logout', 14));
         document.querySelector('#storySearch').closest('.search-box').insertAdjacentHTML('afterbegin', icon('search', 15));
@@ -176,7 +316,8 @@
 
         function getActiveCategory() {
             const active = document.querySelector('#categoryTabs .tab.active');
-            return active ? active.dataset.category : 'News';
+            if (active) return active.dataset.category;
+            return _categories.length ? _categories[0].name : 'News';
         }
 
         /* ── Stories ── */
@@ -461,7 +602,7 @@
         });
 
         renderStats();
-        loadStories();
+        loadCategories().then(function () { loadStories(); });
         loadDesigns(true);
     </script>
 </body>

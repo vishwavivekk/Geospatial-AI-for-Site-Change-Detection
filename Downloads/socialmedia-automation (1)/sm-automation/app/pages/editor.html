@@ -224,6 +224,10 @@
             <button class="btn btn-danger-ghost btn-sm" id="deleteBtn" onclick="deleteSelected()" disabled>Delete</button>
             <div class="divider"></div>
             <button class="btn btn-sm" id="exportBtn" onclick="exportPNG()">Export PNG</button>
+            <div class="tabs" id="variantTabs" style="display:none;margin:0 0 0 8px;">
+                <button class="tab active" id="variantTab0" onclick="switchVariation(0)">Variation 1</button>
+                <button class="tab" id="variantTab1" onclick="switchVariation(1)">Variation 2</button>
+            </div>
             <div style="flex:1;"></div>
             <button class="btn btn-success btn-sm" id="approvalBtn" onclick="sendForApproval()">Send for approval</button>
         </div>
@@ -300,6 +304,12 @@
         let _chatHistory = [];
         let _chatMode = 'chat';
         let _chatSending = false;
+        let _variations = [null, null];
+        let _variantDesigns = [null, null];   // saved design records per variant
+        let _activeVariation = 0;
+        let _variantGroup = '';
+        let _brand = null;
+        let _content = null;
 
         /* ── Feedback Comments (editor) ── */
         function renderCommentsPanel() {
@@ -615,18 +625,19 @@
 
             const elems = state.elements || [];
             const zOffset = state.canvas.background ? 1 : 0;
+            const imagePromises = [];
 
             elems.forEach((el, i) => {
                 if (el.type === 'image') {
                     const imgNode = createImageNode(el);
                     if (imgNode) {
-                        imgNode.then(n => {
+                        imagePromises.push(imgNode.then(n => {
                             if (!n) return;
                             layer.add(n);
                             // restore element order — async loads must not jump on top
                             n.zIndex(Math.min(i + zOffset, layer.children.length - 1));
                             layer.batchDraw();
-                        }).catch(() => {});
+                        }).catch(() => {}));
                     }
                 } else {
                     const node = createNode(el);
@@ -640,6 +651,7 @@
             updateLayers();
             renderCommentBadges();
             setStatus('Canvas rendered (' + elems.length + ' elements)');
+            return Promise.all(imagePromises);
         }
 
         function createNode(el) {
@@ -1144,13 +1156,57 @@
             if (e.target === e.currentTarget) closeTemplatesModal();
         });
 
+        /* ── Layout variations ── */
+        function variantGroupId() {
+            let h = 0;
+            for (let i = 0; i < TOPIC.length; i++) {
+                h = ((h << 5) - h + TOPIC.charCodeAt(i)) | 0;
+            }
+            return 'vg-' + Math.abs(h).toString(36).padStart(8, '0');
+        }
+
+        function showVariantTabs() {
+            document.getElementById('variantTabs').style.display = '';
+            updateVariantTabs();
+        }
+
+        function updateVariantTabs() {
+            for (let i = 0; i < 2; i++) {
+                const tab = document.getElementById('variantTab' + i);
+                tab.classList.toggle('active', i === _activeVariation);
+                tab.disabled = !_variations[i];
+            }
+        }
+
+        function loadVariantMeta(idx) {
+            const d = _variantDesigns[idx];
+            _editorComments = (d && d.comments) || [];
+            _editorDesignId = d ? d.id : null;
+            _designStatus = d ? d.status : _designStatus;
+            _reviewerNote = (d && d.reviewer_note) || '';
+            renderCommentsPanel();
+            renderCommentBadges();
+            updateFeedbackBanner();
+        }
+
+        async function switchVariation(idx) {
+            if (idx === _activeVariation || !_variations[idx]) return;
+            syncState();
+            _variations[_activeVariation] = JSON.parse(JSON.stringify(state));
+            _activeVariation = idx;
+            saveLayoutToHistory(JSON.parse(JSON.stringify(_variations[idx])));
+            loadVariantMeta(idx);
+            updateVariantTabs();
+            setStatus('Switched to variation ' + (idx + 1));
+        }
+
         /* ── Actions ── */
         async function generateLayout() {
             if (isGenerating) return;
             isGenerating = true;
-            document.getElementById('loadingText').textContent = 'Generating layout with AI...';
+            document.getElementById('loadingText').textContent = 'Generating 2 layout variations with AI...';
             document.getElementById('loadingOverlay').classList.add('open');
-            setStatus('Generating layout from AI...');
+            setStatus('Generating layout variations from AI...');
 
             try {
                 const storyResp = await fetch('/api/stories/' + encodeURIComponent(TOPIC));
@@ -1161,14 +1217,24 @@
                     const story = await storyResp.json();
                     body = { topic: story.topic, text: story.text, images: story.images || [], category: story.category || 'News' };
                 }
-                const resp = await fetch('/api/generate-layout', {
+                const resp = await fetch('/api/generate-layouts', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(body)
                 });
                 if (!resp.ok) throw new Error(await resp.text());
-                const layout = await resp.json();
-                saveLayoutToHistory(layout);
+                const result = await resp.json();
+                _brand = result.brand || null;
+                _content = result.content || null;
+                _variations = result.variations && result.variations.length
+                    ? result.variations.slice(0, 2)
+                    : [null, null];
+                while (_variations.length < 2) _variations.push(null);
+                _variantGroup = variantGroupId();
+                _activeVariation = 0;
+                saveLayoutToHistory(JSON.parse(JSON.stringify(_variations[0])));
+                showVariantTabs();
+                setStatus('Generated ' + _variations.filter(Boolean).length + ' variations — use the tabs to compare');
             } catch (e) {
                 setStatus('Error: ' + e.message);
                 toast('Generation failed: ' + e.message, 'error');
@@ -1202,6 +1268,38 @@
 
         let isSubmitting = false;
 
+        function exportCanvasPngDataUrl() {
+            tr.nodes([]);
+            const oldScale = stage.scaleX();
+            stage.scale({ x: 1, y: 1 });
+            stage.getLayers().forEach(l => l.draw());
+            const uri = stage.toDataURL({ x: 0, y: 0, width: 1080, height: 1080, pixelRatio: 2, mimeType: 'image/png' });
+            stage.scale({ x: oldScale, y: oldScale });
+            stage.getLayers().forEach(l => l.draw());
+            return uri;
+        }
+
+        async function submitOne(designState, pngDataUrl, variantGroup, variantIndex) {
+            const category = document.getElementById('categoryData').textContent || 'News';
+            const fd = new FormData();
+            fd.append('topic', TOPIC);
+            fd.append('category', category);
+            fd.append('design_state', JSON.stringify(designState));
+            fd.append('design_png', await (await fetch(pngDataUrl)).blob(), 'design.png');
+            if (variantGroup) {
+                fd.append('variant_group', variantGroup);
+                fd.append('variant_index', String(variantIndex));
+            }
+            const resp = await fetch('/api/designs/submit', { method: 'POST', body: fd });
+            if (!resp.ok) {
+                const errText = await resp.text();
+                let detail;
+                try { detail = JSON.parse(errText).detail; } catch { detail = errText; }
+                throw new Error(detail || 'Submission failed');
+            }
+            return resp.json();
+        }
+
         async function sendForApproval() {
             if (isSubmitting) return;
             syncState();
@@ -1210,28 +1308,29 @@
                 return;
             }
             isSubmitting = true;
-            document.getElementById('loadingText').textContent = 'Submitting for approval...';
+            document.getElementById('loadingText').textContent = 'Exporting and submitting for approval...';
             document.getElementById('loadingOverlay').classList.add('open');
             setStatus('Submitting design for approval...');
 
             try {
-                const category = document.getElementById('categoryData').textContent || 'News';
-                const resp = await fetch('/api/designs/submit', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        topic: TOPIC,
-                        category: category,
-                        design_state: state
-                    })
-                });
-                if (!resp.ok) {
-                    const errText = await resp.text();
-                    let detail;
-                    try { detail = JSON.parse(errText).detail; } catch { detail = errText; }
-                    throw new Error(detail || 'Submission failed');
+                const hasVariants = _variations.filter(Boolean).length > 1;
+                if (hasVariants) {
+                    // snapshot current edits into the active slot, then submit both
+                    _variations[_activeVariation] = JSON.parse(JSON.stringify(state));
+                    const group = _variantGroup || variantGroupId();
+                    const original = _activeVariation;
+                    for (let i = 0; i < 2; i++) {
+                        if (!_variations[i]) continue;
+                        await render(_variations[i]);
+                        await new Promise(r => setTimeout(r, 120));
+                        const png = exportCanvasPngDataUrl();
+                        await submitOne(_variations[i], png, group, i);
+                    }
+                    await render(_variations[original]);
+                } else {
+                    const png = exportCanvasPngDataUrl();
+                    await submitOne(state, png, '', 0);
                 }
-                await resp.json();
                 document.getElementById('loadingOverlay').classList.remove('open');
                 document.getElementById('feedbackBanner').classList.remove('visible');
                 _editorComments = [];
@@ -1367,7 +1466,30 @@
                     const resp = await fetch('/api/designs/by-topic/' + encodeURIComponent(TOPIC));
                     if (resp.ok) {
                         const design = await resp.json();
-                        if (design.design_state) {
+                        if (design.variant_group) {
+                            // restore all saved variations of this design
+                            const vgResp = await fetch('/api/designs/variant-group/' + encodeURIComponent(design.variant_group));
+                            if (vgResp.ok) {
+                                const group = await vgResp.json();
+                                _variantGroup = design.variant_group;
+                                group.forEach(function (d) {
+                                    const idx = d.variant_index || 0;
+                                    if (idx < 2) {
+                                        _variations[idx] = d.design_state;
+                                        _variantDesigns[idx] = d;
+                                    }
+                                });
+                                const startIdx = _variations[0] ? 0 : 1;
+                                _activeVariation = startIdx;
+                                saveLayoutToHistory(JSON.parse(JSON.stringify(_variations[startIdx])));
+                                loadVariantMeta(startIdx);
+                                showVariantTabs();
+                                if (_designStatus === 'feedback' && _editorComments.length) switchPanel('feedback');
+                                loaded = true;
+                                setStatus('Loaded ' + group.length + ' saved variation(s)');
+                            }
+                        }
+                        if (!loaded && design.design_state) {
                             saveLayoutToHistory(design.design_state);
                             _editorComments = design.comments || [];
                             _editorDesignId = design.id;

@@ -135,8 +135,8 @@
             <div class="publish-progress" id="publish-progress"></div>
             <div class="rv-actions" id="rv-actions">
                 <button class="btn btn-warning" id="btn-request" onclick="openReturnModal()"></button>
-                <button class="btn btn-success" id="btn-approve" onclick="approveAndPublish()"></button>
-                <div class="rv-note-row">Approving publishes automatically to Instagram, X and LinkedIn.</div>
+                <button class="btn btn-success" id="btn-approve" onclick="openApproveModal()"></button>
+                <div class="rv-note-row">Approving posts to the connected social accounts automatically.</div>
             </div>
         </div>
     </div>
@@ -151,6 +151,20 @@
             <div class="modal-actions">
                 <button type="button" class="btn" onclick="closeReturnModal()">Cancel</button>
                 <button type="button" class="btn btn-warning" id="rm-send" onclick="requestChanges()">Send back</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Approve & publish modal -->
+    <div id="approveModal" class="modal-overlay">
+        <div class="modal" onclick="event.stopPropagation()">
+            <h2>Approve &amp; publish</h2>
+            <p class="sub">This posts the design to the connected social media accounts. Review the caption before publishing.</p>
+            <label for="ap-caption">Caption</label>
+            <textarea id="ap-caption" style="min-height:140px;"></textarea>
+            <div class="modal-actions">
+                <button type="button" class="btn" onclick="closeApproveModal()">Cancel</button>
+                <button type="button" class="btn btn-success" id="ap-confirm" onclick="approveAndPublish()">Publish now</button>
             </div>
         </div>
     </div>
@@ -177,6 +191,19 @@
         document.getElementById('rv-badges').innerHTML =
             catBadge(DESIGN_META.category) + statusBadge(DESIGN_META.status) +
             '<span style="font-size:12px;color:var(--muted);font-weight:600;">Rev ' + (DESIGN_META.revision || 1) + '</span>';
+
+        /* Variant navigation — each variation is reviewed on its own page */
+        if ((DESIGN_META.variants || []).length > 1) {
+            const pills = DESIGN_META.variants.map(function (v) {
+                const label = 'Variation ' + ((v.variant_index || 0) + 1);
+                if (v.id === DESIGN_ID) {
+                    return '<button class="tab active" disabled>' + label + '</button>';
+                }
+                return '<a class="tab" href="/review/' + v.id + '" style="text-decoration:none;">' + label + '</a>';
+            }).join('');
+            document.getElementById('rv-badges').insertAdjacentHTML('beforebegin',
+                '<div class="tabs" style="margin:0;">' + pills + '</div>');
+        }
 
         /* ── Canvas ── */
         function initCanvas(designState) {
@@ -437,23 +464,51 @@
             }
         }
 
-        async function approveAndPublish() {
+        function deriveCaption() {
+            if (DESIGN_META.caption) return DESIGN_META.caption;
+            let headline = '', body = '';
+            (DESIGN_STATE.elements || []).forEach(function (el) {
+                if (el.type !== 'text') return;
+                const id = el.id || '';
+                const text = (el.attrs || {}).text || '';
+                if (id.indexOf('headline') !== -1 && !headline) headline = text;
+                else if (id.indexOf('body') !== -1 && !body) body = text;
+            });
+            return (headline + '\n\n' + body).trim() || DESIGN_META.topic;
+        }
+
+        function openApproveModal() {
             if (_comments.length && !confirm('There are ' + _comments.length + ' open comment(s) on this revision. Approve anyway?')) return;
+            document.getElementById('ap-caption').value = deriveCaption();
+            document.getElementById('approveModal').classList.add('open');
+        }
+        function closeApproveModal() { document.getElementById('approveModal').classList.remove('open'); }
+        document.getElementById('approveModal').addEventListener('click', function (e) {
+            if (e.target === this) closeApproveModal();
+        });
+
+        async function approveAndPublish() {
+            closeApproveModal();
+            const caption = document.getElementById('ap-caption').value.trim();
             const progress = document.getElementById('publish-progress');
             const btnA = document.getElementById('btn-approve');
             const btnR = document.getElementById('btn-request');
             btnA.disabled = true;
             btnR.disabled = true;
             progress.classList.add('visible');
-            progress.innerHTML = '<span class="spinner dark"></span> Exporting final image...';
+            progress.innerHTML = '<span class="spinner dark"></span> Preparing final image...';
             try {
                 clearSelection();
-                const pngDataUrl = _stage.toDataURL({ pixelRatio: 1080 / _stage.width(), mimeType: 'image/png' });
-                progress.innerHTML = '<span class="spinner dark"></span> Publishing to Instagram, X and LinkedIn...';
+                let pngDataUrl = '';
+                if (!DESIGN_META.has_png) {
+                    // older designs have no stored export — render one client-side
+                    pngDataUrl = _stage.toDataURL({ pixelRatio: 1080 / _stage.width(), mimeType: 'image/png' });
+                }
+                progress.innerHTML = '<span class="spinner dark"></span> Publishing to social media...';
                 const resp = await fetch('/api/designs/' + DESIGN_ID + '/approve', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ png_data_url: pngDataUrl }),
+                    body: JSON.stringify({ caption: caption, png_data_url: pngDataUrl }),
                 });
                 const data = await resp.json();
                 if (!resp.ok) throw new Error(data.detail || 'Publish failed');

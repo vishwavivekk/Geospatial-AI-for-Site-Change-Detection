@@ -1,10 +1,14 @@
 import json
 import os
+import shutil
+import uuid
+from contextlib import asynccontextmanager
 from datetime import date
 
 from fastapi import Depends, FastAPI, File, Form, HTTPException, Query, Request, UploadFile
 from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, RedirectResponse
 from pydantic import BaseModel
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth import (
     SESSION_COOKIE,
@@ -17,28 +21,87 @@ from app.auth import (
 )
 from app.chat_handler import chat_edit
 from app.chunker import chunk_document
-from app.config import PAGES_DIR, PUBLISHED_DIR, TEMPLATES_DIR
-from app.design_store import design_store
-from app.document_loader import Document, load_documents
+from app.config import (
+    ASSETS_DIR,
+    DESIGN_EXPORTS_DIR,
+    BASE_DIR,
+    PAGES_DIR,
+    PUBLISHED_DIR,
+    TEMPLATES_DIR,
+)
+from app.database import async_session, get_db, init_db
+from app.document_loader import Document
 from app.embedder import embed_batch
+from app.enhancement import enhance_layout
 from app.generator import generate_post
 from app.image_store import get_image_path, save_images
-from app.layout_generator import generate_layout
-from app.publisher import publish_design, save_published_png
+from app.layout_generator import generate_layout, generate_layout_variations
+from app.models import Chunk as ChunkModel
+from app.publisher import build_caption, publish_design as publish_design_mock
+from app.repositories.category_repo import BRAND_TEMPLATES, CategoryRepo, _sanitize_name
+from app.repositories.chunk_repo import ChunkRepo
+from app.repositories.design_repo import DesignRepo
+from app.repositories.image_repo import ImageRepo
+from app.repositories.story_repo import StoryRepo
 from app.retriever import retrieve
+from app.social import post_to_social
 from app.vector_store import store
+from app.zernio import upload_image
 
-app = FastAPI(title="NICDC Social Studio")
+
+class Repos:
+    def __init__(self, session: AsyncSession):
+        self.session = session
+        self.category = CategoryRepo(session)
+        self.design = DesignRepo(session)
+        self.story = StoryRepo(session)
+        self.image = ImageRepo(session)
+        self.chunk = ChunkRepo(session)
+
+
+async def get_repos(session: AsyncSession = Depends(get_db)) -> "Repos":
+    return Repos(session)
+
+
+async def _seed_default_categories():
+    seeds = [("News", "authoritative"), ("Events", "celebratory"), ("Hiring", "opportunity-driven")]
+    async with async_session() as session:
+        repo = CategoryRepo(session)
+        if await repo.list():
+            return
+        for name, template in seeds:
+            try:
+                await repo.create(name, template)
+            except ValueError:
+                pass
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    await init_db()
+    await _seed_default_categories()
+    # vectors.npy + metadata.json are written together and stay row-aligned;
+    # the DB chunk table is the fallback source for chunk metadata.
+    if not store.load():
+        async with async_session() as session:
+            meta = await ChunkRepo(session).get_all_metadata()
+        store.load_from_metadata(meta)
+    yield
+
+
+app = FastAPI(title="NICDC Social Studio", lifespan=lifespan)
+
+
+# ── Request models ────────────────────────────────────
+
+class LoginRequest(BaseModel):
+    username: str
+    password: str
 
 
 class QueryRequest(BaseModel):
     query: str
     k: int = 5
-
-
-class LoginRequest(BaseModel):
-    username: str
-    password: str
 
 
 class GenerateRequest(BaseModel):
@@ -53,10 +116,10 @@ class LayoutRequest(BaseModel):
     images: list[str] = []
 
 
-class DesignSubmitRequest(BaseModel):
-    topic: str
-    category: str = "News"
+class EnhanceLayoutRequest(BaseModel):
     design_state: dict
+    brand: dict
+    content: dict = {}
 
 
 class DesignStatusUpdate(BaseModel):
@@ -65,8 +128,13 @@ class DesignStatusUpdate(BaseModel):
 
 
 class ApproveRequest(BaseModel):
-    png_data_url: str
+    caption: str = ""
     note: str = ""
+    png_data_url: str = ""  # fallback for designs submitted without a stored PNG
+
+
+class CaptionUpdate(BaseModel):
+    caption: str
 
 
 class CommentRequest(BaseModel):
@@ -80,6 +148,18 @@ class ChatEditRequest(BaseModel):
     message: str
     design_state: dict
     history: list[dict] = []
+
+
+class CategoryCreateRequest(BaseModel):
+    name: str
+    template: str
+    layout_instructions: str = ""
+
+
+class CategoryUpdateRequest(BaseModel):
+    name: str | None = None
+    tone: str | None = None
+    layout_instructions: str | None = None
 
 
 # ── Pages ─────────────────────────────────────────────
@@ -139,23 +219,35 @@ async def review_queue_page(request: Request):
 
 
 @app.get("/review/{design_id}", response_class=HTMLResponse)
-async def review_detail_page(request: Request, design_id: str):
+async def review_detail_page(request: Request, design_id: str, repos: Repos = Depends(get_repos)):
     user = get_user(request)
     if not user:
         return RedirectResponse("/login", status_code=302)
     if user["role"] != "approver":
         return RedirectResponse("/", status_code=302)
-    design = design_store.get_one(design_id)
+    design = await repos.design.get_one_dict_with_comments(design_id)
     if not design:
         return HTMLResponse("<h3>Design not found</h3>", status_code=404)
+
+    variants = []
+    if design.get("variant_group"):
+        variants = await repos.design.get_variant_group_with_comments(design["variant_group"])
+
     meta = {
         "topic": design["topic"],
         "category": design["category"],
         "status": design["status"],
         "revision": design.get("revision", 1),
+        "caption": design.get("caption", ""),
         "reviewer_note": design.get("reviewer_note", ""),
         "feedback_history": design.get("feedback_history", []),
         "publish_results": design.get("publish_results"),
+        "published_image_url": design.get("published_image_url", ""),
+        "has_png": bool(design.get("design_png")),
+        "variants": [
+            {"id": v["id"], "variant_index": v.get("variant_index", 0), "status": v["status"]}
+            for v in variants
+        ],
     }
     return HTMLResponse(
         load_page("review.html")
@@ -169,7 +261,6 @@ async def review_detail_page(request: Request, design_id: str):
 
 @app.get("/feedback")
 async def feedback_page_redirect(design_id: str = Query("")):
-    # Legacy URL — the review page replaced it
     if not design_id:
         return RedirectResponse("/review", status_code=302)
     return RedirectResponse(f"/review/{design_id}", status_code=302)
@@ -210,106 +301,40 @@ async def api_me(user: dict = Depends(require_user)):
     return user
 
 
-# ── Startup / Ingest ──────────────────────────────────
-
-@app.on_event("startup")
-async def startup():
-    design_store.load()
-    if store.load():
-        return
-    await ingest()
-
-
-async def ingest():
-    docs = load_documents()
-    if not docs:
-        return
-
-    all_chunks = []
-    for doc in docs:
-        all_chunks.extend(chunk_document(doc))
-
-    texts = [c.text for c in all_chunks]
-    embeddings = await embed_batch(texts)
-
-    for chunk, emb in zip(all_chunks, embeddings):
-        chunk.embedding = emb
-
-    store.add(all_chunks)
-    store.save()
-
-
-# ── Health / Ingestion API ────────────────────────────
+# ── Health / files ────────────────────────────────────
 
 @app.get("/health")
 async def health():
     return {"status": "ok", "chunks": store.size}
 
 
-@app.post("/ingest")
-async def ingest_endpoint(user: dict = Depends(require_editor)):
-    store.clear()
-    await ingest()
-    return {"status": "ok", "chunks": store.size}
-
-
-@app.post("/ingest/story")
-async def ingest_story(
-    topic: str = Form(...),
-    information: str = Form(...),
-    category: str = Form("News"),
-    images: list[UploadFile] = File(default=[]),
-    user: dict = Depends(require_editor),
-):
-    saved_filenames = await save_images(images)
-
-    try:
-        doc = Document(
-            title=topic,
-            date=date.today().isoformat(),
-            source="user-submitted",
-            prid=None,
-            url=None,
-            body=information,
-            filepath="user-submitted",
-        )
-        chunks = chunk_document(doc, extra_meta={
-            "type": "story",
-            "topic": topic,
-            "category": category,
-            "images": saved_filenames,
-        })
-        texts = [c.text for c in chunks]
-        embeddings = await embed_batch(texts)
-        for chunk, emb in zip(chunks, embeddings):
-            chunk.embedding = emb
-        store.add(chunks)
-        store.save()
-    except Exception:
-        from app.image_store import delete_images
-        delete_images(saved_filenames)
-        raise
-
-    return {
-        "status": "ok",
-        "chunks": len(chunks),
-        "images_saved": len(saved_filenames),
-        "topic": topic,
-        "category": category,
-    }
-
-
 @app.get("/images/{filename}")
 async def serve_image(filename: str):
-    fpath = get_image_path(filename)
+    fpath = get_image_path(os.path.basename(filename))
     if not os.path.isfile(fpath):
         raise HTTPException(404, "Image not found")
+    return FileResponse(fpath)
+
+
+@app.get("/assets/{filename}")
+async def serve_asset(filename: str):
+    fpath = os.path.join(ASSETS_DIR, os.path.basename(filename))
+    if not os.path.isfile(fpath):
+        raise HTTPException(404, "Asset not found")
     return FileResponse(fpath)
 
 
 @app.get("/published/{filename}")
 async def serve_published(filename: str):
     fpath = os.path.join(PUBLISHED_DIR, os.path.basename(filename))
+    if not os.path.isfile(fpath):
+        raise HTTPException(404, "File not found")
+    return FileResponse(fpath)
+
+
+@app.get("/design-exports/{filename}")
+async def serve_design_export(filename: str, user: dict = Depends(require_user)):
+    fpath = os.path.join(DESIGN_EXPORTS_DIR, os.path.basename(filename))
     if not os.path.isfile(fpath):
         raise HTTPException(404, "File not found")
     return FileResponse(fpath)
@@ -334,6 +359,8 @@ async def serve_template_image(filename: str):
     return FileResponse(fpath)
 
 
+# ── RAG utilities ─────────────────────────────────────
+
 @app.post("/query")
 async def query_endpoint(req: QueryRequest, user: dict = Depends(require_user)):
     results = await retrieve(req.query, k=req.k)
@@ -342,32 +369,102 @@ async def query_endpoint(req: QueryRequest, user: dict = Depends(require_user)):
 
 @app.post("/generate")
 async def generate_endpoint(req: GenerateRequest, user: dict = Depends(require_editor)):
-    result = await generate_post(req.topic, k=req.k)
-    return result
+    return await generate_post(req.topic, k=req.k)
 
 
 # ── Stories ───────────────────────────────────────────
 
-@app.get("/api/stories")
-async def list_stories(user: dict = Depends(require_user)):
-    return store.get_stories()
-
-
-@app.delete("/api/stories/{topic}")
-async def delete_story(topic: str, user: dict = Depends(require_editor)):
-    images = store.delete_story(topic)
-    from app.image_store import delete_images
-    delete_images(images)
+async def _ingest_story_data(
+    repos: "Repos", topic: str, information: str, category: str,
+    image_filenames: list[str], story_date: str,
+):
+    doc = Document(
+        title=topic,
+        date=story_date,
+        source="user-submitted",
+        prid=None,
+        url=None,
+        body=information,
+        filepath="user-submitted",
+    )
+    chunks = chunk_document(doc, extra_meta={
+        "type": "story",
+        "topic": topic,
+        "category": category,
+        "images": image_filenames,
+    })
+    embeddings = await embed_batch([c.text for c in chunks])
+    for chunk, emb in zip(chunks, embeddings):
+        chunk.embedding = emb
+    store.add(chunks)
     store.save()
-    return {"status": "ok", "topic": topic, "images_deleted": len(images)}
+
+    story = await repos.story.create_story(
+        topic=topic,
+        title=topic,
+        date=story_date,
+        source="user-submitted",
+        body_text=information,
+        category_name=category,
+        image_filenames=image_filenames,
+    )
+    await repos.chunk.add_chunks([
+        ChunkModel(story_id=story.id, text=c.text, chunk_index=i, metadata_json=c.metadata)
+        for i, c in enumerate(chunks)
+    ])
+    return len(chunks)
+
+
+@app.post("/ingest/story")
+async def ingest_story(
+    topic: str = Form(...),
+    information: str = Form(...),
+    category: str = Form("News"),
+    images: list[UploadFile] = File(default=[]),
+    user: dict = Depends(require_editor),
+    repos: Repos = Depends(get_repos),
+):
+    if await repos.story.get_story(topic):
+        raise HTTPException(400, detail="A story with this topic already exists")
+    saved_filenames = await save_images(images, image_repo=repos.image)
+    try:
+        n_chunks = await _ingest_story_data(
+            repos, topic, information, category, saved_filenames, date.today().isoformat()
+        )
+    except Exception:
+        from app.image_store import delete_images
+        delete_images(saved_filenames)
+        raise
+    return {
+        "status": "ok",
+        "chunks": n_chunks,
+        "images_saved": len(saved_filenames),
+        "topic": topic,
+        "category": category,
+    }
+
+
+@app.get("/api/stories")
+async def list_stories(user: dict = Depends(require_user), repos: Repos = Depends(get_repos)):
+    return await repos.story.list_stories()
 
 
 @app.get("/api/stories/{topic}")
-async def get_story(topic: str, user: dict = Depends(require_user)):
-    story = store.get_story(topic)
+async def get_story(topic: str, user: dict = Depends(require_user), repos: Repos = Depends(get_repos)):
+    story = await repos.story.get_story(topic)
     if not story:
         raise HTTPException(404, "Story not found")
     return story
+
+
+@app.delete("/api/stories/{topic}")
+async def delete_story(topic: str, user: dict = Depends(require_editor), repos: Repos = Depends(get_repos)):
+    images = await repos.story.delete_story(topic)
+    from app.image_store import delete_images
+    delete_images(images)
+    store.delete_by_topic(topic)
+    store.save()
+    return {"status": "ok", "topic": topic, "images_deleted": len(images)}
 
 
 @app.put("/api/stories/{topic}")
@@ -379,177 +476,337 @@ async def update_story(
     keep_images: str = Form("[]"),
     images: list[UploadFile] = File(default=[]),
     user: dict = Depends(require_editor),
+    repos: Repos = Depends(get_repos),
 ):
-    existing = store.get_story(topic)
+    existing = await repos.story.get_story(topic)
     if not existing:
         raise HTTPException(404, "Story not found")
 
-    old_images = existing["images"]
     keep: list[str] = json.loads(keep_images) if keep_images else []
-
-    to_delete = [img for img in old_images if img not in keep]
+    to_delete = [img for img in existing["images"] if img not in keep]
     from app.image_store import delete_images
     delete_images(to_delete)
 
-    new_filenames = await save_images(images)
+    new_filenames = await save_images(images, image_repo=repos.image)
     all_images = keep + new_filenames
 
     try:
-        store.delete_story(topic)
-        doc = Document(
-            title=new_topic,
-            date=existing["date"],
-            source="user-submitted",
-            prid=None,
-            url=None,
-            body=information,
-            filepath="user-submitted",
+        await repos.story.delete_story(topic)
+        store.delete_by_topic(topic)
+        n_chunks = await _ingest_story_data(
+            repos, new_topic, information, category, all_images, existing["date"] or date.today().isoformat()
         )
-        chunks = chunk_document(doc, extra_meta={
-            "type": "story",
-            "topic": new_topic,
-            "category": category,
-            "images": all_images,
-        })
-        texts = [c.text for c in chunks]
-        embeddings = await embed_batch(texts)
-        for chunk, emb in zip(chunks, embeddings):
-            chunk.embedding = emb
-        store.add(chunks)
-        store.save()
     except Exception:
         delete_images(new_filenames)
         raise
-
     return {
         "status": "ok",
-        "chunks": len(chunks),
+        "chunks": n_chunks,
         "images_saved": len(all_images),
         "topic": new_topic,
         "category": category,
     }
 
 
-# ── Layout Generation ────────────────────────────────
+# ── Layout generation / AI ────────────────────────────
 
 @app.post("/api/generate-layout")
 async def generate_layout_endpoint(req: LayoutRequest, user: dict = Depends(require_editor)):
-    layout = await generate_layout(
-        topic=req.topic,
-        text=req.text,
-        images=req.images,
-        category=req.category,
+    return await generate_layout(
+        topic=req.topic, text=req.text, images=req.images, category=req.category
     )
-    return layout
+
+
+@app.post("/api/generate-layouts")
+async def generate_layouts_endpoint(req: LayoutRequest, user: dict = Depends(require_editor)):
+    return await generate_layout_variations(
+        topic=req.topic, text=req.text, images=req.images, category=req.category
+    )
+
+
+@app.post("/api/enhance-layout")
+async def enhance_layout_endpoint(req: EnhanceLayoutRequest, user: dict = Depends(require_editor)):
+    return await enhance_layout(
+        design_state=req.design_state, brand=req.brand, content=req.content
+    )
 
 
 @app.post("/api/chat-edit")
 async def chat_edit_endpoint(req: ChatEditRequest, user: dict = Depends(require_editor)):
-    result = await chat_edit(
-        design_state=req.design_state,
-        message=req.message,
-        history=req.history,
+    return await chat_edit(
+        design_state=req.design_state, message=req.message, history=req.history
     )
-    return result
 
 
-# ── Design Approval Workflow ──────────────────────────
+# ── Design workflow ───────────────────────────────────
+
+def _rel_path(path: str) -> str:
+    return path[len(BASE_DIR) + 1:] if path.startswith(BASE_DIR) else path
+
+
+async def _save_design_png(design_png: UploadFile, design_id: str) -> str:
+    os.makedirs(DESIGN_EXPORTS_DIR, exist_ok=True)
+    abs_png = os.path.join(DESIGN_EXPORTS_DIR, design_id + ".png")
+    contents = await design_png.read()
+    with open(abs_png, "wb") as f:
+        f.write(contents)
+    return _rel_path(abs_png)
+
 
 @app.post("/api/designs/submit")
-async def submit_design(req: DesignSubmitRequest, user: dict = Depends(require_editor)):
-    story = store.get_story(req.topic)
+async def submit_design(
+    topic: str = Form(...),
+    category: str = Form(""),
+    design_state: str = Form(...),
+    design_png: UploadFile | None = File(None),
+    variant_group: str = Form(""),
+    variant_index: int = Form(0),
+    user: dict = Depends(require_editor),
+    repos: Repos = Depends(get_repos),
+):
+    state = json.loads(design_state)
+    story = await repos.story.get_story(topic)
     if not story:
-        raise HTTPException(404, detail="Story not found for topic: " + req.topic)
-    existing = design_store.get_by_topic(req.topic)
-    if existing:
-        if existing["status"] == "published":
+        raise HTTPException(404, detail="Story not found for topic: " + topic)
+
+    has_png = bool(design_png and design_png.filename)
+
+    if variant_group:
+        existing_variants = await repos.design.get_variant_group(variant_group)
+        existing_map = {v["variant_index"]: v for v in existing_variants}
+        if any(v["status"] == "published" for v in existing_map.values()):
             raise HTTPException(400, detail="This design is already published and cannot be resubmitted.")
-        design = design_store.update_state(existing["id"], req.design_state, submitted_by=user["display_name"])
+        png_path = ""
+        design_id = existing_map[variant_index]["id"] if variant_index in existing_map else "design-" + uuid.uuid4().hex
+        if has_png:
+            png_path = await _save_design_png(design_png, design_id)
+        if variant_index in existing_map:
+            design = await repos.design.update_variant(variant_group, variant_index, state, png_path)
+        else:
+            design = await repos.design.add(
+                topic=topic, category=category, story_text=story["text"],
+                story_images=story["images"], design_state=state, design_png=png_path,
+                variant_group=variant_group, variant_index=variant_index,
+                submitted_by=user["display_name"],
+            )
     else:
-        design = design_store.add(
-            topic=req.topic,
-            category=req.category,
-            story_text=story["text"],
-            story_images=story["images"],
-            design_state=req.design_state,
-            submitted_by=user["display_name"],
-        )
+        existing = await repos.design.get_by_topic_dict(topic)
+        if existing and existing["status"] == "published":
+            raise HTTPException(400, detail="This design is already published and cannot be resubmitted.")
+        png_path = ""
+        design_id = existing["id"] if existing else "design-" + uuid.uuid4().hex
+        if has_png:
+            old_png = os.path.join(BASE_DIR, existing["design_png"]) if existing and existing.get("design_png") else ""
+            if old_png and os.path.exists(old_png) and not old_png.endswith(design_id + ".png"):
+                os.remove(old_png)
+            png_path = await _save_design_png(design_png, design_id)
+        if existing:
+            design = await repos.design.update_state(
+                existing["id"], state, png_path, submitted_by=user["display_name"]
+            )
+        else:
+            design = await repos.design.add(
+                topic=topic, category=category, story_text=story["text"],
+                story_images=story["images"], design_state=state, design_png=png_path,
+                submitted_by=user["display_name"],
+            )
     return {"status": "ok", "id": design["id"]}
 
 
 @app.get("/api/designs")
-async def list_designs(status: str | None = Query(None), user: dict = Depends(require_user)):
-    return design_store.get_all(status)
+async def list_designs(
+    status: str | None = Query(None),
+    user: dict = Depends(require_user),
+    repos: Repos = Depends(get_repos),
+):
+    return await repos.design.get_all(status)
 
 
 @app.get("/api/designs/check")
-async def check_designs(topics: str = Query(""), user: dict = Depends(require_user)):
+async def check_designs(
+    topics: str = Query(""),
+    user: dict = Depends(require_user),
+    repos: Repos = Depends(get_repos),
+):
     topic_list = [t.strip() for t in topics.split(",") if t.strip()]
     found = {}
     for t in topic_list:
-        d = design_store.get_by_topic(t)
+        d = await repos.design.get_by_topic_dict(t)
         if d:
             found[t] = {"id": d["id"], "status": d.get("status", "pending")}
     return found
 
 
+@app.get("/api/designs/variant-group/{group_id}")
+async def get_variant_group(
+    group_id: str, user: dict = Depends(require_user), repos: Repos = Depends(get_repos)
+):
+    designs = await repos.design.get_variant_group_with_comments(group_id)
+    if not designs:
+        raise HTTPException(404, detail="No designs found for variant group")
+    return sorted(designs, key=lambda d: d.get("variant_index", 0))
+
+
 @app.get("/api/designs/by-topic/{topic}")
-async def get_design_by_topic(topic: str, user: dict = Depends(require_user)):
-    design = design_store.get_by_topic(topic)
+async def get_design_by_topic(
+    topic: str, user: dict = Depends(require_user), repos: Repos = Depends(get_repos)
+):
+    design = await repos.design.get_by_topic(topic)
     if not design:
         raise HTTPException(404, detail="No design found for this topic")
-    return design
+    result = await repos.design.get_one_dict_with_comments(design.id)
+    return result
 
 
 @app.get("/api/designs/{design_id}")
-async def get_design(design_id: str, user: dict = Depends(require_user)):
-    design = design_store.get_one(design_id)
+async def get_design(
+    design_id: str, user: dict = Depends(require_user), repos: Repos = Depends(get_repos)
+):
+    design = await repos.design.get_one_dict_with_comments(design_id)
     if not design:
         raise HTTPException(404, detail="Design not found")
     return design
 
 
 @app.patch("/api/designs/{design_id}/status")
-async def update_design_status(design_id: str, req: DesignStatusUpdate, user: dict = Depends(require_approver)):
+async def update_design_status(
+    design_id: str,
+    req: DesignStatusUpdate,
+    user: dict = Depends(require_approver),
+    repos: Repos = Depends(get_repos),
+):
     if req.status not in ("pending", "rejected", "feedback"):
         raise HTTPException(400, detail="Invalid status. Use the approve endpoint to approve designs.")
-    design = design_store.update_status(design_id, req.status, req.reviewer_note, reviewed_by=user["display_name"])
+    design = await repos.design.update_status(
+        design_id, req.status, req.reviewer_note, reviewed_by=user["display_name"]
+    )
     if not design:
         raise HTTPException(404, detail="Design not found")
     return design
 
 
+@app.patch("/api/designs/{design_id}/caption")
+async def update_design_caption(
+    design_id: str,
+    req: CaptionUpdate,
+    user: dict = Depends(require_approver),
+    repos: Repos = Depends(get_repos),
+):
+    design = await repos.design.update_caption(design_id, req.caption)
+    if not design:
+        raise HTTPException(404, detail="Design not found")
+    return design
+
+
+def _derive_caption(design: dict) -> str:
+    if design.get("caption"):
+        return design["caption"]
+    headline, body = "", ""
+    for el in design.get("design_state", {}).get("elements", []):
+        if el.get("type") == "text":
+            el_id = el.get("id", "")
+            el_text = (el.get("attrs") or {}).get("text", "")
+            if "headline" in el_id and not headline:
+                headline = el_text
+            elif "body" in el_id and not body:
+                body = el_text
+    derived = (headline + "\n\n" + body).strip()
+    if derived:
+        return derived
+    return build_caption(design["topic"], design.get("story_text", ""), 2200)
+
+
 @app.post("/api/designs/{design_id}/approve")
-async def approve_design(design_id: str, req: ApproveRequest, user: dict = Depends(require_approver)):
-    """Final approval: saves the rendered PNG, then auto-publishes the
-    post to Instagram, X and LinkedIn."""
-    design = design_store.get_one(design_id)
+async def approve_design(
+    design_id: str,
+    req: ApproveRequest,
+    user: dict = Depends(require_approver),
+    repos: Repos = Depends(get_repos),
+):
+    """Final approval: posts to the connected social accounts via Zernio;
+    falls back to the mock platform APIs when real posting isn't available."""
+    design = await repos.design.get_one_dict(design_id)
     if not design:
         raise HTTPException(404, detail="Design not found")
     if design["status"] == "published":
         raise HTTPException(400, detail="Design is already published")
 
-    try:
-        png_filename = save_published_png(design_id, req.png_data_url)
-    except Exception:
-        raise HTTPException(400, detail="Invalid PNG data")
+    # Resolve the final PNG: stored at submit time, or provided by the client
+    os.makedirs(PUBLISHED_DIR, exist_ok=True)
+    abs_png = os.path.join(PUBLISHED_DIR, design_id + ".png")
+    stored = os.path.join(BASE_DIR, design["design_png"]) if design.get("design_png") else ""
+    if stored and os.path.isfile(stored):
+        shutil.copyfile(stored, abs_png)
+    elif req.png_data_url:
+        from app.publisher import save_published_png
+        save_published_png(design_id, req.png_data_url)
+    else:
+        raise HTTPException(400, detail="No design PNG available. Re-submit the design from the editor.")
 
-    design = design_store.update_status(design_id, "approved", req.note, reviewed_by=user["display_name"])
-    publish_results, image_url = await publish_design(design, png_filename)
-    design = design_store.set_published(design_id, publish_results, image_url=image_url)
+    if req.caption:
+        await repos.design.update_caption(design_id, req.caption)
+        design["caption"] = req.caption
+    caption = _derive_caption(design)
+
+    await repos.design.update_status(
+        design_id, "approved", req.note, reviewed_by=user["display_name"]
+    )
+
+    # 1) Real posting via Zernio — only when explicitly enabled (SOCIAL_MODE=real)
+    from app.config import SOCIAL_MODE
+    mode = "real" if SOCIAL_MODE == "real" else "mock"
+    image_url = ""
+    real_err = None
+    if mode == "real":
+        try:
+            results = await post_to_social(abs_png, caption)
+            image_url = results.get("image_url", "")
+            all_ok = True
+        except Exception as e:
+            real_err = e
+            mode = "mock"
+    if mode == "mock":
+        # 2) Mock platform APIs + Zernio-hosted image
+        results, image_url = await publish_design_mock(design, design_id + ".png")
+        if real_err is not None:
+            results["note"] = f"Real posting unavailable ({real_err}); published to mock platforms."
+        elif SOCIAL_MODE != "real":
+            results["note"] = "SOCIAL_MODE=mock — published to mock platforms only."
+        all_ok = all(
+            r.get("status") == "published"
+            for k, r in results.items() if isinstance(r, dict) and "status" in r
+        )
+
+    results["mode"] = mode
+    design = await repos.design.set_published(design_id, results, image_url=image_url, all_ok=all_ok)
+
+    # Sibling variants are superseded by the approved one
+    if design.get("variant_group"):
+        for v in await repos.design.get_variant_group(design["variant_group"]):
+            if v["id"] != design_id and v["status"] not in ("published", "rejected"):
+                await repos.design.update_status(
+                    v["id"], "rejected", "Another variant was approved",
+                    reviewed_by=user["display_name"],
+                )
 
     return {
         "status": design["status"],
-        "publish_results": publish_results,
-        "image": image_url,
+        "publish_results": results,
+        "image": image_url or f"/published/{design_id}.png",
+        "caption": caption,
     }
 
 
-# ── Comments (approver feedback) ──────────────────────
+# ── Comments ──────────────────────────────────────────
 
 @app.post("/api/designs/{design_id}/comments")
-async def add_comment(design_id: str, req: CommentRequest, user: dict = Depends(require_approver)):
-    comment = design_store.add_comment(
+async def add_comment(
+    design_id: str,
+    req: CommentRequest,
+    user: dict = Depends(require_approver),
+    repos: Repos = Depends(get_repos),
+):
+    comment = await repos.design.add_comment(
         design_id, req.element_id, req.element_type, req.text, author=user["display_name"]
     )
     if comment is None:
@@ -558,16 +815,71 @@ async def add_comment(design_id: str, req: CommentRequest, user: dict = Depends(
 
 
 @app.get("/api/designs/{design_id}/comments")
-async def get_comments(design_id: str, user: dict = Depends(require_user)):
-    result = design_store.get_comments(design_id)
+async def get_comments(
+    design_id: str, user: dict = Depends(require_user), repos: Repos = Depends(get_repos)
+):
+    result = await repos.design.get_comments(design_id)
     if result is None:
         raise HTTPException(404, detail="Design not found")
     return result
 
 
 @app.delete("/api/designs/{design_id}/comments/{comment_id}")
-async def delete_comment(design_id: str, comment_id: str, user: dict = Depends(require_approver)):
-    result = design_store.delete_comment(design_id, comment_id)
+async def delete_comment(
+    design_id: str, comment_id: str,
+    user: dict = Depends(require_approver),
+    repos: Repos = Depends(get_repos),
+):
+    result = await repos.design.delete_comment(design_id, comment_id)
     if result is None:
         raise HTTPException(404, detail="Design not found")
     return {"comments": result}
+
+
+# ── Categories ────────────────────────────────────────
+
+@app.get("/api/categories")
+async def api_list_categories(user: dict = Depends(require_user), repos: Repos = Depends(get_repos)):
+    return await repos.category.list()
+
+
+@app.get("/api/categories/templates")
+async def api_category_templates(user: dict = Depends(require_user)):
+    return CategoryRepo.get_templates()
+
+
+@app.post("/api/categories")
+async def api_create_category(
+    req: CategoryCreateRequest,
+    user: dict = Depends(require_editor),
+    repos: Repos = Depends(get_repos),
+):
+    try:
+        return await repos.category.create(req.name, req.template, req.layout_instructions)
+    except ValueError as e:
+        raise HTTPException(400, detail=str(e))
+
+
+@app.put("/api/categories/{slug}")
+async def api_update_category(
+    slug: str,
+    req: CategoryUpdateRequest,
+    user: dict = Depends(require_editor),
+    repos: Repos = Depends(get_repos),
+):
+    data = {k: v for k, v in req.model_dump().items() if v is not None and k != "name"}
+    try:
+        return await repos.category.update(slug, data)
+    except ValueError as e:
+        raise HTTPException(404, detail=str(e))
+
+
+@app.delete("/api/categories/{slug}")
+async def api_delete_category(
+    slug: str,
+    user: dict = Depends(require_editor),
+    repos: Repos = Depends(get_repos),
+):
+    if not await repos.category.delete(slug):
+        raise HTTPException(404, detail=f"Category '{slug}' not found")
+    return {"status": "ok", "deleted": slug}

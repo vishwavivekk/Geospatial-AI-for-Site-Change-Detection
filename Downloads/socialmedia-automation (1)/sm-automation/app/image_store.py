@@ -6,7 +6,10 @@ from fastapi import UploadFile, HTTPException
 from app.config import IMAGES_DIR, ALLOWED_IMAGE_EXTENSIONS, MAX_IMAGE_SIZE_MB
 
 
-async def save_images(files: list[UploadFile]) -> list[str]:
+async def save_images(
+    files: list[UploadFile],
+    image_repo=None,
+) -> list[str]:
     if not files or all(f.filename is None or f.filename == "" for f in files):
         return []
 
@@ -38,6 +41,13 @@ async def save_images(files: list[UploadFile]) -> list[str]:
             with open(fpath, "wb") as f:
                 f.write(content)
             saved.append(fname)
+
+            if image_repo is not None:
+                await image_repo.register(
+                    filename=fname,
+                    original_filename=file.filename,
+                    file_size=len(content),
+                )
     except Exception:
         delete_images(saved)
         raise

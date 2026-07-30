@@ -1,0 +1,1827 @@
+{
+  "name": "ICLP Page 4 - Tools Grid (layered)",
+  "canvas": {
+    "w": 1080,
+    "h": 1080,
+    "background": "#0D1B2A"
+  },
+  "elements": [
+    {
+      "id": "el-1",
+      "type": "image",
+      "locked": true,
+      "attrs": {
+        "x": 0,
+        "y": 0,
+        "width": 1079,
+        "height": 1080,
+        "src": "/assets/p4_l00_0_0_1880_1881.png",
+        "opacity": 1
+      }
+    },
+    {
+      "id": "el-2",
+      "type": "image",
+      "locked": true,
+      "attrs": {
+        "x": 0,
+        "y": 0,
+        "width": 1079,
+        "height": 1080,
+        "src": "/assets/p4_l01_0_0_1880_1881.png",
+        "opacity": 1
+      }
+    },
+    {
+      "id": "el-3",
+      "type": "image",
+      "locked": true,
+      "attrs": {
+        "x": 275,
+        "y": 0,
+        "width": 1002,
+        "height": 558,
+        "src": "/assets/p4_l02_479_0_1745_971.png",
+        "opacity": 1
+      }
+    },
+    {
+      "id": "el-4",
+      "type": "image",
+      "locked": true,
+      "attrs": {
+        "x": 0,
+        "y": 0,
+        "width": 1080,
+        "height": 1081,
+        "src": "/assets/p4_l03_0_0_1881_1882.png",
+        "opacity": 1
+      }
+    },
+    {
+      "id": "el-5",
+      "type": "image",
+      "locked": true,
+      "attrs": {
+        "x": 0,
+        "y": 50,
+        "width": 288,
+        "height": 254,
+        "src": "/assets/p4_l04_0_87_501_443.png",
+        "opacity": 1
+      }
+    },
+    {
+      "id": "el-6",
+      "type": "text",
+      "locked": false,
+      "attrs": {
+        "x": 67,
+        "y": 257,
+        "width": 456,
+        "height": 106,
+        "text": "ALL IN ONE PLACE",
+        "fontSize": 53,
+        "fontFamily": "Inter, sans-serif",
+        "fontStyle": "bold",
+        "fill": "#002c64",
+        "align": "center",
+        "lineHeight": 1.3,
+        "wrap": "word"
+      },
+      "slot": true,
+      "slot_label": "ALL IN ONE PLACE",
+      "slot_type": "text"
+    },
+    {
+      "id": "el-7",
+      "type": "image",
+      "locked": true,
+      "attrs": {
+        "x": 63,
+        "y": 303,
+        "width": 467,
+        "height": 25,
+        "src": "/assets/p4_l06_110_528_813_44.png",
+        "opacity": 1
+      }
+    },
+    {
+      "id": "el-8",
+      "type": "image",
+      "locked": true,
+      "attrs": {
+        "x": 49,
+        "y": 438,
+        "width": 981,
+        "height": 424,
+        "src": "/assets/p4_l07_86_763_1708_738.png",
+        "opacity": 1
+      }
+    },
+    {
+      "id": "el-9",
+      "type": "image",
+      "locked": true,
+      "attrs": {
+        "x": 100,
+        "y": 455,
+        "width": 153,
+        "height": 153,
+        "src": "/assets/p4_l08_175_793_266_267.png",
+        "opacity": 1
+      }
+    },
+    {
+      "id": "el-10",
+      "type": "image",
+      "locked": true,
+      "attrs": {
+        "x": 134,
+        "y": 489,
+        "width": 86,
+        "height": 86,
+        "src": "/assets/p4_l09_233_852_150_149.png",
+        "opacity": 1
+      },
+      "slot": true,
+      "slot_label": "Column 1 card icon",
+      "slot_type": "image"
+    },
+    {
+      "id": "el-11",
+      "type": "image",
+      "locked": true,
+      "attrs": {
+        "x": 151,
+        "y": 607,
+        "width": 52,
+        "height": 22,
+        "src": "/assets/p4_l10_263_1057_91_39.png",
+        "opacity": 1
+      }
+    },
+    {
+      "id": "el-12",
+      "type": "image",
+      "locked": true,
+      "attrs": {
+        "x": 287,
+        "y": 472,
+        "width": 18,
+        "height": 339,
+        "src": "/assets/p4_l11_499_822_31_590.png",
+        "opacity": 1
+      }
+    },
+    {
+      "id": "el-13",
+      "type": "image",
+      "locked": true,
+      "attrs": {
+        "x": 354,
+        "y": 455,
+        "width": 137,
+        "height": 153,
+        "src": "/assets/p4_l12_616_793_238_267.png",
+        "opacity": 1
+      }
+    },
+    {
+      "id": "el-14",
+      "type": "image",
+      "locked": true,
+      "attrs": {
+        "x": 371,
+        "y": 489,
+        "width": 86,
+        "height": 86,
+        "src": "/assets/p4_l13_646_852_149_149.png",
+        "opacity": 1
+      },
+      "slot": true,
+      "slot_label": "Column 2 card icon",
+      "slot_type": "image"
+    },
+    {
+      "id": "el-15",
+      "type": "image",
+      "locked": true,
+      "attrs": {
+        "x": 387,
+        "y": 621,
+        "width": 57,
+        "height": 11,
+        "src": "/assets/p4_l14_674_1081_100_19.png",
+        "opacity": 1
+      }
+    },
+    {
+      "id": "el-16",
+      "type": "image",
+      "locked": true,
+      "attrs": {
+        "x": 522,
+        "y": 472,
+        "width": 18,
+        "height": 339,
+        "src": "/assets/p4_l15_910_822_31_590.png",
+        "opacity": 1
+      }
+    },
+    {
+      "id": "el-17",
+      "type": "image",
+      "locked": true,
+      "attrs": {
+        "x": 590,
+        "y": 455,
+        "width": 137,
+        "height": 153,
+        "src": "/assets/p4_l16_1027_793_238_267.png",
+        "opacity": 1
+      }
+    },
+    {
+      "id": "el-18",
+      "type": "image",
+      "locked": true,
+      "attrs": {
+        "x": 623,
+        "y": 503,
+        "width": 71,
+        "height": 70,
+        "src": "/assets/p4_l17_1085_876_124_122.png",
+        "opacity": 1
+      },
+      "slot": true,
+      "slot_label": "Column 3 card icon",
+      "slot_type": "image"
+    },
+    {
+      "id": "el-19",
+      "type": "image",
+      "locked": true,
+      "attrs": {
+        "x": 623,
+        "y": 621,
+        "width": 60,
+        "height": 11,
+        "src": "/assets/p4_l18_1085_1081_105_19.png",
+        "opacity": 1
+      }
+    },
+    {
+      "id": "el-20",
+      "type": "image",
+      "locked": true,
+      "attrs": {
+        "x": 776,
+        "y": 472,
+        "width": 8,
+        "height": 338,
+        "src": "/assets/p4_l19_1351_822_14_589.png",
+        "opacity": 1
+      }
+    },
+    {
+      "id": "el-21",
+      "type": "image",
+      "locked": true,
+      "attrs": {
+        "x": 826,
+        "y": 455,
+        "width": 153,
+        "height": 153,
+        "src": "/assets/p4_l20_1439_793_267_267.png",
+        "opacity": 1
+      }
+    },
+    {
+      "id": "el-22",
+      "type": "image",
+      "locked": true,
+      "attrs": {
+        "x": 860,
+        "y": 489,
+        "width": 86,
+        "height": 86,
+        "src": "/assets/p4_l21_1498_852_149_149.png",
+        "opacity": 1
+      },
+      "slot": true,
+      "slot_label": "Column 4 card icon",
+      "slot_type": "image"
+    },
+    {
+      "id": "el-23",
+      "type": "image",
+      "locked": true,
+      "attrs": {
+        "x": 876,
+        "y": 621,
+        "width": 47,
+        "height": 11,
+        "src": "/assets/p4_l22_1526_1081_81_19.png",
+        "opacity": 1
+      }
+    },
+    {
+      "id": "el-24",
+      "type": "image",
+      "locked": true,
+      "attrs": {
+        "x": 0,
+        "y": 877,
+        "width": 1080,
+        "height": 187,
+        "src": "/assets/p4_l23_0_1527_1881_326.png",
+        "opacity": 1
+      }
+    },
+    {
+      "id": "el-25",
+      "type": "image",
+      "locked": true,
+      "attrs": {
+        "x": 67,
+        "y": 877,
+        "width": 69,
+        "height": 86,
+        "src": "/assets/p4_l24_116_1527_120_149.png",
+        "opacity": 1
+      }
+    },
+    {
+      "id": "el-26",
+      "type": "image",
+      "locked": true,
+      "attrs": {
+        "x": 83,
+        "y": 894,
+        "width": 52,
+        "height": 52,
+        "src": "/assets/p4_l25_145_1557_91_91.png",
+        "opacity": 1
+      },
+      "slot": true,
+      "slot_label": "Column 1 footer icon",
+      "slot_type": "image"
+    },
+    {
+      "id": "el-27",
+      "type": "image",
+      "locked": true,
+      "attrs": {
+        "x": 303,
+        "y": 894,
+        "width": 19,
+        "height": 52,
+        "src": "/assets/p4_l26_527_1557_33_91.png",
+        "opacity": 1
+      }
+    },
+    {
+      "id": "el-28",
+      "type": "image",
+      "locked": true,
+      "attrs": {
+        "x": 336,
+        "y": 877,
+        "width": 69,
+        "height": 86,
+        "src": "/assets/p4_l27_586_1527_121_149.png",
+        "opacity": 1
+      }
+    },
+    {
+      "id": "el-29",
+      "type": "image",
+      "locked": true,
+      "attrs": {
+        "x": 354,
+        "y": 894,
+        "width": 35,
+        "height": 52,
+        "src": "/assets/p4_l28_616_1557_61_91.png",
+        "opacity": 1
+      },
+      "slot": true,
+      "slot_label": "Column 2 footer icon",
+      "slot_type": "image"
+    },
+    {
+      "id": "el-30",
+      "type": "image",
+      "locked": true,
+      "attrs": {
+        "x": 0,
+        "y": 953,
+        "width": 540,
+        "height": 169,
+        "src": "/assets/p4_l29_0_1660_941_295.png",
+        "opacity": 1
+      }
+    },
+    {
+      "id": "el-31",
+      "type": "image",
+      "locked": true,
+      "attrs": {
+        "x": 252,
+        "y": 1046,
+        "width": 828,
+        "height": 35,
+        "src": "/assets/p4_l30_439_1821_1442_61.png",
+        "opacity": 1
+      }
+    },
+    {
+      "id": "el-32",
+      "type": "image",
+      "locked": true,
+      "attrs": {
+        "x": 216,
+        "y": 1038,
+        "width": 30,
+        "height": 26,
+        "src": "/assets/p4_l31_376_1808_52_46.png",
+        "opacity": 1
+      }
+    },
+    {
+      "id": "el-33",
+      "type": "image",
+      "locked": true,
+      "attrs": {
+        "x": 254,
+        "y": 1041,
+        "width": 21,
+        "height": 21,
+        "src": "/assets/p4_l32_442_1813_36_37.png",
+        "opacity": 1
+      }
+    },
+    {
+      "id": "el-34",
+      "type": "text",
+      "locked": true,
+      "attrs": {
+        "x": 284,
+        "y": 1039,
+        "width": 131,
+        "height": 48,
+        "text": "@iclp_nicdc",
+        "fontSize": 24,
+        "fontFamily": "Inter, sans-serif",
+        "fontStyle": "bold",
+        "fill": "#ffffff",
+        "align": "center",
+        "lineHeight": 1.3,
+        "wrap": "word"
+      }
+    },
+    {
+      "id": "el-35",
+      "type": "image",
+      "locked": true,
+      "attrs": {
+        "x": 34,
+        "y": 1033,
+        "width": 33,
+        "height": 33,
+        "src": "/assets/p4_l34_60_1800_58_58.png",
+        "opacity": 1
+      }
+    },
+    {
+      "id": "el-36",
+      "type": "text",
+      "locked": true,
+      "attrs": {
+        "x": 75,
+        "y": 1041,
+        "width": 123,
+        "height": 46,
+        "text": "iclp.nicdc.in",
+        "fontSize": 23,
+        "fontFamily": "Inter, sans-serif",
+        "fontStyle": "bold",
+        "fill": "#ffffff",
+        "align": "center",
+        "lineHeight": 1.3,
+        "wrap": "word"
+      }
+    },
+    {
+      "id": "el-37",
+      "type": "image",
+      "locked": true,
+      "attrs": {
+        "x": 0,
+        "y": -1,
+        "width": 485,
+        "height": 148,
+        "src": "/assets/p4_l36_0_-2_844_257.png",
+        "opacity": 1
+      }
+    },
+    {
+      "id": "el-38",
+      "type": "image",
+      "locked": true,
+      "attrs": {
+        "x": 17,
+        "y": 15,
+        "width": 445,
+        "height": 101,
+        "src": "/assets/p4_l37_30_26_775_176.png",
+        "opacity": 1
+      }
+    },
+    {
+      "id": "el-39",
+      "type": "image",
+      "locked": true,
+      "attrs": {
+        "x": 367,
+        "y": 16,
+        "width": 59,
+        "height": 103,
+        "src": "/assets/p4_l38_639_28_103_179.png",
+        "opacity": 1
+      }
+    },
+    {
+      "id": "el-40",
+      "type": "image",
+      "locked": true,
+      "attrs": {
+        "x": 38,
+        "y": 16,
+        "width": 123,
+        "height": 107,
+        "src": "/assets/p4_l39_66_28_215_187.png",
+        "opacity": 1
+      }
+    },
+    {
+      "id": "el-41",
+      "type": "text",
+      "locked": true,
+      "attrs": {
+        "x": 235,
+        "y": 99,
+        "width": 57,
+        "height": 54,
+        "text": "ICLP",
+        "fontSize": 27,
+        "fontFamily": "Inter, sans-serif",
+        "fontStyle": "bold",
+        "fill": "#0d2b46",
+        "align": "center",
+        "lineHeight": 1.3,
+        "wrap": "word"
+      }
+    },
+    {
+      "id": "el-42",
+      "type": "image",
+      "locked": true,
+      "attrs": {
+        "x": 221,
+        "y": 16,
+        "width": 84,
+        "height": 73,
+        "src": "/assets/p4_l41_385_28_146_127.png",
+        "opacity": 1
+      }
+    },
+    {
+      "id": "el-43",
+      "type": "image",
+      "locked": true,
+      "attrs": {
+        "x": 643,
+        "y": -130,
+        "width": 518,
+        "height": 518,
+        "src": "/assets/p4_l42_1120_-226_903_902.png",
+        "opacity": 1
+      }
+    },
+    {
+      "id": "el-44",
+      "type": "image",
+      "locked": true,
+      "attrs": {
+        "x": 584,
+        "y": -99,
+        "width": 644,
+        "height": 467,
+        "src": "/assets/p4_l43_1018_-172_1121_813.png",
+        "opacity": 1
+      }
+    },
+    {
+      "id": "el-45",
+      "type": "text",
+      "locked": false,
+      "attrs": {
+        "x": 72,
+        "y": 215,
+        "width": 342,
+        "height": 58,
+        "text": "ALL THE TOOLS YOU NEED",
+        "fontSize": 29,
+        "fontFamily": "Inter, sans-serif",
+        "fontStyle": "bold",
+        "fill": "#001f44",
+        "align": "center",
+        "lineHeight": 1.3,
+        "wrap": "word"
+      },
+      "slot": true,
+      "slot_label": "ALL THE TOOLS YOU NEED",
+      "slot_type": "text"
+    },
+    {
+      "id": "el-46",
+      "type": "text",
+      "locked": false,
+      "attrs": {
+        "x": 70,
+        "y": 345,
+        "width": 300,
+        "height": 50,
+        "text": "Explore investor tools on",
+        "fontSize": 25,
+        "fontFamily": "Inter, sans-serif",
+        "fontStyle": "bold",
+        "fill": "#001f44",
+        "align": "center",
+        "lineHeight": 1.3,
+        "wrap": "word"
+      },
+      "slot": true,
+      "slot_label": "Explore investor tools on",
+      "slot_type": "text"
+    },
+    {
+      "id": "el-47",
+      "type": "text",
+      "locked": false,
+      "attrs": {
+        "x": 69,
+        "y": 377,
+        "width": 519,
+        "height": 44,
+        "text": "ICLP \u2013 Industrial Corridor Land Platform",
+        "fontSize": 22,
+        "fontFamily": "Inter, sans-serif",
+        "fontStyle": "bold",
+        "fill": "#001f44",
+        "align": "center",
+        "lineHeight": 1.3,
+        "wrap": "word"
+      },
+      "slot": true,
+      "slot_label": "ICLP \u2013 Industrial Corridor Lan",
+      "slot_type": "text"
+    },
+    {
+      "id": "el-48",
+      "type": "text",
+      "locked": false,
+      "attrs": {
+        "x": 104,
+        "y": 713,
+        "width": 159,
+        "height": 90,
+        "text": "Estimate land and project setup costs in just a few clicks.",
+        "fontSize": 18,
+        "fontFamily": "Inter, sans-serif",
+        "fontStyle": "normal",
+        "fill": "#ffffff",
+        "align": "center",
+        "lineHeight": 1.3,
+        "wrap": "word"
+      },
+      "slot": true,
+      "slot_label": "Estimate land and project setu",
+      "slot_type": "text"
+    },
+    {
+      "id": "el-49",
+      "type": "text",
+      "locked": false,
+      "attrs": {
+        "x": 359,
+        "y": 650,
+        "width": 125,
+        "height": 52,
+        "text": "Investor\u2019s Site Visit Kit",
+        "fontSize": 21,
+        "fontFamily": "Inter, sans-serif",
+        "fontStyle": "bold",
+        "fill": "#ffffff",
+        "align": "center",
+        "lineHeight": 1.3,
+        "wrap": "word"
+      },
+      "slot": true,
+      "slot_label": "Investor\u2019s Site Visit Kit",
+      "slot_type": "text"
+    },
+    {
+      "id": "el-50",
+      "type": "text",
+      "locked": false,
+      "attrs": {
+        "x": 138,
+        "y": 649,
+        "width": 108,
+        "height": 52,
+        "text": "Cost Calculator",
+        "fontSize": 21,
+        "fontFamily": "Inter, sans-serif",
+        "fontStyle": "bold",
+        "fill": "#ffffff",
+        "align": "center",
+        "lineHeight": 1.3,
+        "wrap": "word"
+      },
+      "slot": true,
+      "slot_label": "Cost Calculator",
+      "slot_type": "text"
+    },
+    {
+      "id": "el-51",
+      "type": "text",
+      "locked": false,
+      "attrs": {
+        "x": 323,
+        "y": 713,
+        "width": 191,
+        "height": 95,
+        "text": "Checklist for effective industrial site visits and assessments.",
+        "fontSize": 19,
+        "fontFamily": "Inter, sans-serif",
+        "fontStyle": "normal",
+        "fill": "#ffffff",
+        "align": "center",
+        "lineHeight": 1.3,
+        "wrap": "word"
+      },
+      "slot": true,
+      "slot_label": "Checklist for effective indust",
+      "slot_type": "text"
+    },
+    {
+      "id": "el-52",
+      "type": "text",
+      "locked": false,
+      "attrs": {
+        "x": 579,
+        "y": 649,
+        "width": 162,
+        "height": 55,
+        "text": "Land Allotment Workflow",
+        "fontSize": 22,
+        "fontFamily": "Inter, sans-serif",
+        "fontStyle": "bold",
+        "fill": "#ffffff",
+        "align": "center",
+        "lineHeight": 1.3,
+        "wrap": "word"
+      },
+      "slot": true,
+      "slot_label": "Land Allotment Workflow",
+      "slot_type": "text"
+    },
+    {
+      "id": "el-53",
+      "type": "text",
+      "locked": false,
+      "attrs": {
+        "x": 559,
+        "y": 713,
+        "width": 203,
+        "height": 95,
+        "text": "Step-by-step guidance on industrial land allotment process.",
+        "fontSize": 19,
+        "fontFamily": "Inter, sans-serif",
+        "fontStyle": "normal",
+        "fill": "#ffffff",
+        "align": "center",
+        "lineHeight": 1.3,
+        "wrap": "word"
+      },
+      "slot": true,
+      "slot_label": "Step-by-step guidance on indus",
+      "slot_type": "text"
+    },
+    {
+      "id": "el-54",
+      "type": "text",
+      "locked": false,
+      "attrs": {
+        "x": 841,
+        "y": 648,
+        "width": 117,
+        "height": 58,
+        "text": "Know Your Approvals",
+        "fontSize": 23,
+        "fontFamily": "Inter, sans-serif",
+        "fontStyle": "bold",
+        "fill": "#ffffff",
+        "align": "center",
+        "lineHeight": 1.3,
+        "wrap": "word"
+      },
+      "slot": true,
+      "slot_label": "Know Your Approvals",
+      "slot_type": "text"
+    },
+    {
+      "id": "el-55",
+      "type": "text",
+      "locked": false,
+      "attrs": {
+        "x": 816,
+        "y": 715,
+        "width": 175,
+        "height": 100,
+        "text": "State-wise industrial approvals and clearances at your fingertips.",
+        "fontSize": 20,
+        "fontFamily": "Inter, sans-serif",
+        "fontStyle": "normal",
+        "fill": "#ffffff",
+        "align": "center",
+        "lineHeight": 1.3,
+        "wrap": "word"
+      },
+      "slot": true,
+      "slot_label": "State-wise industrial approval",
+      "slot_type": "text"
+    },
+    {
+      "id": "el-56",
+      "type": "text",
+      "locked": false,
+      "attrs": {
+        "x": 149,
+        "y": 908,
+        "width": 147,
+        "height": 32,
+        "text": "One Platform. Smarter Decisions.",
+        "fontSize": 16,
+        "fontFamily": "Inter, sans-serif",
+        "fontStyle": "bold",
+        "fill": "#001f44",
+        "align": "center",
+        "lineHeight": 1.3,
+        "wrap": "word"
+      },
+      "slot": true,
+      "slot_label": "One Platform. Smarter Decision",
+      "slot_type": "text"
+    },
+    {
+      "id": "el-57",
+      "type": "text",
+      "locked": false,
+      "attrs": {
+        "x": 416,
+        "y": 907,
+        "width": 175,
+        "height": 32,
+        "text": "Plan. Assess. Approve. All with ICLP.",
+        "fontSize": 16,
+        "fontFamily": "Inter, sans-serif",
+        "fontStyle": "bold",
+        "fill": "#001f44",
+        "align": "center",
+        "lineHeight": 1.3,
+        "wrap": "word"
+      },
+      "slot": true,
+      "slot_label": "Plan. Assess. Approve. All wit",
+      "slot_type": "text"
+    }
+  ],
+  "category": "ICLP",
+  "description": "Exact PSD font sizes, colors, and styles",
+  "design_state": {
+    "elements": [
+      {
+        "id": "el-1",
+        "type": "image",
+        "locked": true,
+        "attrs": {
+          "x": 0,
+          "y": 0,
+          "width": 1079,
+          "height": 1080,
+          "src": "/assets/p4_l00_0_0_1880_1881.png",
+          "opacity": 1
+        }
+      },
+      {
+        "id": "el-2",
+        "type": "image",
+        "locked": true,
+        "attrs": {
+          "x": 0,
+          "y": 0,
+          "width": 1079,
+          "height": 1080,
+          "src": "/assets/p4_l01_0_0_1880_1881.png",
+          "opacity": 1
+        }
+      },
+      {
+        "id": "el-3",
+        "type": "image",
+        "locked": true,
+        "attrs": {
+          "x": 275,
+          "y": 0,
+          "width": 1002,
+          "height": 558,
+          "src": "/assets/p4_l02_479_0_1745_971.png",
+          "opacity": 1
+        }
+      },
+      {
+        "id": "el-4",
+        "type": "image",
+        "locked": true,
+        "attrs": {
+          "x": 0,
+          "y": 0,
+          "width": 1080,
+          "height": 1081,
+          "src": "/assets/p4_l03_0_0_1881_1882.png",
+          "opacity": 1
+        }
+      },
+      {
+        "id": "el-5",
+        "type": "image",
+        "locked": true,
+        "attrs": {
+          "x": 0,
+          "y": 50,
+          "width": 288,
+          "height": 254,
+          "src": "/assets/p4_l04_0_87_501_443.png",
+          "opacity": 1
+        }
+      },
+      {
+        "id": "el-6",
+        "type": "text",
+        "locked": false,
+        "attrs": {
+          "x": 67,
+          "y": 257,
+          "width": 456,
+          "height": 106,
+          "text": "ALL IN ONE PLACE",
+          "fontSize": 39,
+          "fontFamily": "Inter, sans-serif",
+          "fontStyle": "bold",
+          "fill": "#002c64",
+          "align": "center",
+          "lineHeight": 1.3,
+          "wrap": "word"
+        },
+        "slot": true,
+        "slot_label": "ALL IN ONE PLACE",
+        "slot_type": "text"
+      },
+      {
+        "id": "el-7",
+        "type": "image",
+        "locked": true,
+        "attrs": {
+          "x": 63,
+          "y": 303,
+          "width": 467,
+          "height": 25,
+          "src": "/assets/p4_l06_110_528_813_44.png",
+          "opacity": 1
+        }
+      },
+      {
+        "id": "el-8",
+        "type": "image",
+        "locked": true,
+        "attrs": {
+          "x": 49,
+          "y": 438,
+          "width": 981,
+          "height": 424,
+          "src": "/assets/p4_l07_86_763_1708_738.png",
+          "opacity": 1
+        }
+      },
+      {
+        "id": "el-9",
+        "type": "image",
+        "locked": true,
+        "attrs": {
+          "x": 100,
+          "y": 455,
+          "width": 153,
+          "height": 153,
+          "src": "/assets/p4_l08_175_793_266_267.png",
+          "opacity": 1
+        }
+      },
+      {
+        "id": "el-10",
+        "type": "image",
+        "locked": true,
+        "attrs": {
+          "x": 134,
+          "y": 489,
+          "width": 86,
+          "height": 86,
+          "src": "/assets/p4_l09_233_852_150_149.png",
+          "opacity": 1
+        },
+        "slot": true,
+        "slot_label": "Column 1 card icon",
+        "slot_type": "image"
+      },
+      {
+        "id": "el-11",
+        "type": "image",
+        "locked": true,
+        "attrs": {
+          "x": 151,
+          "y": 607,
+          "width": 52,
+          "height": 22,
+          "src": "/assets/p4_l10_263_1057_91_39.png",
+          "opacity": 1
+        }
+      },
+      {
+        "id": "el-12",
+        "type": "image",
+        "locked": true,
+        "attrs": {
+          "x": 287,
+          "y": 472,
+          "width": 18,
+          "height": 339,
+          "src": "/assets/p4_l11_499_822_31_590.png",
+          "opacity": 1
+        }
+      },
+      {
+        "id": "el-13",
+        "type": "image",
+        "locked": true,
+        "attrs": {
+          "x": 354,
+          "y": 455,
+          "width": 137,
+          "height": 153,
+          "src": "/assets/p4_l12_616_793_238_267.png",
+          "opacity": 1
+        }
+      },
+      {
+        "id": "el-14",
+        "type": "image",
+        "locked": true,
+        "attrs": {
+          "x": 371,
+          "y": 489,
+          "width": 86,
+          "height": 86,
+          "src": "/assets/p4_l13_646_852_149_149.png",
+          "opacity": 1
+        },
+        "slot": true,
+        "slot_label": "Column 2 card icon",
+        "slot_type": "image"
+      },
+      {
+        "id": "el-15",
+        "type": "image",
+        "locked": true,
+        "attrs": {
+          "x": 387,
+          "y": 621,
+          "width": 57,
+          "height": 11,
+          "src": "/assets/p4_l14_674_1081_100_19.png",
+          "opacity": 1
+        }
+      },
+      {
+        "id": "el-16",
+        "type": "image",
+        "locked": true,
+        "attrs": {
+          "x": 522,
+          "y": 472,
+          "width": 18,
+          "height": 339,
+          "src": "/assets/p4_l15_910_822_31_590.png",
+          "opacity": 1
+        }
+      },
+      {
+        "id": "el-17",
+        "type": "image",
+        "locked": true,
+        "attrs": {
+          "x": 590,
+          "y": 455,
+          "width": 137,
+          "height": 153,
+          "src": "/assets/p4_l16_1027_793_238_267.png",
+          "opacity": 1
+        }
+      },
+      {
+        "id": "el-18",
+        "type": "image",
+        "locked": true,
+        "attrs": {
+          "x": 623,
+          "y": 503,
+          "width": 71,
+          "height": 70,
+          "src": "/assets/p4_l17_1085_876_124_122.png",
+          "opacity": 1
+        },
+        "slot": true,
+        "slot_label": "Column 3 card icon",
+        "slot_type": "image"
+      },
+      {
+        "id": "el-19",
+        "type": "image",
+        "locked": true,
+        "attrs": {
+          "x": 623,
+          "y": 621,
+          "width": 60,
+          "height": 11,
+          "src": "/assets/p4_l18_1085_1081_105_19.png",
+          "opacity": 1
+        }
+      },
+      {
+        "id": "el-20",
+        "type": "image",
+        "locked": true,
+        "attrs": {
+          "x": 776,
+          "y": 472,
+          "width": 8,
+          "height": 338,
+          "src": "/assets/p4_l19_1351_822_14_589.png",
+          "opacity": 1
+        }
+      },
+      {
+        "id": "el-21",
+        "type": "image",
+        "locked": true,
+        "attrs": {
+          "x": 826,
+          "y": 455,
+          "width": 153,
+          "height": 153,
+          "src": "/assets/p4_l20_1439_793_267_267.png",
+          "opacity": 1
+        }
+      },
+      {
+        "id": "el-22",
+        "type": "image",
+        "locked": true,
+        "attrs": {
+          "x": 860,
+          "y": 489,
+          "width": 86,
+          "height": 86,
+          "src": "/assets/p4_l21_1498_852_149_149.png",
+          "opacity": 1
+        },
+        "slot": true,
+        "slot_label": "Column 4 card icon",
+        "slot_type": "image"
+      },
+      {
+        "id": "el-23",
+        "type": "image",
+        "locked": true,
+        "attrs": {
+          "x": 876,
+          "y": 621,
+          "width": 47,
+          "height": 11,
+          "src": "/assets/p4_l22_1526_1081_81_19.png",
+          "opacity": 1
+        }
+      },
+      {
+        "id": "el-24",
+        "type": "image",
+        "locked": true,
+        "attrs": {
+          "x": 0,
+          "y": 877,
+          "width": 1080,
+          "height": 187,
+          "src": "/assets/p4_l23_0_1527_1881_326.png",
+          "opacity": 1
+        }
+      },
+      {
+        "id": "el-25",
+        "type": "image",
+        "locked": true,
+        "attrs": {
+          "x": 67,
+          "y": 877,
+          "width": 69,
+          "height": 86,
+          "src": "/assets/p4_l24_116_1527_120_149.png",
+          "opacity": 1
+        }
+      },
+      {
+        "id": "el-26",
+        "type": "image",
+        "locked": true,
+        "attrs": {
+          "x": 83,
+          "y": 894,
+          "width": 52,
+          "height": 52,
+          "src": "/assets/p4_l25_145_1557_91_91.png",
+          "opacity": 1
+        },
+        "slot": true,
+        "slot_label": "Column 1 footer icon",
+        "slot_type": "image"
+      },
+      {
+        "id": "el-27",
+        "type": "image",
+        "locked": true,
+        "attrs": {
+          "x": 303,
+          "y": 894,
+          "width": 19,
+          "height": 52,
+          "src": "/assets/p4_l26_527_1557_33_91.png",
+          "opacity": 1
+        }
+      },
+      {
+        "id": "el-28",
+        "type": "image",
+        "locked": true,
+        "attrs": {
+          "x": 336,
+          "y": 877,
+          "width": 69,
+          "height": 86,
+          "src": "/assets/p4_l27_586_1527_121_149.png",
+          "opacity": 1
+        }
+      },
+      {
+        "id": "el-29",
+        "type": "image",
+        "locked": true,
+        "attrs": {
+          "x": 354,
+          "y": 894,
+          "width": 35,
+          "height": 52,
+          "src": "/assets/p4_l28_616_1557_61_91.png",
+          "opacity": 1
+        },
+        "slot": true,
+        "slot_label": "Column 2 footer icon",
+        "slot_type": "image"
+      },
+      {
+        "id": "el-30",
+        "type": "image",
+        "locked": true,
+        "attrs": {
+          "x": 0,
+          "y": 953,
+          "width": 540,
+          "height": 169,
+          "src": "/assets/p4_l29_0_1660_941_295.png",
+          "opacity": 1
+        }
+      },
+      {
+        "id": "el-31",
+        "type": "image",
+        "locked": true,
+        "attrs": {
+          "x": 252,
+          "y": 1046,
+          "width": 828,
+          "height": 35,
+          "src": "/assets/p4_l30_439_1821_1442_61.png",
+          "opacity": 1
+        }
+      },
+      {
+        "id": "el-32",
+        "type": "image",
+        "locked": true,
+        "attrs": {
+          "x": 216,
+          "y": 1038,
+          "width": 30,
+          "height": 26,
+          "src": "/assets/p4_l31_376_1808_52_46.png",
+          "opacity": 1
+        }
+      },
+      {
+        "id": "el-33",
+        "type": "image",
+        "locked": true,
+        "attrs": {
+          "x": 254,
+          "y": 1041,
+          "width": 21,
+          "height": 21,
+          "src": "/assets/p4_l32_442_1813_36_37.png",
+          "opacity": 1
+        }
+      },
+      {
+        "id": "el-34",
+        "type": "text",
+        "locked": true,
+        "attrs": {
+          "x": 284,
+          "y": 1039,
+          "width": 131,
+          "height": 48,
+          "text": "@iclp_nicdc",
+          "fontSize": 18,
+          "fontFamily": "Inter, sans-serif",
+          "fontStyle": "bold",
+          "fill": "#ffffff",
+          "align": "center",
+          "lineHeight": 1.3,
+          "wrap": "word"
+        }
+      },
+      {
+        "id": "el-35",
+        "type": "image",
+        "locked": true,
+        "attrs": {
+          "x": 34,
+          "y": 1033,
+          "width": 33,
+          "height": 33,
+          "src": "/assets/p4_l34_60_1800_58_58.png",
+          "opacity": 1
+        }
+      },
+      {
+        "id": "el-36",
+        "type": "text",
+        "locked": true,
+        "attrs": {
+          "x": 75,
+          "y": 1041,
+          "width": 123,
+          "height": 46,
+          "text": "iclp.nicdc.in",
+          "fontSize": 17,
+          "fontFamily": "Inter, sans-serif",
+          "fontStyle": "bold",
+          "fill": "#ffffff",
+          "align": "center",
+          "lineHeight": 1.3,
+          "wrap": "word"
+        }
+      },
+      {
+        "id": "el-37",
+        "type": "image",
+        "locked": true,
+        "attrs": {
+          "x": 0,
+          "y": -1,
+          "width": 485,
+          "height": 148,
+          "src": "/assets/p4_l36_0_-2_844_257.png",
+          "opacity": 1
+        }
+      },
+      {
+        "id": "el-38",
+        "type": "image",
+        "locked": true,
+        "attrs": {
+          "x": 17,
+          "y": 15,
+          "width": 445,
+          "height": 101,
+          "src": "/assets/p4_l37_30_26_775_176.png",
+          "opacity": 1
+        }
+      },
+      {
+        "id": "el-39",
+        "type": "image",
+        "locked": true,
+        "attrs": {
+          "x": 367,
+          "y": 16,
+          "width": 59,
+          "height": 103,
+          "src": "/assets/p4_l38_639_28_103_179.png",
+          "opacity": 1
+        }
+      },
+      {
+        "id": "el-40",
+        "type": "image",
+        "locked": true,
+        "attrs": {
+          "x": 38,
+          "y": 16,
+          "width": 123,
+          "height": 107,
+          "src": "/assets/p4_l39_66_28_215_187.png",
+          "opacity": 1
+        }
+      },
+      {
+        "id": "el-41",
+        "type": "text",
+        "locked": true,
+        "attrs": {
+          "x": 235,
+          "y": 99,
+          "width": 57,
+          "height": 54,
+          "text": "ICLP",
+          "fontSize": 21,
+          "fontFamily": "Inter, sans-serif",
+          "fontStyle": "bold",
+          "fill": "#0d2b46",
+          "align": "center",
+          "lineHeight": 1.3,
+          "wrap": "word"
+        }
+      },
+      {
+        "id": "el-42",
+        "type": "image",
+        "locked": true,
+        "attrs": {
+          "x": 221,
+          "y": 16,
+          "width": 84,
+          "height": 73,
+          "src": "/assets/p4_l41_385_28_146_127.png",
+          "opacity": 1
+        }
+      },
+      {
+        "id": "el-43",
+        "type": "image",
+        "locked": true,
+        "attrs": {
+          "x": 643,
+          "y": -130,
+          "width": 518,
+          "height": 518,
+          "src": "/assets/p4_l42_1120_-226_903_902.png",
+          "opacity": 1
+        }
+      },
+      {
+        "id": "el-44",
+        "type": "image",
+        "locked": true,
+        "attrs": {
+          "x": 584,
+          "y": -99,
+          "width": 644,
+          "height": 467,
+          "src": "/assets/p4_l43_1018_-172_1121_813.png",
+          "opacity": 1
+        }
+      },
+      {
+        "id": "el-45",
+        "type": "text",
+        "locked": false,
+        "attrs": {
+          "x": 72,
+          "y": 215,
+          "width": 342,
+          "height": 58,
+          "text": "ALL THE TOOLS YOU NEED",
+          "fontSize": 22,
+          "fontFamily": "Inter, sans-serif",
+          "fontStyle": "bold",
+          "fill": "#001f44",
+          "align": "center",
+          "lineHeight": 1.3,
+          "wrap": "word"
+        },
+        "slot": true,
+        "slot_label": "ALL THE TOOLS YOU NEED",
+        "slot_type": "text"
+      },
+      {
+        "id": "el-46",
+        "type": "text",
+        "locked": false,
+        "attrs": {
+          "x": 70,
+          "y": 345,
+          "width": 300,
+          "height": 50,
+          "text": "Explore investor tools on",
+          "fontSize": 18,
+          "fontFamily": "Inter, sans-serif",
+          "fontStyle": "bold",
+          "fill": "#001f44",
+          "align": "center",
+          "lineHeight": 1.3,
+          "wrap": "word"
+        },
+        "slot": true,
+        "slot_label": "Explore investor tools on",
+        "slot_type": "text"
+      },
+      {
+        "id": "el-47",
+        "type": "text",
+        "locked": false,
+        "attrs": {
+          "x": 69,
+          "y": 377,
+          "width": 519,
+          "height": 44,
+          "text": "ICLP \u2013 Industrial Corridor Land Platform",
+          "fontSize": 17,
+          "fontFamily": "Inter, sans-serif",
+          "fontStyle": "bold",
+          "fill": "#001f44",
+          "align": "center",
+          "lineHeight": 1.3,
+          "wrap": "word"
+        },
+        "slot": true,
+        "slot_label": "ICLP \u2013 Industrial Corridor Lan",
+        "slot_type": "text"
+      },
+      {
+        "id": "el-48",
+        "type": "text",
+        "locked": false,
+        "attrs": {
+          "x": 104,
+          "y": 713,
+          "width": 159,
+          "height": 90,
+          "text": "Estimate land and project setup costs in just a few clicks.",
+          "fontSize": 13,
+          "fontFamily": "Inter, sans-serif",
+          "fontStyle": "normal",
+          "fill": "#ffffff",
+          "align": "center",
+          "lineHeight": 1.3,
+          "wrap": "word"
+        },
+        "slot": true,
+        "slot_label": "Estimate land and project setu",
+        "slot_type": "text"
+      },
+      {
+        "id": "el-49",
+        "type": "text",
+        "locked": false,
+        "attrs": {
+          "x": 359,
+          "y": 650,
+          "width": 125,
+          "height": 52,
+          "text": "Investor\u2019s Site Visit Kit",
+          "fontSize": 16,
+          "fontFamily": "Inter, sans-serif",
+          "fontStyle": "bold",
+          "fill": "#ffffff",
+          "align": "center",
+          "lineHeight": 1.3,
+          "wrap": "word"
+        },
+        "slot": true,
+        "slot_label": "Investor\u2019s Site Visit Kit",
+        "slot_type": "text"
+      },
+      {
+        "id": "el-50",
+        "type": "text",
+        "locked": false,
+        "attrs": {
+          "x": 138,
+          "y": 649,
+          "width": 108,
+          "height": 52,
+          "text": "Cost Calculator",
+          "fontSize": 16,
+          "fontFamily": "Inter, sans-serif",
+          "fontStyle": "bold",
+          "fill": "#ffffff",
+          "align": "center",
+          "lineHeight": 1.3,
+          "wrap": "word"
+        },
+        "slot": true,
+        "slot_label": "Cost Calculator",
+        "slot_type": "text"
+      },
+      {
+        "id": "el-51",
+        "type": "text",
+        "locked": false,
+        "attrs": {
+          "x": 323,
+          "y": 713,
+          "width": 191,
+          "height": 95,
+          "text": "Checklist for effective industrial site visits and assessments.",
+          "fontSize": 14,
+          "fontFamily": "Inter, sans-serif",
+          "fontStyle": "normal",
+          "fill": "#ffffff",
+          "align": "center",
+          "lineHeight": 1.3,
+          "wrap": "word"
+        },
+        "slot": true,
+        "slot_label": "Checklist for effective indust",
+        "slot_type": "text"
+      },
+      {
+        "id": "el-52",
+        "type": "text",
+        "locked": false,
+        "attrs": {
+          "x": 579,
+          "y": 649,
+          "width": 162,
+          "height": 55,
+          "text": "Land Allotment Workflow",
+          "fontSize": 17,
+          "fontFamily": "Inter, sans-serif",
+          "fontStyle": "bold",
+          "fill": "#ffffff",
+          "align": "center",
+          "lineHeight": 1.3,
+          "wrap": "word"
+        },
+        "slot": true,
+        "slot_label": "Land Allotment Workflow",
+        "slot_type": "text"
+      },
+      {
+        "id": "el-53",
+        "type": "text",
+        "locked": false,
+        "attrs": {
+          "x": 559,
+          "y": 713,
+          "width": 203,
+          "height": 95,
+          "text": "Step-by-step guidance on industrial land allotment process.",
+          "fontSize": 14,
+          "fontFamily": "Inter, sans-serif",
+          "fontStyle": "normal",
+          "fill": "#ffffff",
+          "align": "center",
+          "lineHeight": 1.3,
+          "wrap": "word"
+        },
+        "slot": true,
+        "slot_label": "Step-by-step guidance on indus",
+        "slot_type": "text"
+      },
+      {
+        "id": "el-54",
+        "type": "text",
+        "locked": false,
+        "attrs": {
+          "x": 841,
+          "y": 648,
+          "width": 117,
+          "height": 58,
+          "text": "Know Your Approvals",
+          "fontSize": 17,
+          "fontFamily": "Inter, sans-serif",
+          "fontStyle": "bold",
+          "fill": "#ffffff",
+          "align": "center",
+          "lineHeight": 1.3,
+          "wrap": "word"
+        },
+        "slot": true,
+        "slot_label": "Know Your Approvals",
+        "slot_type": "text"
+      },
+      {
+        "id": "el-55",
+        "type": "text",
+        "locked": false,
+        "attrs": {
+          "x": 816,
+          "y": 715,
+          "width": 175,
+          "height": 100,
+          "text": "State-wise industrial approvals and clearances at your fingertips.",
+          "fontSize": 14,
+          "fontFamily": "Inter, sans-serif",
+          "fontStyle": "normal",
+          "fill": "#ffffff",
+          "align": "center",
+          "lineHeight": 1.3,
+          "wrap": "word"
+        },
+        "slot": true,
+        "slot_label": "State-wise industrial approval",
+        "slot_type": "text"
+      },
+      {
+        "id": "el-56",
+        "type": "text",
+        "locked": false,
+        "attrs": {
+          "x": 149,
+          "y": 908,
+          "width": 147,
+          "height": 32,
+          "text": "One Platform. Smarter Decisions.",
+          "fontSize": 12,
+          "fontFamily": "Inter, sans-serif",
+          "fontStyle": "bold",
+          "fill": "#001f44",
+          "align": "center",
+          "lineHeight": 1.3,
+          "wrap": "word"
+        },
+        "slot": true,
+        "slot_label": "One Platform. Smarter Decision",
+        "slot_type": "text"
+      },
+      {
+        "id": "el-57",
+        "type": "text",
+        "locked": false,
+        "attrs": {
+          "x": 416,
+          "y": 907,
+          "width": 175,
+          "height": 32,
+          "text": "Plan. Assess. Approve. All with ICLP.",
+          "fontSize": 12,
+          "fontFamily": "Inter, sans-serif",
+          "fontStyle": "bold",
+          "fill": "#001f44",
+          "align": "center",
+          "lineHeight": 1.3,
+          "wrap": "word"
+        },
+        "slot": true,
+        "slot_label": "Plan. Assess. Approve. All wit",
+        "slot_type": "text"
+      }
+    ],
+    "canvas": {
+      "w": 1080,
+      "h": 1080,
+      "background": "#0D1B2A"
+    }
+  }
+}
