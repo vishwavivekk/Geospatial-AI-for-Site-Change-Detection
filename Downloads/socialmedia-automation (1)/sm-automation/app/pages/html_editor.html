@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HTML designer — NICDC Social Studio</title>
+    <link rel="stylesheet" href="/static/app.css">
+    <script src="https://unpkg.com/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+    <style>
+        body { height: 100vh; overflow: hidden; display: flex; flex-direction: column; }
+        .he-toolbar {
+            display: flex; align-items: center; gap: 10px;
+            padding: 10px 16px; background: var(--card);
+            border-bottom: 1px solid var(--border); flex-wrap: wrap;
+        }
+        .he-toolbar input[type="text"] {
+            width: 320px; padding: 8px 12px;
+            border: 1px solid var(--border-strong); border-radius: 8px;
+            font-size: 14px; font-family: inherit; outline: none;
+        }
+        .he-toolbar input[type="text"]:focus { border-color: var(--primary); box-shadow: var(--ring); }
+        .he-main { display: flex; flex: 1; overflow: hidden; }
+        .he-code {
+            width: 46%; display: flex; flex-direction: column;
+            border-right: 1px solid var(--border); background: #0f172a;
+        }
+        .he-code-head { padding: 8px 14px; font-size: 12px; font-weight: 700; color: #94a3b8; letter-spacing: 0.05em; }
+        .he-code textarea {
+            flex: 1; width: 100%; border: none; outline: none; resize: none;
+            background: #0f172a; color: #e2e8f0;
+            font-family: Consolas, 'Courier New', monospace;
+            font-size: 13px; line-height: 1.55; padding: 6px 14px 14px;
+            white-space: pre; tab-size: 2;
+        }
+        .he-preview {
+            flex: 1; display: flex; align-items: center; justify-content: center;
+            background: #1e2433 radial-gradient(circle, #2d3547 1px, transparent 1px);
+            background-size: 22px 22px; overflow: hidden; position: relative;
+        }
+        #renderFrameWrap {
+            width: 1080px; height: 1080px;
+            transform-origin: top left;
+            background: white;
+            box-shadow: 0 4px 24px rgba(0,0,0,0.4);
+            position: absolute; top: 24px; left: 24px;
+            overflow: hidden;
+        }
+        #renderFrame { width: 1080px; height: 1080px; overflow: hidden; position: relative; }
+        .he-hint { padding: 8px 16px; font-size: 12px; color: var(--muted); background: var(--card); border-top: 1px solid var(--border); }
+    </style>
+</head>
+<body>
+    <nav class="nav" style="height:54px;">
+        <a class="brand" href="/">
+            <span class="logo">N</span>
+            <span class="product">NICDC Social Studio<small>HTML designer</small></span>
+        </a>
+        <a href="/" class="btn btn-ghost btn-sm" id="backBtn">Post bank</a>
+        <div class="spacer"></div>
+        <span class="role-chip editor">Editor</span>
+        <div class="user-block"><span class="avatar" id="navAvatar"></span></div>
+        <button class="btn btn-ghost btn-sm" onclick="logout()">Sign out</button>
+    </nav>
+    <div class="he-toolbar">
+        <input id="postTitle" type="text" placeholder="Post title (required)">
+        <button class="btn btn-sm" onclick="renderPreview()" id="refreshBtn">Refresh preview</button>
+        <div style="flex:1;"></div>
+        <button class="btn btn-primary" id="saveBtn" onclick="saveToBank()">Save to post bank</button>
+    </div>
+    <div class="he-main">
+        <div class="he-code">
+            <div class="he-code-head">HTML — the canvas is 1080 × 1080 px</div>
+            <textarea id="htmlSource" spellcheck="false"></textarea>
+        </div>
+        <div class="he-preview" id="previewArea">
+            <div id="renderFrameWrap"><div id="renderFrame"></div></div>
+        </div>
+    </div>
+    <div class="he-hint">The preview updates as you type. Styles must be inline or in a &lt;style&gt; tag; external images should use absolute URLs or /assets/... paths. Saving renders the canvas to a PNG in your post bank.</div>
+
+    <script src="/static/app.js"></script>
+    <script>
+        const POST_ID = '__POST_ID__';
+        document.getElementById('navAvatar').textContent = initials('__USER_NAME__');
+        document.getElementById('backBtn').insertAdjacentHTML('afterbegin', icon('back', 13));
+        document.getElementById('saveBtn').insertAdjacentHTML('afterbegin', icon('check', 14));
+
+        const DEFAULT_HTML = [
+            '<style>',
+            '  .post { width: 1080px; height: 1080px; background: linear-gradient(160deg, #0b2545, #13315c); color: white;',
+            '          font-family: Poppins, Arial, sans-serif; padding: 80px; box-sizing: border-box;',
+            '          display: flex; flex-direction: column; justify-content: center; }',
+            '  .kicker { color: #ffd700; font-size: 30px; font-weight: 700; letter-spacing: 2px; }',
+            '  h1 { font-size: 72px; line-height: 1.15; margin: 24px 0; }',
+            '  p { font-size: 34px; color: #b8cde8; line-height: 1.4; }',
+            '  .footer { margin-top: auto; display: flex; justify-content: space-between; color: #ffd700; font-size: 26px; }',
+            '</style>',
+            '<div class="post">',
+            '  <div class="kicker">NICDC | NEWS UPDATE</div>',
+            '  <h1>Your headline goes here</h1>',
+            '  <p>Supporting line with the key facts of the announcement.</p>',
+            '  <div class="footer"><span>www.nicdc.in</span><span>@nicdc01</span></div>',
+            '</div>',
+        ].join('\n');
+
+        const src = document.getElementById('htmlSource');
+        const frame = document.getElementById('renderFrame');
+
+        function fitPreview() {
+            const area = document.getElementById('previewArea');
+            const scale = Math.min((area.clientWidth - 48) / 1080, (area.clientHeight - 48) / 1080, 1);
+            const wrap = document.getElementById('renderFrameWrap');
+            wrap.style.transform = 'scale(' + scale + ')';
+        }
+
+        let _renderTimer = null;
+        function renderPreview() {
+            frame.innerHTML = src.value;
+        }
+        src.addEventListener('input', function () {
+            clearTimeout(_renderTimer);
+            _renderTimer = setTimeout(renderPreview, 400);
+        });
+        window.addEventListener('resize', fitPreview);
+
+        async function saveToBank() {
+            const title = document.getElementById('postTitle').value.trim();
+            if (!title) { toast('Give the post a title first.', 'error'); return; }
+            if (!src.value.trim()) { toast('The HTML is empty.', 'error'); return; }
+            const btn = document.getElementById('saveBtn');
+            btn.disabled = true;
+            let stage = null;
+            try {
+                // html2canvas mis-renders elements inside CSS transforms, so
+                // capture from an untransformed clone laid out at full size.
+                stage = document.createElement('div');
+                stage.style.cssText = 'position:fixed;left:0;top:0;width:1080px;height:1080px;overflow:hidden;background:#ffffff;z-index:-1;';
+                stage.innerHTML = src.value;
+                document.body.appendChild(stage);
+                await new Promise(r => setTimeout(r, 400));   // let images/fonts settle
+                const canvas = await html2canvas(stage, {
+                    width: 1080, height: 1080, scale: 2,
+                    windowWidth: 1080, windowHeight: 1080,
+                    scrollX: 0, scrollY: 0,
+                    useCORS: true, backgroundColor: '#ffffff',
+                });
+                const png = canvas.toDataURL('image/png');
+                let resp;
+                if (POST_ID) {
+                    const fd = new FormData();
+                    fd.append('title', title);
+                    fd.append('html_source', src.value);
+                    fd.append('png_data_url', png);
+                    resp = await fetch('/api/posts/' + POST_ID, { method: 'PUT', body: fd });
+                } else {
+                    resp = await fetch('/api/posts/create-html', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ title: title, html_source: src.value, png_data_url: png }),
+                    });
+                }
+                const data = await resp.json();
+                if (!resp.ok) throw new Error(data.detail || 'Save failed');
+                toast('Saved to post bank', 'success');
+                setTimeout(() => { window.location.href = '/post/' + data.id; }, 700);
+            } catch (e) {
+                toast('Error: ' + e.message, 'error');
+            } finally {
+                if (stage) stage.remove();
+                btn.disabled = false;
+            }
+        }
+
+        (async function init() {
+            if (POST_ID) {
+                try {
+                    const resp = await fetch('/api/posts/' + POST_ID);
+                    if (resp.ok) {
+                        const p = await resp.json();
+                        document.getElementById('postTitle').value = p.title || '';
+                        src.value = p.html_source || DEFAULT_HTML;
+                    }
+                } catch (e) { src.value = DEFAULT_HTML; }
+            } else {
+                src.value = DEFAULT_HTML;
+            }
+            renderPreview();
+            fitPreview();
+        })();
+    </script>
+</body>
+</html>

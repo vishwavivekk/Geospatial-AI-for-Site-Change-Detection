@@ -35,11 +35,28 @@
         <div class="stats" id="statsRow"></div>
 
         <div class="tabs" id="mainTabs">
-            <button class="tab active" data-tab="stories">Stories</button>
-            <button class="tab" data-tab="designs">My designs <span class="count" id="designCount">0</span></button>
+            <button class="tab active" data-tab="bank">Post bank <span class="count" id="bankCount">0</span></button>
+            <button class="tab" data-tab="stories">Stories</button>
+            <button class="tab" data-tab="designs">Story designs <span class="count" id="designCount">0</span></button>
         </div>
 
-        <div id="pane-stories">
+        <div id="pane-bank">
+            <div style="display:flex;align-items:center;gap:10px;margin-bottom:20px;flex-wrap:wrap;">
+                <div class="tabs" style="margin-bottom:0;" id="bankFilterTabs">
+                    <button class="tab active" data-bfilter="all">All</button>
+                    <button class="tab" data-bfilter="draft">Drafts</button>
+                    <button class="tab" data-bfilter="pending">In review</button>
+                    <button class="tab" data-bfilter="feedback">Changes requested</button>
+                    <button class="tab" data-bfilter="published">Published</button>
+                </div>
+                <div style="flex:1;"></div>
+                <button class="btn" onclick="openUploadModal()" id="uploadBtn">Upload design</button>
+                <button class="btn btn-primary" onclick="openCreateChooser()" id="createBtn">Create design</button>
+            </div>
+            <div id="bank-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:16px;"></div>
+        </div>
+
+        <div id="pane-stories" style="display:none">
             <div style="display:flex;align-items:center;gap:12px;margin-bottom:20px;flex-wrap:wrap;">
                 <div class="tabs" style="margin-bottom:0;" id="categoryTabs"></div>
                 <button class="btn btn-ghost btn-sm" onclick="openCategoriesModal()" id="manageCatsBtn">Categories</button>
@@ -107,6 +124,52 @@
                     </button>
                 </div>
             </form>
+        </div>
+    </div>
+
+    <!-- Upload design modal -->
+    <div id="uploadModal" class="modal-overlay">
+        <div class="modal" onclick="event.stopPropagation()">
+            <h2>Upload a design</h2>
+            <p class="sub">Add a finished design from Canva, Photoshop or anywhere else to your post bank.</p>
+            <div id="uploadFeedback" class="feedback-msg"></div>
+            <form id="uploadForm">
+                <label for="upTitle">Title</label>
+                <input id="upTitle" name="title" type="text" required placeholder="e.g. BHAVYA milestone announcement">
+                <label for="upDesc">Notes for the caption AI (optional)</label>
+                <textarea id="upDesc" name="description" style="min-height:70px;" placeholder="What does this post show? Key facts, dates, numbers..."></textarea>
+                <label for="upImage">Design image (PNG / JPG / WEBP)</label>
+                <input id="upImage" name="image" type="file" required accept=".png,.jpg,.jpeg,.webp">
+                <img id="uploadPreview" style="display:none;max-width:100%;border-radius:10px;border:1px solid var(--border);margin-bottom:14px;" alt="preview">
+                <div class="modal-actions">
+                    <button type="button" class="btn" onclick="closeUploadModal()">Cancel</button>
+                    <button type="submit" id="uploadSubmitBtn" class="btn btn-primary">
+                        <span class="spinner" style="display:none;"></span>
+                        <span class="btn-text">Add to post bank</span>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Create design chooser -->
+    <div id="createChooser" class="modal-overlay">
+        <div class="modal" style="max-width:560px;" onclick="event.stopPropagation()">
+            <h2>Create a design</h2>
+            <p class="sub">Choose how you want to design this post.</p>
+            <div style="display:flex;gap:14px;">
+                <a href="/html-editor" style="flex:1;text-decoration:none;color:inherit;border:1px solid var(--border-strong);border-radius:14px;padding:20px 18px;display:block;transition:border-color 0.15s, background 0.15s;" onmouseover="this.style.borderColor='var(--primary)'" onmouseout="this.style.borderColor='var(--border-strong)'">
+                    <div style="font-size:15px;font-weight:800;margin-bottom:6px;">HTML designer</div>
+                    <div style="font-size:12.5px;color:var(--muted);line-height:1.5;">Write HTML/CSS on a 1080×1080 canvas with live preview; saved straight to the post bank.</div>
+                </a>
+                <button onclick="closeCreateChooser();document.querySelector('#mainTabs .tab[data-tab=stories]').click();toast('Pick a story and click Design post — AI designs are submitted from the canvas editor.','info')" style="flex:1;text-align:left;font-family:inherit;cursor:pointer;background:white;border:1px solid var(--border-strong);border-radius:14px;padding:20px 18px;transition:border-color 0.15s;" onmouseover="this.style.borderColor='var(--primary)'" onmouseout="this.style.borderColor='var(--border-strong)'">
+                    <div style="font-size:15px;font-weight:800;margin-bottom:6px;">Canvas / AI designer</div>
+                    <div style="font-size:12.5px;color:var(--muted);line-height:1.5;">Generate branded layouts from a story with AI and fine-tune them on the canvas.</div>
+                </button>
+            </div>
+            <div class="modal-actions" style="margin-top:18px;">
+                <button type="button" class="btn" onclick="closeCreateChooser()">Cancel</button>
+            </div>
         </div>
     </div>
 
@@ -278,13 +341,13 @@
         document.getElementById('logoutBtn').insertAdjacentHTML('afterbegin', icon('logout', 14));
         document.querySelector('#storySearch').closest('.search-box').insertAdjacentHTML('afterbegin', icon('search', 15));
 
-        /* ── Stats ── */
+        /* ── Stats (bank posts + story designs combined) ── */
         function renderStats() {
-            const stories = _allStories || [];
             const designs = _allDesigns || [];
-            const count = st => designs.filter(d => d.status === st).length;
+            const posts = _bankPosts || [];
+            const count = st => designs.filter(d => d.status === st).length + posts.filter(p => p.status === st).length;
             document.getElementById('statsRow').innerHTML =
-                '<div class="stat tone-plain"><span class="k">' + stories.length + '</span><span class="l">' + icon('file', 13) + ' Stories</span></div>' +
+                '<div class="stat tone-plain"><span class="k">' + posts.length + '</span><span class="l">' + icon('image', 13) + ' Posts in bank</span></div>' +
                 '<div class="stat tone-pending"><span class="k">' + count('pending') + '</span><span class="l">' + icon('clock', 13) + ' Waiting for review</span></div>' +
                 '<div class="stat tone-feedback"><span class="k">' + count('feedback') + '</span><span class="l">' + icon('comment', 13) + ' Changes requested</span></div>' +
                 '<div class="stat tone-published"><span class="k">' + count('published') + '</span><span class="l">' + icon('rocket', 13) + ' Published</span></div>';
@@ -296,10 +359,87 @@
             if (!tab) return;
             document.querySelectorAll('#mainTabs .tab').forEach(t => t.classList.remove('active'));
             tab.classList.add('active');
+            document.getElementById('pane-bank').style.display = tab.dataset.tab === 'bank' ? '' : 'none';
             document.getElementById('pane-stories').style.display = tab.dataset.tab === 'stories' ? '' : 'none';
             document.getElementById('pane-designs').style.display = tab.dataset.tab === 'designs' ? '' : 'none';
             if (tab.dataset.tab === 'designs') loadDesigns();
+            if (tab.dataset.tab === 'bank') loadBank();
         });
+
+        /* ── Post bank ── */
+        let _bankPosts = null;
+        let _bankFilter = 'all';
+
+        document.getElementById('bankFilterTabs').addEventListener('click', function (e) {
+            const tab = e.target.closest('.tab');
+            if (!tab) return;
+            document.querySelectorAll('#bankFilterTabs .tab').forEach(t => t.classList.remove('active'));
+            tab.classList.add('active');
+            _bankFilter = tab.dataset.bfilter;
+            renderBank();
+        });
+
+        async function loadBank(silent) {
+            const grid = document.getElementById('bank-grid');
+            if (!silent) grid.innerHTML = '<div style="grid-column:1/-1;">' + skeletonCards(1) + '</div>';
+            try {
+                const resp = await fetch('/api/posts');
+                if (!resp.ok) throw new Error(await resp.text());
+                _bankPosts = await resp.json();
+                document.getElementById('bankCount').textContent = _bankPosts.length;
+                renderBank();
+                renderStats();
+            } catch (e) {
+                grid.innerHTML = '<div class="error-box" style="grid-column:1/-1;">Error loading posts: ' + escHtml(e.message) + '</div>';
+            }
+        }
+
+        const KIND_LABELS = { upload: 'Uploaded', html: 'HTML', canvas: 'Canvas' };
+        const PLATFORM_SHORT = { linkedin: 'in', x: 'X', instagram: 'IG' };
+
+        function renderBank() {
+            const grid = document.getElementById('bank-grid');
+            if (!_bankPosts) return;
+            let posts = _bankPosts;
+            if (_bankFilter !== 'all') {
+                posts = posts.filter(p => _bankFilter === 'published'
+                    ? (p.status === 'published' || p.status === 'approved')
+                    : p.status === _bankFilter);
+            }
+            if (!posts.length) {
+                grid.innerHTML = '<div style="grid-column:1/-1;">' + emptyState('image',
+                    _bankFilter === 'all' ? 'Your post bank is empty' : 'Nothing here',
+                    'Upload a finished design (Canva, Photoshop...) or create one with the HTML designer.') + '</div>';
+                return;
+            }
+            grid.innerHTML = posts.map(function (p) {
+                const comments = p.comments || [];
+                const plats = (p.platforms || []).map(x => '<span style="font-size:10px;font-weight:700;background:var(--bg-subtle);border:1px solid var(--border);border-radius:9999px;padding:1px 7px;color:var(--text-2);">' + (PLATFORM_SHORT[x] || x) + '</span>').join(' ');
+                return '<a href="/post/' + p.id + '" class="card hoverable" style="padding:0;overflow:hidden;text-decoration:none;color:inherit;margin:0;display:block;">' +
+                    '<div style="aspect-ratio:1;background:#f1f3f8 url(\'/bank/' + escHtml(p.image_path) + '\') center/cover;"></div>' +
+                    '<div style="padding:12px 14px;">' +
+                        '<div style="font-size:13.5px;font-weight:700;margin-bottom:6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + escHtml(p.title) + '</div>' +
+                        '<div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;">' +
+                            (p.status === 'draft'
+                                ? '<span class="badge" style="background:var(--bg-subtle);color:var(--text-2);border-color:var(--border);"><span class="dot"></span>Draft</span>'
+                                : statusBadge(p.status)) +
+                            plats +
+                            (comments.length ? '<span style="font-size:11px;color:var(--danger);font-weight:700;">' + comments.length + ' 💬</span>' : '') +
+                        '</div>' +
+                    '</div>' +
+                '</a>';
+            }).join('');
+        }
+
+        function openUploadModal() {
+            document.getElementById('uploadModal').classList.add('open');
+            document.getElementById('uploadFeedback').className = 'feedback-msg';
+            document.getElementById('uploadForm').reset();
+            document.getElementById('uploadPreview').style.display = 'none';
+        }
+        function closeUploadModal() { document.getElementById('uploadModal').classList.remove('open'); }
+        function openCreateChooser() { document.getElementById('createChooser').classList.add('open'); }
+        function closeCreateChooser() { document.getElementById('createChooser').classList.remove('open'); }
 
         document.getElementById('categoryTabs').addEventListener('click', function (e) {
             const tab = e.target.closest('.tab');
@@ -601,7 +741,40 @@
             });
         });
 
+        /* ── Upload design ── */
+        document.getElementById('upImage').addEventListener('change', function () {
+            const prev = document.getElementById('uploadPreview');
+            if (this.files.length) {
+                prev.src = URL.createObjectURL(this.files[0]);
+                prev.style.display = '';
+            } else prev.style.display = 'none';
+        });
+
+        document.getElementById('uploadForm').addEventListener('submit', async function (e) {
+            e.preventDefault();
+            const fb = document.getElementById('uploadFeedback');
+            const btn = document.getElementById('uploadSubmitBtn');
+            btn.disabled = true;
+            btn.querySelector('.spinner').style.display = '';
+            try {
+                const fd = new FormData(this);
+                const resp = await fetch('/api/posts/upload', { method: 'POST', body: fd });
+                const data = await resp.json();
+                if (!resp.ok) throw new Error(data.detail || 'Upload failed');
+                closeUploadModal();
+                toast('Design added to your post bank', 'success');
+                window.location.href = '/post/' + data.id;
+            } catch (ex) {
+                fb.className = 'feedback-msg error';
+                fb.textContent = 'Error: ' + ex.message;
+            } finally {
+                btn.disabled = false;
+                btn.querySelector('.spinner').style.display = 'none';
+            }
+        });
+
         renderStats();
+        loadBank();
         loadCategories().then(function () { loadStories(); });
         loadDesigns(true);
     </script>

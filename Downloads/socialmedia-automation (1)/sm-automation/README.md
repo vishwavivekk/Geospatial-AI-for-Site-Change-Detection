@@ -29,6 +29,21 @@ Open **http://localhost:8000** and sign in.
 
 Accounts live in `data/users.json` (auto-created on first run, passwords hashed).
 
+## Post Bank (primary workflow)
+
+The dashboard opens on the **Post bank** — the editor's library of finished designs:
+
+1. **Upload design** — add a finished image from Canva/Photoshop/anywhere, or
+   **Create design** — the HTML designer (1080×1080 live-preview canvas, saved
+   as a PNG) or the Canvas/AI designer via Stories.
+2. Open a post → **Share with approver**: pick LinkedIn / X / Instagram, write
+   the caption or **Generate with AI**.
+3. The approver **clicks or drags on the image** to highlight the exact part a
+   comment is about (numbered markers), then sends it back or approves.
+4. The editor sees the pinned feedback, fixes/replaces the design, re-shares
+   (revision bumps, feedback archived).
+5. Approval publishes to the selected platforms (`SOCIAL_MODE` applies).
+
 ## Workflow
 
 ```

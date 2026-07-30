@@ -174,6 +174,97 @@ class DesignComment(Base):
         }
 
 
+class BankPost(Base):
+    """A post in the editor's Post Bank — either an uploaded finished
+    design (Canva, Photoshop, ...) or one created in-app (HTML/canvas).
+    Flows: draft -> pending (shared with approver) -> feedback -> ... -> published."""
+    __tablename__ = "bank_posts"
+
+    id: Mapped[str] = mapped_column(String, primary_key=True, default=_uuid)
+    title: Mapped[str] = mapped_column(String, nullable=False)
+    description: Mapped[Optional[str]] = mapped_column(Text)
+    kind: Mapped[str] = mapped_column(String, default="upload")  # upload | html | canvas
+    image_path: Mapped[str] = mapped_column(String, nullable=False)
+    html_source: Mapped[Optional[str]] = mapped_column(Text)
+    design_state: Mapped[Optional[dict]] = mapped_column(JSON)
+    caption: Mapped[Optional[str]] = mapped_column(Text)
+    platforms: Mapped[Optional[list]] = mapped_column(JSON)  # ["linkedin","x","instagram"]
+    status: Mapped[str] = mapped_column(String, default="draft", index=True)
+    revision: Mapped[int] = mapped_column(Integer, default=1)
+    created_by: Mapped[Optional[str]] = mapped_column(String)
+    submitted_by: Mapped[Optional[str]] = mapped_column(String)
+    submitted_at: Mapped[Optional[datetime]] = mapped_column(DateTime)
+    reviewed_at: Mapped[Optional[datetime]] = mapped_column(DateTime)
+    reviewed_by: Mapped[Optional[str]] = mapped_column(String)
+    reviewer_note: Mapped[Optional[str]] = mapped_column(Text)
+    feedback_history: Mapped[Optional[list]] = mapped_column(JSON)
+    post_results: Mapped[Optional[dict]] = mapped_column(JSON)
+    published_image_url: Mapped[Optional[str]] = mapped_column(String)
+    published_at: Mapped[Optional[datetime]] = mapped_column(DateTime)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=_now)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=_now, onupdate=_now)
+
+    comments: Mapped[list["PostComment"]] = relationship(
+        back_populates="post", cascade="all, delete-orphan"
+    )
+
+    def to_dict(self) -> dict:
+        return {
+            "id": self.id,
+            "title": self.title,
+            "description": self.description or "",
+            "kind": self.kind,
+            "image_path": self.image_path,
+            "html_source": self.html_source or "",
+            "design_state": self.design_state,
+            "caption": self.caption or "",
+            "platforms": self.platforms or [],
+            "status": self.status,
+            "revision": self.revision or 1,
+            "created_by": self.created_by or "",
+            "submitted_by": self.submitted_by or "",
+            "submitted_at": self.submitted_at.isoformat() if self.submitted_at else None,
+            "reviewed_at": self.reviewed_at.isoformat() if self.reviewed_at else None,
+            "reviewed_by": self.reviewed_by or "",
+            "reviewer_note": self.reviewer_note or "",
+            "feedback_history": self.feedback_history or [],
+            "publish_results": self.post_results,
+            "published_image_url": self.published_image_url or "",
+            "published_at": self.published_at.isoformat() if self.published_at else None,
+            "created_at": self.created_at.isoformat() if self.created_at else None,
+            "comments": [],
+        }
+
+    def to_dict_with_comments(self) -> dict:
+        d = self.to_dict()
+        d["comments"] = [c.to_dict() for c in self.comments]
+        return d
+
+
+class PostComment(Base):
+    """Approver feedback on a bank post — optionally pinned to a
+    highlighted region of the image (normalized 0..1 coordinates)."""
+    __tablename__ = "post_comments"
+
+    id: Mapped[str] = mapped_column(String, primary_key=True, default=_uuid)
+    post_id: Mapped[str] = mapped_column(String, ForeignKey("bank_posts.id"), nullable=False, index=True)
+    region: Mapped[Optional[dict]] = mapped_column(JSON)  # {x, y, w, h} as fractions
+    text: Mapped[str] = mapped_column(Text, nullable=False)
+    author: Mapped[Optional[str]] = mapped_column(String)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=_now)
+
+    post: Mapped["BankPost"] = relationship(back_populates="comments")
+
+    def to_dict(self) -> dict:
+        return {
+            "id": self.id,
+            "region": self.region,
+            "text": self.text,
+            "author": self.author or "",
+            "created_at": self.created_at.isoformat() if self.created_at else "",
+        }
+
+
 class ImageFile(Base):
     __tablename__ = "images"
 

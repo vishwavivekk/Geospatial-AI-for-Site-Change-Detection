@@ -181,14 +181,14 @@ async def _publish_linkedin(client: httpx.AsyncClient, png_bytes: bytes, text: s
     return {"platform": "linkedin", "post_id": post_urn, "status": "published"}
 
 
-async def publish_design(design: dict, png_filename: str) -> tuple[dict, str]:
-    """Publish to all three platforms. Returns (per-platform results,
-    image URL used); each result is a success record or
-    {status: failed, error}."""
+async def publish_design(design: dict, png_filename: str, platforms: list[str] | None = None) -> tuple[dict, str]:
+    """Publish to the mock platforms (all three unless `platforms` narrows
+    it). Returns (per-platform results, image URL used); each result is a
+    success record or {status: failed, error}."""
     from app.zernio import upload_image
 
-    topic = design["topic"]
-    story_text = design.get("story_text", "")
+    topic = design.get("topic") or design.get("title", "")
+    story_text = design.get("story_text") or design.get("caption") or design.get("description", "")
     with open(os.path.join(PUBLISHED_DIR, png_filename), "rb") as f:
         png_bytes = f.read()
 
@@ -197,19 +197,21 @@ async def publish_design(design: dict, png_filename: str) -> tuple[dict, str]:
     if not image_url:
         image_url = f"{PUBLIC_BASE_URL}/published/{png_filename}"
 
+    wanted = [p.lower() for p in (platforms or ["instagram", "x", "linkedin"])]
     results: dict[str, dict] = {}
     async with httpx.AsyncClient(timeout=30) as client:
-        tasks = {
-            "instagram": _publish_instagram(
+        all_tasks = {
+            "instagram": lambda: _publish_instagram(
                 client, image_url, build_caption(topic, story_text, IG_CAPTION_MAX)
             ),
-            "x": _publish_x(
+            "x": lambda: _publish_x(
                 client, png_bytes, build_caption(topic, story_text, X_TEXT_MAX)
             ),
-            "linkedin": _publish_linkedin(
+            "linkedin": lambda: _publish_linkedin(
                 client, png_bytes, build_caption(topic, story_text, LINKEDIN_TEXT_MAX)
             ),
         }
+        tasks = {name: fn() for name, fn in all_tasks.items() if name in wanted}
         outcomes = await asyncio.gather(*tasks.values(), return_exceptions=True)
         for platform, outcome in zip(tasks.keys(), outcomes):
             if isinstance(outcome, Exception):

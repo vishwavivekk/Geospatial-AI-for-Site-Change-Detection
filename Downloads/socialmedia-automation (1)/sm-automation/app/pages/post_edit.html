@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Post — NICDC Social Studio</title>
+    <link rel="stylesheet" href="/static/app.css">
+    <style>
+        .pe-layout { display: flex; gap: 20px; padding: 24px; align-items: flex-start; max-width: 1340px; margin: 0 auto; }
+        .pe-canvas-col { flex: 1; min-width: 0; }
+        .pe-canvas-wrap { background: var(--card); border-radius: var(--radius-lg); border: 1px solid var(--border); padding: 20px; box-shadow: var(--shadow-sm); }
+        .pe-head { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; flex-wrap: wrap; }
+        .pe-head h1 { font-size: 18px; font-weight: 800; letter-spacing: -0.02em; flex: 1; min-width: 200px; }
+        .pe-img-holder { position: relative; display: inline-block; max-width: 100%; border-radius: 10px; overflow: hidden; border: 1px solid var(--border-strong); }
+        .pe-img-holder img { display: block; max-width: 100%; height: auto; }
+        .pe-region { position: absolute; border: 2px solid #dc2626; background: rgba(220,38,38,0.12); border-radius: 4px; pointer-events: none; }
+        .pe-region .n { position: absolute; top: -11px; left: -11px; width: 22px; height: 22px; border-radius: 50%; background: #dc2626; color: white; font-size: 12px; font-weight: 700; display: flex; align-items: center; justify-content: center; border: 2px solid white; }
+        .pe-region.hl { border-width: 3px; background: rgba(220,38,38,0.24); }
+        .pe-sidebar { width: 390px; flex-shrink: 0; background: var(--card); border-radius: var(--radius-lg); border: 1px solid var(--border); box-shadow: var(--shadow-sm); display: flex; flex-direction: column; max-height: calc(100vh - 110px); position: sticky; top: 84px; }
+        .pe-sb-head { padding: 15px 18px; border-bottom: 1px solid var(--border); font-size: 14.5px; font-weight: 700; }
+        .pe-body { flex: 1; overflow-y: auto; padding: 14px 18px; }
+        .pe-comment { padding: 11px 12px; border: 1px solid var(--border); border-radius: 11px; margin-bottom: 10px; }
+        .pe-comment.linked { border-left: 3px solid #dc2626; cursor: pointer; }
+        .pe-comment.linked:hover { background: #fff7f7; }
+        .pe-num { display: inline-flex; width: 20px; height: 20px; border-radius: 50%; background: #dc2626; color: white; font-size: 11px; font-weight: 700; align-items: center; justify-content: center; margin-right: 7px; }
+        .pe-text { font-size: 13.5px; line-height: 1.5; white-space: pre-wrap; margin-top: 5px; }
+        .pe-time { font-size: 11px; color: var(--muted); }
+        .pe-actions { padding: 15px 18px; border-top: 1px solid var(--border); display: flex; flex-direction: column; gap: 9px; }
+        .pe-actions .btn { width: 100%; }
+        .plat-check { display: flex; gap: 10px; margin-bottom: 16px; }
+        .plat-check label { flex: 1; display: flex; align-items: center; gap: 8px; padding: 10px 12px; border: 1px solid var(--border-strong); border-radius: 10px; font-size: 13.5px; font-weight: 600; cursor: pointer; color: var(--text-2); }
+        .plat-check label:has(input:checked) { border-color: var(--primary); background: var(--primary-soft); color: var(--primary); }
+        .plat-check input { accent-color: var(--primary); }
+        .caption-row { display: flex; gap: 8px; align-items: center; margin-bottom: 6px; justify-content: space-between; }
+        @media (max-width: 1000px) { .pe-layout { flex-direction: column; } .pe-sidebar { width: 100%; position: static; max-height: none; } }
+    </style>
+</head>
+<body>
+    <nav class="nav">
+        <a class="brand" href="/">
+            <span class="logo">N</span>
+            <span class="product">NICDC Social Studio<small>Post bank</small></span>
+        </a>
+        <a href="/" class="btn btn-ghost btn-sm" id="backBtn">Post bank</a>
+        <div class="spacer"></div>
+        <span class="role-chip editor">Editor</span>
+        <div class="divider-v"></div>
+        <div class="user-block">
+            <span class="avatar" id="navAvatar"></span>
+            <span class="name">__USER_NAME__</span>
+        </div>
+        <button class="btn btn-ghost btn-sm" onclick="logout()">Sign out</button>
+    </nav>
+
+    <div id="feedbackBanner" style="display:none;align-items:center;gap:10px;padding:10px 24px;background:#fff4e5;border-bottom:1px solid #fbd9a5;color:#9a5b00;font-size:13.5px;"></div>
+
+    <div class="pe-layout">
+        <div class="pe-canvas-col">
+            <div class="pe-canvas-wrap">
+                <div class="pe-head">
+                    <h1 id="pe-title"></h1>
+                    <span id="pe-badges" style="display:inline-flex;gap:8px;align-items:center;"></span>
+                </div>
+                <div class="pe-img-holder" id="imgHolder">
+                    <img id="postImg" alt="Post design">
+                </div>
+                <div style="margin-top:12px;font-size:13px;color:var(--muted);" id="pe-desc"></div>
+            </div>
+        </div>
+
+        <div class="pe-sidebar">
+            <div class="pe-sb-head">Approver feedback <span id="pe-count" style="font-size:11px;font-weight:700;background:var(--bg-subtle);color:var(--text-2);border-radius:9999px;padding:2px 9px;">0</span></div>
+            <div class="pe-body" id="pe-comments"></div>
+            <div class="pe-actions" id="pe-actions"></div>
+        </div>
+    </div>
+
+    <!-- Share modal -->
+    <div id="shareModal" class="modal-overlay">
+        <div class="modal" onclick="event.stopPropagation()">
+            <h2 id="sm-title">Share with approver</h2>
+            <p class="sub">Pick the platforms and write the caption — you can generate one with AI.</p>
+            <label>Platforms</label>
+            <div class="plat-check">
+                <label><input type="checkbox" id="plat-linkedin" checked> LinkedIn</label>
+                <label><input type="checkbox" id="plat-x"> X (Twitter)</label>
+                <label><input type="checkbox" id="plat-instagram"> Instagram</label>
+            </div>
+            <div class="caption-row">
+                <label for="sm-caption" style="margin:0;">Caption</label>
+                <button type="button" class="btn btn-sm" id="genCapBtn" onclick="generateCaption()">Generate with AI</button>
+            </div>
+            <textarea id="sm-caption" style="min-height:140px;" placeholder="Write the caption for this post..."></textarea>
+            <div class="modal-actions">
+                <button type="button" class="btn" onclick="closeShareModal()">Cancel</button>
+                <button type="button" class="btn btn-primary" id="sm-send" onclick="sharePost()">Share with approver</button>
+            </div>
+        </div>
+    </div>
+
+    <input type="file" id="replaceFile" accept=".png,.jpg,.jpeg,.webp" style="display:none;">
+
+    <script src="/static/app.js"></script>
+    <script>
+        const POST = __POST_JSON__;
+        let _comments = POST.comments || [];
+
+        document.getElementById('navAvatar').textContent = initials('__USER_NAME__');
+        document.getElementById('backBtn').insertAdjacentHTML('afterbegin', icon('back', 14));
+        document.getElementById('pe-title').textContent = POST.title;
+        document.getElementById('postImg').src = '/bank/' + POST.image_path + '?v=' + Date.now();
+        document.getElementById('pe-desc').textContent = POST.description || '';
+
+        const PLATFORM_LABELS = { linkedin: 'LinkedIn', x: 'X (Twitter)', instagram: 'Instagram' };
+        const KIND_LABELS = { upload: 'Uploaded design', html: 'HTML design', canvas: 'Canvas design' };
+        document.getElementById('pe-badges').innerHTML =
+            '<span class="badge cat-News">' + (KIND_LABELS[POST.kind] || POST.kind) + '</span> ' +
+            statusBadge(POST.status === 'draft' ? 'pending' : POST.status).replace('Waiting for review', POST.status === 'draft' ? 'Draft' : 'Waiting for review') +
+            ' <span style="font-size:12px;color:var(--muted);font-weight:600;">Rev ' + (POST.revision || 1) + '</span>';
+
+        /* feedback banner */
+        if (POST.status === 'feedback') {
+            const b = document.getElementById('feedbackBanner');
+            b.style.display = 'flex';
+            b.innerHTML = '<b>Changes requested by the approver</b>&nbsp;— ' + _comments.length + ' comment(s)' +
+                (POST.reviewer_note ? ' · Note: ' + escHtml(POST.reviewer_note) : '') +
+                '. Fix the design, then re-share.';
+        }
+
+        /* ── Region markers ── */
+        const holder = document.getElementById('imgHolder');
+        function renderRegions(highlightId) {
+            holder.querySelectorAll('.pe-region').forEach(el => el.remove());
+            let n = 0;
+            _comments.forEach(function (c) {
+                if (!c.region) return;
+                n += 1;
+                const el = document.createElement('div');
+                el.className = 'pe-region' + (c.id === highlightId ? ' hl' : '');
+                el.style.left = (c.region.x * 100) + '%';
+                el.style.top = (c.region.y * 100) + '%';
+                el.style.width = (c.region.w * 100) + '%';
+                el.style.height = (c.region.h * 100) + '%';
+                el.innerHTML = '<span class="n">' + n + '</span>';
+                holder.appendChild(el);
+            });
+        }
+
+        function renderComments(highlightId) {
+            const list = document.getElementById('pe-comments');
+            document.getElementById('pe-count').textContent = _comments.length;
+            if (!_comments.length) {
+                list.innerHTML = '<div style="text-align:center;padding:26px 10px;color:var(--muted);font-size:13px;">' +
+                    icon('check', 26) + '<br>No feedback on this revision.</div>';
+                renderRegions();
+                return;
+            }
+            let n = 0;
+            list.innerHTML = _comments.map(function (c) {
+                const num = c.region ? ++n : null;
+                return '<div class="pe-comment' + (c.region ? ' linked' : '') + '" data-comment-id="' + c.id + '">' +
+                    '<div>' + (num ? '<span class="pe-num">' + num + '</span>' : '') +
+                    '<span class="pe-time">' + escHtml(c.author || 'Approver') + ' · ' + fmtTime(c.created_at) + '</span></div>' +
+                    '<div class="pe-text">' + escHtml(c.text) + '</div>' +
+                '</div>';
+            }).join('');
+            renderRegions(highlightId);
+        }
+        document.getElementById('pe-comments').addEventListener('click', function (e) {
+            const card = e.target.closest('.pe-comment.linked');
+            if (card) renderComments(card.dataset.commentId);
+        });
+
+        /* ── Actions by status ── */
+        function renderActions() {
+            const box = document.getElementById('pe-actions');
+            const canEdit = ['draft', 'feedback', 'rejected'].indexOf(POST.status) !== -1;
+            let html = '';
+            if (canEdit) {
+                html += '<button class="btn btn-primary" onclick="openShareModal()">' + icon('send', 15) +
+                    (POST.status === 'feedback' ? 'Re-share with approver' : 'Share with approver') + '</button>';
+                if (POST.kind === 'html') {
+                    html += '<a class="btn" href="/html-editor?post_id=' + POST.id + '">' + icon('edit', 14) + 'Edit HTML design</a>';
+                }
+                html += '<button class="btn" onclick="document.getElementById(\'replaceFile\').click()">' + icon('image', 14) + 'Replace image</button>';
+                if (POST.status === 'draft') {
+                    html += '<button class="btn btn-danger-ghost" onclick="deletePost()">' + icon('trash', 14) + 'Delete draft</button>';
+                }
+            } else if (POST.status === 'pending') {
+                html += '<div style="font-size:13px;color:var(--muted);text-align:center;padding:6px;">' + icon('clock', 14) + ' Waiting for the approver\'s review.</div>';
+            } else if (POST.status === 'published') {
+                html += '<div>' + publishPills(POST.publish_results) + '</div>';
+            }
+            box.innerHTML = html;
+        }
+
+        /* ── Replace image ── */
+        document.getElementById('replaceFile').addEventListener('change', async function () {
+            if (!this.files.length) return;
+            const fd = new FormData();
+            fd.append('image', this.files[0]);
+            try {
+                const resp = await fetch('/api/posts/' + POST.id, { method: 'PUT', body: fd });
+                const data = await resp.json();
+                if (!resp.ok) throw new Error(data.detail || 'Upload failed');
+                POST.image_path = data.image_path;
+                document.getElementById('postImg').src = '/bank/' + data.image_path + '?v=' + Date.now();
+                toast('Image replaced', 'success');
+            } catch (e) {
+                toast('Error: ' + e.message, 'error');
+            }
+            this.value = '';
+        });
+
+        async function deletePost() {
+            if (!confirm('Delete this draft from the post bank?')) return;
+            try {
+                const resp = await fetch('/api/posts/' + POST.id, { method: 'DELETE' });
+                if (!resp.ok) throw new Error((await resp.json()).detail || 'Failed');
+                window.location.href = '/';
+            } catch (e) {
+                toast('Error: ' + e.message, 'error');
+            }
+        }
+
+        /* ── Share ── */
+        function openShareModal() {
+            document.getElementById('sm-title').textContent =
+                POST.status === 'feedback' ? 'Re-share with approver' : 'Share with approver';
+            document.getElementById('sm-caption').value = POST.caption || '';
+            const plats = POST.platforms || [];
+            document.getElementById('plat-linkedin').checked = !plats.length || plats.indexOf('linkedin') !== -1;
+            document.getElementById('plat-x').checked = plats.indexOf('x') !== -1;
+            document.getElementById('plat-instagram').checked = plats.indexOf('instagram') !== -1;
+            document.getElementById('shareModal').classList.add('open');
+        }
+        function closeShareModal() { document.getElementById('shareModal').classList.remove('open'); }
+        document.getElementById('shareModal').addEventListener('click', function (e) { if (e.target === this) closeShareModal(); });
+
+        function selectedPlatforms() {
+            const out = [];
+            ['linkedin', 'x', 'instagram'].forEach(function (p) {
+                if (document.getElementById('plat-' + p).checked) out.push(p);
+            });
+            return out;
+        }
+
+        async function generateCaption() {
+            const btn = document.getElementById('genCapBtn');
+            btn.disabled = true;
+            btn.textContent = 'Generating...';
+            try {
+                const resp = await fetch('/api/generate-caption', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        title: POST.title,
+                        description: POST.description || '',
+                        platforms: selectedPlatforms(),
+                        current: document.getElementById('sm-caption').value.trim(),
+                    }),
+                });
+                const data = await resp.json();
+                if (!resp.ok) throw new Error(data.detail || 'Failed');
+                document.getElementById('sm-caption').value = data.caption;
+            } catch (e) {
+                toast('Caption generation failed: ' + e.message, 'error');
+            } finally {
+                btn.disabled = false;
+                btn.textContent = 'Generate with AI';
+            }
+        }
+
+        async function sharePost() {
+            const platforms = selectedPlatforms();
+            if (!platforms.length) { toast('Pick at least one platform.', 'error'); return; }
+            const btn = document.getElementById('sm-send');
+            btn.disabled = true;
+            try {
+                const resp = await fetch('/api/posts/' + POST.id + '/share', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        caption: document.getElementById('sm-caption').value.trim(),
+                        platforms: platforms,
+                    }),
+                });
+                const data = await resp.json();
+                if (!resp.ok) throw new Error(data.detail || 'Failed');
+                toast('Shared with the approver', 'success');
+                setTimeout(() => { window.location.href = '/'; }, 800);
+            } catch (e) {
+                toast('Error: ' + e.message, 'error');
+                btn.disabled = false;
+            }
+        }
+
+        /* ── Init ── */
+        document.getElementById('postImg').addEventListener('load', function () { renderComments(); });
+        renderComments();
+        renderActions();
+    </script>
+</body>
+</html>

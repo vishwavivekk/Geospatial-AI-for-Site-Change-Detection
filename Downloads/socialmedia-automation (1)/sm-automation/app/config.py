@@ -30,6 +30,7 @@ IMAGES_DIR = os.path.join(BASE_DIR, "data", "images")
 PUBLISHED_DIR = os.path.join(BASE_DIR, "data", "published")
 TEMPLATES_DIR = os.path.join(BASE_DIR, "data", "templates")
 DESIGN_EXPORTS_DIR = os.path.join(BASE_DIR, "data", "designs")
+BANK_DIR = os.path.join(BASE_DIR, "data", "bank")
 ASSETS_DIR = os.path.join(BASE_DIR, "assets")
 DATABASE_PATH = os.path.join(BASE_DIR, "data", "sm-automation.db")
 ALLOWED_IMAGE_EXTENSIONS = {".jpg", ".jpeg", ".png", ".webp", ".gif"}

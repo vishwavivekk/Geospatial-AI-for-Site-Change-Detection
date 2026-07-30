@@ -11,7 +11,15 @@ import asyncio
 from app.config import ZERNIO_API_KEY
 
 
-def _post_sync(image_path: str, caption: str) -> dict:
+# our platform names -> Zernio platform values
+_PLATFORM_ALIASES = {
+    "instagram": {"instagram"},
+    "linkedin": {"linkedin"},
+    "x": {"x", "twitter"},
+}
+
+
+def _post_sync(image_path: str, caption: str, wanted: list[str] | None = None) -> dict:
     from zernio import Zernio
 
     if not ZERNIO_API_KEY:
@@ -19,21 +27,23 @@ def _post_sync(image_path: str, caption: str) -> dict:
 
     client = Zernio(api_key=ZERNIO_API_KEY)
 
+    wanted = [w.lower() for w in (wanted or list(_PLATFORM_ALIASES))]
     accounts_resp = client.accounts.list()
-    ig_accounts = [a for a in accounts_resp.accounts if a.platform.value == "instagram"]
-    li_accounts = [a for a in accounts_resp.accounts if a.platform.value == "linkedin"]
 
-    if not ig_accounts and not li_accounts:
-        raise RuntimeError("No Instagram or LinkedIn accounts connected in Zernio")
+    platforms = []
+    for name in wanted:
+        aliases = _PLATFORM_ALIASES.get(name, {name})
+        match = next((a for a in accounts_resp.accounts if a.platform.value in aliases), None)
+        if match:
+            platforms.append({"platform": match.platform.value, "accountId": match.field_id})
+
+    if not platforms:
+        raise RuntimeError(
+            "None of the requested platforms (" + ", ".join(wanted) + ") are connected in Zernio"
+        )
 
     upload = client.media.upload(image_path)
     image_url = str(upload.files[0].url)
-
-    platforms = []
-    if ig_accounts:
-        platforms.append({"platform": "instagram", "accountId": ig_accounts[0].field_id})
-    if li_accounts:
-        platforms.append({"platform": "linkedin", "accountId": li_accounts[0].field_id})
 
     result = client.posts.create_post(
         content=caption,
@@ -58,6 +68,6 @@ def _post_sync(image_path: str, caption: str) -> dict:
     }
 
 
-async def post_to_social(image_path: str, caption: str) -> dict:
+async def post_to_social(image_path: str, caption: str, platforms: list[str] | None = None) -> dict:
     """Async wrapper — the Zernio SDK is synchronous."""
-    return await asyncio.to_thread(_post_sync, image_path, caption)
+    return await asyncio.to_thread(_post_sync, image_path, caption, platforms)

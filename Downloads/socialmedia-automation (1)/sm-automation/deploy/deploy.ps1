@@ -16,7 +16,7 @@ tar -czf $tarball -C $projectRoot `
     --exclude "venv" --exclude "__pycache__" --exclude "*.pyc" `
     --exclude ".env" --exclude "data/.session_secret" --exclude "data/users.json" `
     --exclude "data/images" --exclude "data/published" --exclude "data/designs.json" `
-    --exclude "data/sm-automation.db" --exclude "data/designs" `
+    --exclude "data/sm-automation.db" --exclude "data/designs" --exclude "data/bank" `
     --exclude "mock-apis/published_posts.json" --exclude "server.log" --exclude ".claude" `
     .
 if ($LASTEXITCODE -ne 0) { throw "tar failed" }

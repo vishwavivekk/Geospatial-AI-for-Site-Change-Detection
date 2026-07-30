@@ -23,6 +23,7 @@ from app.chat_handler import chat_edit
 from app.chunker import chunk_document
 from app.config import (
     ASSETS_DIR,
+    BANK_DIR,
     DESIGN_EXPORTS_DIR,
     BASE_DIR,
     PAGES_DIR,
@@ -42,6 +43,7 @@ from app.repositories.category_repo import BRAND_TEMPLATES, CategoryRepo, _sanit
 from app.repositories.chunk_repo import ChunkRepo
 from app.repositories.design_repo import DesignRepo
 from app.repositories.image_repo import ImageRepo
+from app.repositories.post_repo import PostRepo
 from app.repositories.story_repo import StoryRepo
 from app.retriever import retrieve
 from app.social import post_to_social
@@ -57,6 +59,7 @@ class Repos:
         self.story = StoryRepo(session)
         self.image = ImageRepo(session)
         self.chunk = ChunkRepo(session)
+        self.post = PostRepo(session)
 
 
 async def get_repos(session: AsyncSession = Depends(get_db)) -> "Repos":
@@ -883,3 +886,373 @@ async def api_delete_category(
     if not await repos.category.delete(slug):
         raise HTTPException(404, detail=f"Category '{slug}' not found")
     return {"status": "ok", "deleted": slug}
+
+
+# ══════════════════════════════════════════════════════
+#  POST BANK — upload/create designs, share, review, publish
+# ══════════════════════════════════════════════════════
+
+class ShareRequest(BaseModel):
+    caption: str = ""
+    platforms: list[str] = []
+
+
+class CaptionGenRequest(BaseModel):
+    title: str = ""
+    description: str = ""
+    platforms: list[str] = []
+    current: str = ""
+
+
+class PostCommentRequest(BaseModel):
+    region: dict | None = None
+    text: str
+
+
+class PostApproveRequest(BaseModel):
+    caption: str = ""
+    note: str = ""
+
+
+class HtmlPostRequest(BaseModel):
+    title: str
+    description: str = ""
+    html_source: str = ""
+    png_data_url: str
+
+
+ALLOWED_POST_EXTS = {".png", ".jpg", ".jpeg", ".webp"}
+
+
+async def _save_bank_image(upload: UploadFile, post_id: str) -> str:
+    ext = os.path.splitext(upload.filename or "")[1].lower()
+    if ext not in ALLOWED_POST_EXTS:
+        raise HTTPException(400, detail=f"Unsupported image type '{ext}'. Allowed: png, jpg, jpeg, webp")
+    os.makedirs(BANK_DIR, exist_ok=True)
+    contents = await upload.read()
+    if len(contents) > 15 * 1024 * 1024:
+        raise HTTPException(400, detail="Image exceeds 15 MB")
+    fname = post_id + ext
+    with open(os.path.join(BANK_DIR, fname), "wb") as f:
+        f.write(contents)
+    return fname
+
+
+def _save_bank_data_url(png_data_url: str, post_id: str) -> str:
+    import base64
+    if "," in png_data_url:
+        png_data_url = png_data_url.split(",", 1)[1]
+    os.makedirs(BANK_DIR, exist_ok=True)
+    fname = post_id + ".png"
+    with open(os.path.join(BANK_DIR, fname), "wb") as f:
+        f.write(base64.b64decode(png_data_url))
+    return fname
+
+
+@app.get("/bank/{filename}")
+async def serve_bank_image(filename: str):
+    fpath = os.path.join(BANK_DIR, os.path.basename(filename))
+    if not os.path.isfile(fpath):
+        raise HTTPException(404, "File not found")
+    return FileResponse(fpath)
+
+
+@app.get("/api/posts")
+async def list_posts(
+    status: str | None = Query(None),
+    user: dict = Depends(require_user),
+    repos: Repos = Depends(get_repos),
+):
+    posts = await repos.post.get_all(status)
+    # approvers only see posts that have been shared with them
+    if user["role"] == "approver":
+        posts = [p for p in posts if p["status"] != "draft"]
+    return posts
+
+
+@app.get("/api/posts/{post_id}")
+async def get_post(post_id: str, user: dict = Depends(require_user), repos: Repos = Depends(get_repos)):
+    post = await repos.post.get_one_dict(post_id)
+    if not post:
+        raise HTTPException(404, detail="Post not found")
+    return post
+
+
+@app.post("/api/posts/upload")
+async def upload_post(
+    title: str = Form(...),
+    description: str = Form(""),
+    image: UploadFile = File(...),
+    user: dict = Depends(require_editor),
+    repos: Repos = Depends(get_repos),
+):
+    post_id = "post-" + uuid.uuid4().hex
+    fname = await _save_bank_image(image, post_id)
+    post = await repos.post.add(
+        title=title, kind="upload", image_path=fname,
+        description=description, created_by=user["display_name"],
+    )
+    return post
+
+
+@app.post("/api/posts/create-html")
+async def create_html_post(
+    req: HtmlPostRequest,
+    user: dict = Depends(require_editor),
+    repos: Repos = Depends(get_repos),
+):
+    post_id = "post-" + uuid.uuid4().hex
+    try:
+        fname = _save_bank_data_url(req.png_data_url, post_id)
+    except Exception:
+        raise HTTPException(400, detail="Invalid PNG data")
+    post = await repos.post.add(
+        title=req.title, kind="html", image_path=fname,
+        description=req.description, html_source=req.html_source,
+        created_by=user["display_name"],
+    )
+    return post
+
+
+@app.put("/api/posts/{post_id}")
+async def update_post(
+    post_id: str,
+    title: str = Form(""),
+    description: str = Form(""),
+    html_source: str = Form(""),
+    png_data_url: str = Form(""),
+    image: UploadFile | None = File(None),
+    user: dict = Depends(require_editor),
+    repos: Repos = Depends(get_repos),
+):
+    existing = await repos.post.get_one_dict(post_id)
+    if not existing:
+        raise HTTPException(404, detail="Post not found")
+    if existing["status"] == "published":
+        raise HTTPException(400, detail="Published posts cannot be edited")
+    image_path = ""
+    if image and image.filename:
+        old = os.path.join(BANK_DIR, existing["image_path"])
+        image_path = await _save_bank_image(image, post_id)
+        if os.path.isfile(old) and os.path.basename(old) != image_path:
+            os.remove(old)
+    elif png_data_url:
+        image_path = _save_bank_data_url(png_data_url, post_id)
+    post = await repos.post.update_content(
+        post_id, title=title, description=description if description else None,
+        image_path=image_path, html_source=html_source if html_source else None,
+    )
+    return post
+
+
+@app.delete("/api/posts/{post_id}")
+async def delete_post(post_id: str, user: dict = Depends(require_editor), repos: Repos = Depends(get_repos)):
+    existing = await repos.post.get_one_dict(post_id)
+    if not existing:
+        raise HTTPException(404, detail="Post not found")
+    if existing["status"] not in ("draft", "rejected"):
+        raise HTTPException(400, detail="Only drafts can be deleted")
+    image_path = await repos.post.delete(post_id)
+    if image_path:
+        fpath = os.path.join(BANK_DIR, image_path)
+        if os.path.isfile(fpath):
+            os.remove(fpath)
+    return {"status": "ok"}
+
+
+@app.post("/api/generate-caption")
+async def generate_caption_endpoint(req: CaptionGenRequest, user: dict = Depends(require_editor)):
+    from app.captioner import generate_caption
+    try:
+        caption = await generate_caption(req.title, req.description, req.platforms, req.current)
+    except Exception as e:
+        raise HTTPException(502, detail=f"Caption generation failed: {e}")
+    return {"caption": caption}
+
+
+@app.post("/api/posts/{post_id}/share")
+async def share_post(
+    post_id: str,
+    req: ShareRequest,
+    user: dict = Depends(require_editor),
+    repos: Repos = Depends(get_repos),
+):
+    existing = await repos.post.get_one_dict(post_id)
+    if not existing:
+        raise HTTPException(404, detail="Post not found")
+    if existing["status"] == "published":
+        raise HTTPException(400, detail="Post is already published")
+    platforms = [p for p in req.platforms if p in ("linkedin", "x", "instagram")]
+    if not platforms and not existing["platforms"]:
+        raise HTTPException(400, detail="Pick at least one platform")
+    post = await repos.post.share(post_id, req.caption, platforms, user["display_name"])
+    return post
+
+
+@app.patch("/api/posts/{post_id}/status")
+async def update_post_status(
+    post_id: str,
+    req: DesignStatusUpdate,
+    user: dict = Depends(require_approver),
+    repos: Repos = Depends(get_repos),
+):
+    if req.status not in ("pending", "rejected", "feedback"):
+        raise HTTPException(400, detail="Invalid status. Use the approve endpoint to approve posts.")
+    post = await repos.post.update_status(
+        post_id, req.status, req.reviewer_note, reviewed_by=user["display_name"]
+    )
+    if not post:
+        raise HTTPException(404, detail="Post not found")
+    return post
+
+
+@app.post("/api/posts/{post_id}/comments")
+async def add_post_comment(
+    post_id: str,
+    req: PostCommentRequest,
+    user: dict = Depends(require_approver),
+    repos: Repos = Depends(get_repos),
+):
+    region = None
+    if req.region and all(k in req.region for k in ("x", "y", "w", "h")):
+        region = {k: max(0.0, min(1.0, float(req.region[k]))) for k in ("x", "y", "w", "h")}
+    comment = await repos.post.add_comment(post_id, region, req.text, author=user["display_name"])
+    if comment is None:
+        raise HTTPException(404, detail="Post not found")
+    return comment
+
+
+@app.get("/api/posts/{post_id}/comments")
+async def get_post_comments(post_id: str, user: dict = Depends(require_user), repos: Repos = Depends(get_repos)):
+    result = await repos.post.get_comments(post_id)
+    if result is None:
+        raise HTTPException(404, detail="Post not found")
+    return result
+
+
+@app.delete("/api/posts/{post_id}/comments/{comment_id}")
+async def delete_post_comment(
+    post_id: str, comment_id: str,
+    user: dict = Depends(require_approver),
+    repos: Repos = Depends(get_repos),
+):
+    result = await repos.post.delete_comment(post_id, comment_id)
+    if result is None:
+        raise HTTPException(404, detail="Post not found")
+    return {"comments": result}
+
+
+@app.post("/api/posts/{post_id}/approve")
+async def approve_post(
+    post_id: str,
+    req: PostApproveRequest,
+    user: dict = Depends(require_approver),
+    repos: Repos = Depends(get_repos),
+):
+    """Final approval of a bank post: publishes to the selected platforms."""
+    post = await repos.post.get_one_dict(post_id)
+    if not post:
+        raise HTTPException(404, detail="Post not found")
+    if post["status"] == "published":
+        raise HTTPException(400, detail="Post is already published")
+    if post["status"] == "draft":
+        raise HTTPException(400, detail="Post has not been shared for review yet")
+
+    src = os.path.join(BANK_DIR, post["image_path"])
+    if not os.path.isfile(src):
+        raise HTTPException(400, detail="Post image is missing")
+    os.makedirs(PUBLISHED_DIR, exist_ok=True)
+    abs_png = os.path.join(PUBLISHED_DIR, post_id + ".png")
+    shutil.copyfile(src, abs_png)
+
+    if req.caption:
+        await repos.post.update_caption(post_id, req.caption)
+        post["caption"] = req.caption
+    caption = post.get("caption") or post["title"]
+    platforms = post.get("platforms") or ["linkedin", "x", "instagram"]
+
+    await repos.post.update_status(post_id, "approved", req.note, reviewed_by=user["display_name"])
+
+    from app.config import SOCIAL_MODE
+    mode = "real" if SOCIAL_MODE == "real" else "mock"
+    image_url = ""
+    real_err = None
+    if mode == "real":
+        try:
+            results = await post_to_social(abs_png, caption, platforms)
+            image_url = results.get("image_url", "")
+            all_ok = True
+        except Exception as e:
+            real_err = e
+            mode = "mock"
+    if mode == "mock":
+        results, image_url = await publish_design_mock(post, post_id + ".png", platforms)
+        if real_err is not None:
+            results["note"] = f"Real posting unavailable ({real_err}); published to mock platforms."
+        elif SOCIAL_MODE != "real":
+            results["note"] = "SOCIAL_MODE=mock — published to mock platforms only."
+        all_ok = all(
+            r.get("status") == "published"
+            for k, r in results.items() if isinstance(r, dict) and "status" in r
+        )
+
+    results["mode"] = mode
+    post = await repos.post.set_published(post_id, results, image_url=image_url, all_ok=all_ok)
+    return {
+        "status": post["status"],
+        "publish_results": results,
+        "image": image_url or f"/published/{post_id}.png",
+        "caption": caption,
+    }
+
+
+# ── Post bank pages ───────────────────────────────────
+
+@app.get("/html-editor", response_class=HTMLResponse)
+async def html_editor_page(request: Request, post_id: str = Query("")):
+    user = get_user(request)
+    if not user:
+        return RedirectResponse("/login", status_code=302)
+    if user["role"] != "editor":
+        return RedirectResponse("/review", status_code=302)
+    return HTMLResponse(
+        load_page("html_editor.html")
+        .replace("__POST_ID__", post_id)
+        .replace("__USER_NAME__", user["display_name"])
+    )
+
+
+@app.get("/post/{post_id}", response_class=HTMLResponse)
+async def post_detail_page(request: Request, post_id: str, repos: Repos = Depends(get_repos)):
+    """Editor's view of a bank post: feedback pins, replace image, re-share."""
+    user = get_user(request)
+    if not user:
+        return RedirectResponse("/login", status_code=302)
+    if user["role"] != "editor":
+        return RedirectResponse(f"/review-post/{post_id}", status_code=302)
+    post = await repos.post.get_one_dict(post_id)
+    if not post:
+        return HTMLResponse("<h3>Post not found</h3>", status_code=404)
+    return HTMLResponse(
+        load_page("post_edit.html")
+        .replace("__POST_JSON__", _json_for_script(post))
+        .replace("__USER_NAME__", user["display_name"])
+    )
+
+
+@app.get("/review-post/{post_id}", response_class=HTMLResponse)
+async def review_post_page(request: Request, post_id: str, repos: Repos = Depends(get_repos)):
+    """Approver's review view: region-pinned comments on the post image."""
+    user = get_user(request)
+    if not user:
+        return RedirectResponse("/login", status_code=302)
+    if user["role"] != "approver":
+        return RedirectResponse(f"/post/{post_id}", status_code=302)
+    post = await repos.post.get_one_dict(post_id)
+    if not post:
+        return HTMLResponse("<h3>Post not found</h3>", status_code=404)
+    return HTMLResponse(
+        load_page("post_review.html")
+        .replace("__POST_JSON__", _json_for_script(post))
+        .replace("__USER_NAME__", user["display_name"])
+    )

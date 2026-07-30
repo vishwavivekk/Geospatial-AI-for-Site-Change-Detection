@@ -33,11 +33,17 @@
 
         <div class="stats" id="statsRow"></div>
 
-        <div class="tabs" id="filterTabs">
-            <button class="tab active" data-filter="pending">Needs review <span class="count" id="cnt-pending">0</span></button>
-            <button class="tab" data-filter="feedback">With editor <span class="count" id="cnt-feedback">0</span></button>
-            <button class="tab" data-filter="published">Published <span class="count" id="cnt-published">0</span></button>
-            <button class="tab" data-filter="all">All</button>
+        <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;">
+            <div class="tabs" id="sourceTabs">
+                <button class="tab active" data-source="posts">Posts</button>
+                <button class="tab" data-source="designs">Story designs</button>
+            </div>
+            <div class="tabs" id="filterTabs">
+                <button class="tab active" data-filter="pending">Needs review <span class="count" id="cnt-pending">0</span></button>
+                <button class="tab" data-filter="feedback">With editor <span class="count" id="cnt-feedback">0</span></button>
+                <button class="tab" data-filter="published">Published <span class="count" id="cnt-published">0</span></button>
+                <button class="tab" data-filter="all">All</button>
+            </div>
         </div>
 
         <div id="designs-list"></div>
@@ -46,43 +52,112 @@
     <script src="/static/app.js"></script>
     <script>
         let _allDesigns = null;
+        let _allPosts = null;
+        let _source = 'posts';
 
         document.getElementById('navAvatar').textContent = initials('__USER_NAME__');
         document.getElementById('logoutBtn').insertAdjacentHTML('afterbegin', icon('logout', 14));
+
+        document.getElementById('sourceTabs').addEventListener('click', function (e) {
+            const tab = e.target.closest('.tab');
+            if (!tab) return;
+            document.querySelectorAll('#sourceTabs .tab').forEach(t => t.classList.remove('active'));
+            tab.classList.add('active');
+            _source = tab.dataset.source;
+            updateCounts();
+            renderCurrent();
+        });
 
         document.getElementById('filterTabs').addEventListener('click', function (e) {
             const tab = e.target.closest('.tab');
             if (!tab) return;
             document.querySelectorAll('#filterTabs .tab').forEach(t => t.classList.remove('active'));
             tab.classList.add('active');
-            renderDesigns(tab.dataset.filter);
+            renderCurrent();
         });
+
+        function activeFilter() {
+            const t = document.querySelector('#filterTabs .tab.active');
+            return t ? t.dataset.filter : 'pending';
+        }
+
+        function renderCurrent() {
+            if (_source === 'posts') renderPosts(activeFilter());
+            else renderDesigns(activeFilter());
+        }
 
         async function loadDesigns() {
             const list = document.getElementById('designs-list');
             list.innerHTML = skeletonCards(2);
             try {
-                const resp = await fetch('/api/designs');
-                if (!resp.ok) throw new Error(await resp.text());
-                _allDesigns = await resp.json();
+                const [dResp, pResp] = await Promise.all([fetch('/api/designs'), fetch('/api/posts')]);
+                if (!dResp.ok) throw new Error(await dResp.text());
+                _allDesigns = await dResp.json();
+                _allPosts = pResp.ok ? await pResp.json() : [];
                 updateCounts();
-                const active = document.querySelector('#filterTabs .tab.active');
-                renderDesigns(active ? active.dataset.filter : 'pending');
+                renderCurrent();
             } catch (e) {
-                list.innerHTML = '<div class="error-box">Error loading designs: ' + escHtml(e.message) + '</div>';
+                list.innerHTML = '<div class="error-box">Error loading queue: ' + escHtml(e.message) + '</div>';
             }
         }
 
         function updateCounts() {
-            const count = st => _allDesigns.filter(d => d.status === st).length;
+            const items = _source === 'posts' ? (_allPosts || []) : (_allDesigns || []);
+            const count = st => items.filter(d => d.status === st).length;
             document.getElementById('cnt-pending').textContent = count('pending');
             document.getElementById('cnt-feedback').textContent = count('feedback');
             document.getElementById('cnt-published').textContent = count('published') + count('approved');
+            const posts = _allPosts || [], designs = _allDesigns || [];
+            const all = posts.concat(designs);
+            const cAll = st => all.filter(d => d.status === st).length;
             document.getElementById('statsRow').innerHTML =
-                '<div class="stat tone-pending"><span class="k">' + count('pending') + '</span><span class="l">' + icon('inbox', 13) + ' Needs review</span></div>' +
-                '<div class="stat tone-feedback"><span class="k">' + count('feedback') + '</span><span class="l">' + icon('comment', 13) + ' With editor</span></div>' +
-                '<div class="stat tone-published"><span class="k">' + (count('published') + count('approved')) + '</span><span class="l">' + icon('rocket', 13) + ' Published</span></div>' +
-                '<div class="stat tone-plain"><span class="k">' + _allDesigns.length + '</span><span class="l">' + icon('layers', 13) + ' Total designs</span></div>';
+                '<div class="stat tone-pending"><span class="k">' + cAll('pending') + '</span><span class="l">' + icon('inbox', 13) + ' Needs review</span></div>' +
+                '<div class="stat tone-feedback"><span class="k">' + cAll('feedback') + '</span><span class="l">' + icon('comment', 13) + ' With editor</span></div>' +
+                '<div class="stat tone-published"><span class="k">' + (cAll('published') + cAll('approved')) + '</span><span class="l">' + icon('rocket', 13) + ' Published</span></div>' +
+                '<div class="stat tone-plain"><span class="k">' + all.length + '</span><span class="l">' + icon('layers', 13) + ' Total items</span></div>';
+        }
+
+        const PLATFORM_LABELS = { linkedin: 'LinkedIn', x: 'X', instagram: 'Instagram' };
+
+        function renderPosts(filter) {
+            const list = document.getElementById('designs-list');
+            if (!_allPosts) return;
+            let filtered;
+            if (filter === 'all') filtered = _allPosts;
+            else if (filter === 'published') filtered = _allPosts.filter(p => p.status === 'published' || p.status === 'approved');
+            else filtered = _allPosts.filter(p => p.status === filter);
+
+            if (!filtered.length) {
+                list.innerHTML = emptyState('inbox',
+                    filter === 'pending' ? 'All caught up' : 'Nothing here',
+                    filter === 'pending' ? 'No posts are waiting for your review.' : '');
+                return;
+            }
+            list.innerHTML = filtered.map(function (p) {
+                const comments = p.comments || [];
+                const plats = (p.platforms || []).map(x => PLATFORM_LABELS[x] || x).join(', ');
+                return '<div class="card hoverable">' +
+                    '<div class="design-row">' +
+                        '<div class="preview-frame" style="background:#f1f3f8 url(\'/bank/' + escHtml(p.image_path) + '\') center/cover;"></div>' +
+                        '<div class="design-info">' +
+                            '<h3>' + escHtml(p.title) + '</h3>' +
+                            '<div class="card-meta">' +
+                                statusBadge(p.status) +
+                                '<span>Revision ' + (p.revision || 1) + '</span>' +
+                                (p.submitted_by ? '<span>&middot; by ' + escHtml(p.submitted_by) + '</span>' : '') +
+                                (plats ? '<span>&middot; ' + escHtml(plats) + '</span>' : '') +
+                            '</div>' +
+                            (p.caption ? '<div class="story-text collapsed" style="margin-bottom:8px;">' + escHtml(p.caption) + '</div>' : '') +
+                            (comments.length ? '<div class="card-meta">' + icon('comment', 13) + ' ' + comments.length + ' comment' + (comments.length !== 1 ? 's' : '') + ' on this revision</div>' : '') +
+                            (p.status === 'published' && p.publish_results ? publishPills(p.publish_results) : '') +
+                            '<div class="card-actions">' +
+                                '<a class="btn ' + (p.status === 'pending' ? 'btn-primary' : '') + ' btn-sm" href="/review-post/' + p.id + '">' +
+                                    icon('eye', 14) + (p.status === 'pending' ? 'Review post' : 'Open') + '</a>' +
+                            '</div>' +
+                        '</div>' +
+                    '</div>' +
+                '</div>';
+            }).join('');
         }
 
         function renderDesigns(filter) {
