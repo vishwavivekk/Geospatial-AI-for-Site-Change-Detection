@@ -5,14 +5,15 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Sign in — NICDC Social Studio</title>
     <link rel="stylesheet" href="/static/app.css">
+    <link rel="icon" type="image/png" href="/assets/favicon.png">
     <style>
         body { display: flex; min-height: 100vh; background: white; }
         .brand-panel {
             flex: 1;
             background:
-                radial-gradient(1200px 700px at -10% -20%, rgba(168, 85, 247, 0.35), transparent 55%),
-                radial-gradient(900px 600px at 110% 110%, rgba(59, 130, 246, 0.4), transparent 55%),
-                linear-gradient(150deg, #312e81 0%, #4f46e5 55%, #6d28d9 100%);
+                radial-gradient(1200px 700px at -10% -20%, rgba(180, 68, 31, 0.30), transparent 55%),
+                radial-gradient(900px 600px at 110% 110%, rgba(120, 180, 70, 0.28), transparent 55%),
+                linear-gradient(150deg, #16290c 0%, #244212 55%, #33591a 100%);
             color: white;
             display: flex;
             flex-direction: column;
@@ -22,15 +23,10 @@
             overflow: hidden;
         }
         .brand-panel .mark {
-            width: 52px; height: 52px;
-            border-radius: 14px;
-            background: rgba(255,255,255,0.14);
-            border: 1px solid rgba(255,255,255,0.25);
-            backdrop-filter: blur(4px);
-            display: flex; align-items: center; justify-content: center;
-            font-size: 24px; font-weight: 800;
-            margin-bottom: 28px;
+            width: 190px;
+            margin-bottom: 26px;
         }
+        .brand-panel .mark img { width: 100%; height: auto; display: block; filter: drop-shadow(0 4px 14px rgba(0,0,0,0.35)); }
         .brand-panel h1 { font-size: 32px; font-weight: 800; letter-spacing: -0.03em; line-height: 1.15; margin-bottom: 12px; }
         .brand-panel .lede { font-size: 15.5px; color: rgba(255,255,255,0.82); max-width: 440px; line-height: 1.65; margin-bottom: 40px; }
         .flow-steps { display: flex; flex-direction: column; gap: 18px; max-width: 420px; }
@@ -102,7 +98,7 @@
 </head>
 <body>
     <div class="brand-panel">
-        <div class="mark">N</div>
+        <div class="mark"><img src="/assets/nicdc-logo.png" alt="NICDC — National Industrial Corridor Development Corporation"></div>
         <h1>NICDC Social Studio</h1>
         <p class="lede">Turn press releases into polished social media posts — designed with AI, reviewed by your team, and published automatically.</p>
         <div class="flow-steps">
