@@ -118,6 +118,15 @@ class PostRepo:
         await self.session.commit()
         return post.to_dict()
 
+    async def set_canva(self, post_id: str, design_id: str, edit_url: str) -> dict | None:
+        post = await self.get_one(post_id)
+        if not post:
+            return None
+        post.canva_design_id = design_id
+        post.canva_edit_url = edit_url
+        await self.session.commit()
+        return post.to_dict()
+
     async def update_caption(self, post_id: str, caption: str) -> dict | None:
         post = await self.get_one(post_id)
         if not post:

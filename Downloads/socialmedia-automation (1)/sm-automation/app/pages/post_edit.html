@@ -183,6 +183,10 @@
                 if (POST.kind === 'html') {
                     html += '<a class="btn" href="/html-editor?post_id=' + POST.id + '">' + icon('edit', 14) + 'Edit HTML design</a>';
                 }
+                html += '<button class="btn" onclick="canvaOpen()">' + icon('edit', 14) + (POST.canva_design_id ? 'Edit in Canva' : 'Open in Canva') + '</button>';
+                if (POST.canva_design_id) {
+                    html += '<button class="btn" onclick="canvaPull()" id="canvaPullBtn">' + icon('download', 14) + 'Pull latest from Canva</button>';
+                }
                 html += '<button class="btn" onclick="document.getElementById(\'replaceFile\').click()">' + icon('image', 14) + 'Replace image</button>';
                 if (POST.status === 'draft') {
                     html += '<button class="btn btn-danger-ghost" onclick="deletePost()">' + icon('trash', 14) + 'Delete draft</button>';
@@ -212,6 +216,47 @@
             }
             this.value = '';
         });
+
+        /* ── Canva ── */
+        async function canvaOpen() {
+            try {
+                const resp = await fetch('/api/posts/' + POST.id + '/canva/open', { method: 'POST' });
+                const data = await resp.json();
+                if (resp.status === 409) {
+                    toast('Connect your Canva account first — opening the connect page...', 'info');
+                    setTimeout(() => { window.location.href = '/canva/connect'; }, 1200);
+                    return;
+                }
+                if (resp.status === 501) { toast('Canva is not configured on this server yet — ask the admin to add the Canva integration keys.', 'error'); return; }
+                if (!resp.ok) throw new Error(data.detail || 'Failed');
+                if (!POST.canva_design_id) { POST.canva_design_id = data.design_id; renderActions(); }
+                window.open(data.edit_url, '_blank');
+            } catch (e) {
+                toast('Error: ' + e.message, 'error');
+            }
+        }
+
+        async function canvaPull() {
+            const btn = document.getElementById('canvaPullBtn');
+            if (btn) { btn.disabled = true; btn.innerHTML = icon('download', 14) + 'Pulling from Canva...'; }
+            try {
+                const resp = await fetch('/api/posts/' + POST.id + '/canva/pull', { method: 'POST' });
+                const data = await resp.json();
+                if (resp.status === 409) {
+                    toast('Connect your Canva account first — opening the connect page...', 'info');
+                    setTimeout(() => { window.location.href = '/canva/connect'; }, 1200);
+                    return;
+                }
+                if (!resp.ok) throw new Error(data.detail || 'Failed');
+                POST.image_path = data.image_path;
+                document.getElementById('postImg').src = '/bank/' + data.image_path + '?v=' + Date.now();
+                toast('Latest Canva design pulled in', 'success');
+            } catch (e) {
+                toast('Error: ' + e.message, 'error');
+            } finally {
+                if (btn) { btn.disabled = false; btn.innerHTML = icon('download', 14) + 'Pull latest from Canva'; }
+            }
+        }
 
         async function deletePost() {
             if (!confirm('Delete this draft from the post bank?')) return;

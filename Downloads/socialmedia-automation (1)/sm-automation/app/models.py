@@ -189,6 +189,8 @@ class BankPost(Base):
     design_state: Mapped[Optional[dict]] = mapped_column(JSON)
     caption: Mapped[Optional[str]] = mapped_column(Text)
     platforms: Mapped[Optional[list]] = mapped_column(JSON)  # ["linkedin","x","instagram"]
+    canva_design_id: Mapped[Optional[str]] = mapped_column(String)
+    canva_edit_url: Mapped[Optional[str]] = mapped_column(String)
     status: Mapped[str] = mapped_column(String, default="draft", index=True)
     revision: Mapped[int] = mapped_column(Integer, default=1)
     created_by: Mapped[Optional[str]] = mapped_column(String)
@@ -219,6 +221,8 @@ class BankPost(Base):
             "design_state": self.design_state,
             "caption": self.caption or "",
             "platforms": self.platforms or [],
+            "canva_design_id": self.canva_design_id or "",
+            "canva_edit_url": self.canva_edit_url or "",
             "status": self.status,
             "revision": self.revision or 1,
             "created_by": self.created_by or "",

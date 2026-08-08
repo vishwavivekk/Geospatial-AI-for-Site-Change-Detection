@@ -82,6 +82,18 @@ async def _seed_default_categories():
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     await init_db()
+    # additive schema migrations for tables that predate new columns
+    from sqlalchemy import text as _sql_text
+    from app.database import engine as _engine
+    async with _engine.begin() as conn:
+        for ddl in (
+            "ALTER TABLE bank_posts ADD COLUMN canva_design_id VARCHAR",
+            "ALTER TABLE bank_posts ADD COLUMN canva_edit_url VARCHAR",
+        ):
+            try:
+                await conn.execute(_sql_text(ddl))
+            except Exception:
+                pass  # column already exists
     await _seed_default_categories()
     # vectors.npy + metadata.json are written together and stay row-aligned;
     # the DB chunk table is the fallback source for chunk metadata.
@@ -1256,3 +1268,177 @@ async def review_post_page(request: Request, post_id: str, repos: Repos = Depend
         .replace("__POST_JSON__", _json_for_script(post))
         .replace("__USER_NAME__", user["display_name"])
     )
+
+
+# ══════════════════════════════════════════════════════
+#  CANVA CONNECT — edit bank posts in Canva
+# ══════════════════════════════════════════════════════
+
+from app import canva as canva_api
+
+
+class CanvaNewRequest(BaseModel):
+    title: str
+    description: str = ""
+
+
+def _canva_placeholder_png(title: str) -> bytes:
+    """1080x1080 'design in progress' placeholder for Canva-first drafts."""
+    import io
+    from PIL import Image, ImageDraw
+    img = Image.new("RGB", (1080, 1080), (238, 246, 230))
+    d = ImageDraw.Draw(img)
+    d.rectangle([40, 40, 1040, 1040], outline=(67, 118, 31), width=4)
+    d.text((90, 480), "Design in progress in Canva", fill=(67, 118, 31))
+    d.text((90, 540), title[:60], fill=(90, 105, 125))
+    buf = io.BytesIO()
+    img.save(buf, format="PNG")
+    return buf.getvalue()
+
+
+@app.get("/api/canva/status")
+async def canva_status(user: dict = Depends(require_editor)):
+    return {
+        "configured": canva_api.configured(),
+        "connected": canva_api.configured() and canva_api.connected(user["username"]),
+    }
+
+
+@app.get("/canva/connect")
+async def canva_connect(request: Request):
+    user = get_user(request)
+    if not user or user["role"] != "editor":
+        return RedirectResponse("/login", status_code=302)
+    if not canva_api.configured():
+        return HTMLResponse(
+            "<div style='font-family:sans-serif;max-width:560px;margin:80px auto;'>"
+            "<h2>Canva is not configured yet</h2>"
+            "<p>An administrator needs to create an integration at "
+            "<a href='https://www.canva.com/developers/'>developer.canva.com</a> and set "
+            "<code>CANVA_CLIENT_ID</code>, <code>CANVA_CLIENT_SECRET</code> and "
+            "<code>CANVA_REDIRECT_URI</code> in the server's <code>.env</code>, then restart.</p>"
+            "<a href='/'>&larr; Back</a></div>",
+            status_code=200,
+        )
+    return RedirectResponse(canva_api.authorize_url(user["username"]), status_code=302)
+
+
+@app.get("/canva/callback")
+async def canva_callback(state: str = Query(""), code: str = Query(""), error: str = Query("")):
+    if error:
+        return HTMLResponse(
+            f"<div style='font-family:sans-serif;max-width:560px;margin:80px auto;'>"
+            f"<h2>Canva connection cancelled</h2><p>{error}</p><a href='/'>&larr; Back</a></div>"
+        )
+    try:
+        await canva_api.handle_callback(state, code)
+    except Exception as e:
+        return HTMLResponse(
+            f"<div style='font-family:sans-serif;max-width:560px;margin:80px auto;'>"
+            f"<h2>Canva connection failed</h2><p>{e}</p><a href='/canva/connect'>Try again</a></div>",
+            status_code=400,
+        )
+    return HTMLResponse(
+        "<div style='font-family:sans-serif;max-width:560px;margin:80px auto;text-align:center;'>"
+        "<h2>&#10003; Canva connected</h2>"
+        "<p>You can now open designs in Canva from your post bank.</p>"
+        "<a href='/' style='display:inline-block;margin-top:12px;padding:10px 22px;"
+        "background:#43761f;color:white;border-radius:9px;text-decoration:none;'>Back to post bank</a></div>"
+    )
+
+
+@app.post("/api/canva/new-design")
+async def canva_new_design(
+    req: CanvaNewRequest,
+    user: dict = Depends(require_editor),
+    repos: Repos = Depends(get_repos),
+):
+    if not canva_api.configured():
+        raise HTTPException(501, detail="Canva is not configured on this server")
+    if not canva_api.connected(user["username"]):
+        raise HTTPException(409, detail="canva_not_connected")
+
+    post_id = "post-" + uuid.uuid4().hex
+    os.makedirs(BANK_DIR, exist_ok=True)
+    fname = post_id + ".png"
+    with open(os.path.join(BANK_DIR, fname), "wb") as f:
+        f.write(_canva_placeholder_png(req.title))
+    post = await repos.post.add(
+        title=req.title, kind="canva", image_path=fname,
+        description=req.description, created_by=user["display_name"],
+    )
+    try:
+        design = await canva_api.create_design(user["username"], req.title)
+    except LookupError:
+        raise HTTPException(409, detail="canva_not_connected")
+    except Exception as e:
+        raise HTTPException(502, detail=f"Canva design creation failed: {e}")
+    post = await repos.post.set_canva(post["id"], design["id"], design["edit_url"])
+    return {"post_id": post["id"], "edit_url": design["edit_url"]}
+
+
+@app.post("/api/posts/{post_id}/canva/open")
+async def canva_open_post(
+    post_id: str,
+    user: dict = Depends(require_editor),
+    repos: Repos = Depends(get_repos),
+):
+    """Ensures the post has a linked Canva design (seeding it with the
+    current image on first open) and returns the edit URL."""
+    if not canva_api.configured():
+        raise HTTPException(501, detail="Canva is not configured on this server")
+    if not canva_api.connected(user["username"]):
+        raise HTTPException(409, detail="canva_not_connected")
+    post = await repos.post.get_one_dict(post_id)
+    if not post:
+        raise HTTPException(404, detail="Post not found")
+    if post["status"] == "published":
+        raise HTTPException(400, detail="Published posts cannot be edited")
+
+    if post.get("canva_design_id") and post.get("canva_edit_url"):
+        return {"edit_url": post["canva_edit_url"], "design_id": post["canva_design_id"]}
+
+    try:
+        asset_id = None
+        if post["kind"] != "canva":  # seed the design with the current image
+            fpath = os.path.join(BANK_DIR, post["image_path"])
+            with open(fpath, "rb") as f:
+                asset_id = await canva_api.upload_asset(user["username"], f.read(), post["title"])
+        design = await canva_api.create_design(user["username"], post["title"], asset_id)
+    except LookupError:
+        raise HTTPException(409, detail="canva_not_connected")
+    except Exception as e:
+        raise HTTPException(502, detail=f"Canva design creation failed: {e}")
+    await repos.post.set_canva(post_id, design["id"], design["edit_url"])
+    return {"edit_url": design["edit_url"], "design_id": design["id"]}
+
+
+@app.post("/api/posts/{post_id}/canva/pull")
+async def canva_pull_post(
+    post_id: str,
+    user: dict = Depends(require_editor),
+    repos: Repos = Depends(get_repos),
+):
+    """Exports the latest state of the linked Canva design and makes it
+    the post's image."""
+    if not canva_api.configured():
+        raise HTTPException(501, detail="Canva is not configured on this server")
+    post = await repos.post.get_one_dict(post_id)
+    if not post:
+        raise HTTPException(404, detail="Post not found")
+    if not post.get("canva_design_id"):
+        raise HTTPException(400, detail="This post has no linked Canva design")
+    if post["status"] == "published":
+        raise HTTPException(400, detail="Published posts cannot be changed")
+    try:
+        png = await canva_api.export_design_png(user["username"], post["canva_design_id"])
+    except LookupError:
+        raise HTTPException(409, detail="canva_not_connected")
+    except Exception as e:
+        raise HTTPException(502, detail=f"Canva export failed: {e}")
+    os.makedirs(BANK_DIR, exist_ok=True)
+    fname = post_id + ".png"
+    with open(os.path.join(BANK_DIR, fname), "wb") as f:
+        f.write(png)
+    post = await repos.post.update_content(post_id, image_path=fname)
+    return post

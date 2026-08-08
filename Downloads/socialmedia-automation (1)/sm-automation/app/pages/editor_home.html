@@ -158,7 +158,7 @@
         <div class="modal" style="max-width:560px;" onclick="event.stopPropagation()">
             <h2>Create a design</h2>
             <p class="sub">Choose how you want to design this post.</p>
-            <div style="display:flex;gap:14px;">
+            <div style="display:flex;gap:14px;" id="chooserOptions">
                 <a href="/html-editor" style="flex:1;text-decoration:none;color:inherit;border:1px solid var(--border-strong);border-radius:14px;padding:20px 18px;display:block;transition:border-color 0.15s, background 0.15s;" onmouseover="this.style.borderColor='var(--primary)'" onmouseout="this.style.borderColor='var(--border-strong)'">
                     <div style="font-size:15px;font-weight:800;margin-bottom:6px;">HTML designer</div>
                     <div style="font-size:12.5px;color:var(--muted);line-height:1.5;">Write HTML/CSS on a 1080×1080 canvas with live preview; saved straight to the post bank.</div>
@@ -167,9 +167,19 @@
                     <div style="font-size:15px;font-weight:800;margin-bottom:6px;">Canvas / AI designer</div>
                     <div style="font-size:12.5px;color:var(--muted);line-height:1.5;">Generate branded layouts from a story with AI and fine-tune them on the canvas.</div>
                 </button>
+                <button onclick="showCanvaForm()" style="flex:1;text-align:left;font-family:inherit;cursor:pointer;background:white;border:1px solid var(--border-strong);border-radius:14px;padding:20px 18px;transition:border-color 0.15s;" onmouseover="this.style.borderColor='var(--primary)'" onmouseout="this.style.borderColor='var(--border-strong)'">
+                    <div style="font-size:15px;font-weight:800;margin-bottom:6px;">Canva <span style="font-size:10px;font-weight:700;background:var(--primary-soft);color:var(--primary);border-radius:9999px;padding:2px 8px;vertical-align:2px;">connects to canva.com</span></div>
+                    <div style="font-size:12.5px;color:var(--muted);line-height:1.5;">Design in Canva itself — the finished design is pulled back into the post bank.</div>
+                </button>
+            </div>
+            <div id="canvaNewForm" style="display:none;">
+                <label for="canvaTitle">Post title</label>
+                <input id="canvaTitle" type="text" placeholder="e.g. BHAVYA milestone announcement" style="width:100%;padding:10px 13px;border:1px solid var(--border-strong);border-radius:9px;font-size:14px;font-family:inherit;margin-bottom:16px;outline:none;">
+                <div style="font-size:12.5px;color:var(--muted);margin-bottom:6px;">A blank 1080×1080 design opens in Canva. When you're done, open the post and click <b>Pull latest from Canva</b>.</div>
             </div>
             <div class="modal-actions" style="margin-top:18px;">
                 <button type="button" class="btn" onclick="closeCreateChooser()">Cancel</button>
+                <button type="button" class="btn btn-primary" id="canvaCreateBtn" style="display:none;" onclick="canvaCreate()">Create &amp; open Canva</button>
             </div>
         </div>
     </div>
@@ -439,8 +449,51 @@
             document.getElementById('uploadPreview').style.display = 'none';
         }
         function closeUploadModal() { document.getElementById('uploadModal').classList.remove('open'); }
-        function openCreateChooser() { document.getElementById('createChooser').classList.add('open'); }
+        function openCreateChooser() {
+            document.getElementById('chooserOptions').style.display = '';
+            document.getElementById('canvaNewForm').style.display = 'none';
+            document.getElementById('canvaCreateBtn').style.display = 'none';
+            document.getElementById('createChooser').classList.add('open');
+        }
         function closeCreateChooser() { document.getElementById('createChooser').classList.remove('open'); }
+
+        function showCanvaForm() {
+            document.getElementById('chooserOptions').style.display = 'none';
+            document.getElementById('canvaNewForm').style.display = '';
+            document.getElementById('canvaCreateBtn').style.display = '';
+            setTimeout(() => document.getElementById('canvaTitle').focus(), 60);
+        }
+
+        async function canvaCreate() {
+            const title = document.getElementById('canvaTitle').value.trim();
+            if (!title) { toast('Give the post a title first.', 'error'); return; }
+            const btn = document.getElementById('canvaCreateBtn');
+            btn.disabled = true;
+            try {
+                const resp = await fetch('/api/canva/new-design', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ title: title }),
+                });
+                const data = await resp.json();
+                if (resp.status === 409) {
+                    closeCreateChooser();
+                    toast('Connect your Canva account first — opening the connect page...', 'info');
+                    setTimeout(() => { window.location.href = '/canva/connect'; }, 1200);
+                    return;
+                }
+                if (resp.status === 501) { toast('Canva is not configured on this server yet — ask the admin to add the Canva integration keys.', 'error'); return; }
+                if (!resp.ok) throw new Error(data.detail || 'Failed');
+                closeCreateChooser();
+                window.open(data.edit_url, '_blank');
+                toast('Design created — Canva opened in a new tab', 'success');
+                loadBank(true);
+            } catch (e) {
+                toast('Error: ' + e.message, 'error');
+            } finally {
+                btn.disabled = false;
+            }
+        }
 
         document.getElementById('categoryTabs').addEventListener('click', function (e) {
             const tab = e.target.closest('.tab');

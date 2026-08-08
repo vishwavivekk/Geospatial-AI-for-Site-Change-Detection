@@ -44,6 +44,28 @@ The dashboard opens on the **Post bank** — the editor's library of finished de
    (revision bumps, feedback archived).
 5. Approval publishes to the selected platforms (`SOCIAL_MODE` applies).
 
+## Designing in Canva
+
+Editors can design posts in Canva itself. **Create design → Canva** opens a
+blank 1080×1080 Canva design linked to a bank draft; any post's page also has
+**Open in Canva** (seeds the design with the current image) and **Pull latest
+from Canva** (exports the design as PNG back into the post). The share →
+review → approve flow is unchanged.
+
+One-time setup (admin): create an integration at
+[developer.canva.com](https://www.canva.com/developers/), enable scopes
+`asset:read asset:write design:content:read design:content:write design:meta:read`,
+add the redirect URL `https://YOUR_SERVER/canva/callback`, then set in `.env`:
+
+```
+CANVA_CLIENT_ID=...
+CANVA_CLIENT_SECRET=...
+CANVA_REDIRECT_URI=https://YOUR_SERVER/canva/callback
+```
+
+Each editor then connects their own Canva account once via the in-app prompt
+(tokens are stored in `data/canva_tokens.json`, never committed or deployed).
+
 ## Workflow
 
 ```

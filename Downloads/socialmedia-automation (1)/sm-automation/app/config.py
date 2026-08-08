@@ -44,6 +44,12 @@ SOCIAL_ACCESS_TOKEN = os.environ.get("SOCIAL_ACCESS_TOKEN", "mock-access-token")
 IG_USER_ID = os.environ.get("IG_USER_ID", "17841400000000000")
 LINKEDIN_AUTHOR = os.environ.get("LINKEDIN_AUTHOR", "urn:li:organization:900001")
 
+# ── Canva Connect integration (edit designs in Canva) ──
+CANVA_CLIENT_ID = os.environ.get("CANVA_CLIENT_ID", "")
+CANVA_CLIENT_SECRET = os.environ.get("CANVA_CLIENT_SECRET", "")
+CANVA_REDIRECT_URI = os.environ.get("CANVA_REDIRECT_URI", "")
+CANVA_TOKENS_PATH = os.path.join(BASE_DIR, "data", "canva_tokens.json")
+
 # ── Zernio media hosting (public image URLs for publishing) ──
 ZERNIO_API_KEY = os.environ.get("ZERNIO_API_KEY", "")
 ZERNIO_API_BASE = os.environ.get("ZERNIO_API_BASE", "https://zernio.com/api")
