@@ -159,7 +159,7 @@
             <h2>Create a design</h2>
             <p class="sub">Choose how you want to design this post.</p>
             <div style="display:flex;gap:14px;" id="chooserOptions">
-                <button onclick="showCanvaForm()" style="flex:1;text-align:left;font-family:inherit;cursor:pointer;background:var(--primary-soft);border:1.5px solid var(--primary);border-radius:14px;padding:20px 18px;transition:box-shadow 0.15s;" onmouseover="this.style.boxShadow='var(--shadow-md)'" onmouseout="this.style.boxShadow='none'">
+                <button id="canvaChooserCard" onclick="showCanvaForm()" style="flex:1;text-align:left;font-family:inherit;cursor:pointer;background:var(--primary-soft);border:1.5px solid var(--primary);border-radius:14px;padding:20px 18px;transition:box-shadow 0.15s;" onmouseover="this.style.boxShadow='var(--shadow-md)'" onmouseout="this.style.boxShadow='none'">
                     <div style="font-size:15px;font-weight:800;margin-bottom:6px;">Canva <span style="font-size:10px;font-weight:700;background:var(--primary);color:white;border-radius:9999px;padding:2px 8px;vertical-align:2px;">Recommended</span></div>
                     <div style="font-size:12.5px;color:var(--text-2);line-height:1.5;">Design in Canva itself — when you finish, the design comes straight back into the portal to send for approval.</div>
                 </button>
@@ -831,6 +831,13 @@
         loadBank();
         loadCategories().then(function () { loadStories(); });
         loadDesigns(true);
+        // hide the Canva option for editors without Canva access
+        fetch('/api/me').then(r => r.json()).then(function (me) {
+            if (me && me.can_use_canva === false) {
+                const card = document.getElementById('canvaChooserCard');
+                if (card) card.style.display = 'none';
+            }
+        }).catch(function () {});
     </script>
 </body>
 </html>

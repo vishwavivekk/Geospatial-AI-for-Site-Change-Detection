@@ -191,11 +191,28 @@
 
         /* ── Guided workflow: 1 Design in Canva → 2 Bring back → 3 Send to admin ── */
         let _pulledThisSession = false;
+        let _canUseCanva = true;
+        fetch('/api/me').then(r => r.json()).then(function (me) {
+            if (me && me.can_use_canva === false) { _canUseCanva = false; renderActions(); }
+        }).catch(function () {});
 
         function renderActions() {
             const box = document.getElementById('pe-actions');
             const canEdit = ['draft', 'feedback', 'rejected'].indexOf(POST.status) !== -1;
             let html = '';
+            if (canEdit && !_canUseCanva) {
+                // Canva not allowed for this editor — plain actions
+                html += '<button class="btn btn-primary" onclick="document.getElementById(\'replaceFile\').click()">' + icon('image', 14) + 'Replace image</button>';
+                if (POST.kind === 'html') {
+                    html += '<a class="btn" href="/html-editor?post_id=' + POST.id + '">' + icon('edit', 14) + 'Edit HTML design</a>';
+                }
+                html += '<button class="btn btn-success" onclick="openShareModal()">' + icon('send', 14) + (POST.status === 'feedback' ? 'Re-share with approver' : 'Share with approver') + '</button>';
+                if (POST.status === 'draft') {
+                    html += '<button class="btn btn-danger-ghost btn-sm" onclick="deletePost()">' + icon('trash', 13) + 'Delete draft</button>';
+                }
+                box.innerHTML = html;
+                return;
+            }
             if (canEdit) {
                 const linked = !!POST.canva_design_id;
                 html += '<div>' +

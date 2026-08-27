@@ -29,6 +29,11 @@ Open **http://localhost:8000** and sign in.
 
 Accounts live in `data/users.json` (auto-created on first run, passwords hashed).
 
+Admins manage accounts in the app: **approval workspace → Team** lists every
+account, creates new editor/approver accounts, and toggles per-editor **Canva
+access** (enforced server-side on all Canva endpoints). Deleting an account
+invalidates its sessions immediately.
+
 ## Post Bank (primary workflow)
 
 The dashboard opens on the **Post bank** — the editor's library of finished designs:

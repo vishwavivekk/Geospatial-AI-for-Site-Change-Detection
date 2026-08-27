@@ -12,6 +12,13 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth import (
     SESSION_COOKIE,
+    create_user,
+    delete_user,
+    get_user_record,
+    list_users,
+    require_canva_access,
+    update_user,
+    user_can_use_canva,
     create_session_token,
     get_user,
     require_approver,
@@ -313,7 +320,8 @@ async def api_logout():
 
 @app.get("/api/me")
 async def api_me(user: dict = Depends(require_user)):
-    return user
+    record = get_user_record(user["username"]) or {}
+    return {**user, "can_use_canva": record.get("can_use_canva", True)}
 
 
 # ── Health / files ────────────────────────────────────
@@ -1297,7 +1305,7 @@ def _canva_placeholder_png(title: str) -> bytes:
 
 
 @app.get("/api/canva/status")
-async def canva_status(user: dict = Depends(require_editor)):
+async def canva_status(user: dict = Depends(require_canva_access)):
     return {
         "configured": canva_api.configured(),
         "connected": canva_api.configured() and canva_api.connected(user["username"]),
@@ -1350,7 +1358,7 @@ async def canva_callback(state: str = Query(""), code: str = Query(""), error: s
 @app.post("/api/canva/new-design")
 async def canva_new_design(
     req: CanvaNewRequest,
-    user: dict = Depends(require_editor),
+    user: dict = Depends(require_canva_access),
     repos: Repos = Depends(get_repos),
 ):
     if not canva_api.configured():
@@ -1380,7 +1388,7 @@ async def canva_new_design(
 @app.post("/api/posts/{post_id}/canva/open")
 async def canva_open_post(
     post_id: str,
-    user: dict = Depends(require_editor),
+    user: dict = Depends(require_canva_access),
     repos: Repos = Depends(get_repos),
 ):
     """Ensures the post has a linked Canva design (seeding it with the
@@ -1416,7 +1424,7 @@ async def canva_open_post(
 @app.post("/api/posts/{post_id}/canva/pull")
 async def canva_pull_post(
     post_id: str,
-    user: dict = Depends(require_editor),
+    user: dict = Depends(require_canva_access),
     repos: Repos = Depends(get_repos),
 ):
     """Exports the latest state of the linked Canva design and makes it
@@ -1442,3 +1450,62 @@ async def canva_pull_post(
         f.write(png)
     post = await repos.post.update_content(post_id, image_path=fname)
     return post
+
+
+# ══════════════════════════════════════════════════════
+#  TEAM MANAGEMENT — admins create editor/approver accounts
+# ══════════════════════════════════════════════════════
+
+class UserCreateRequest(BaseModel):
+    username: str
+    password: str
+    display_name: str = ""
+    role: str = "editor"
+    can_use_canva: bool = False
+
+
+class UserUpdateRequest(BaseModel):
+    display_name: str | None = None
+    password: str | None = None
+    role: str | None = None
+    can_use_canva: bool | None = None
+
+
+@app.get("/api/users")
+async def api_list_users(user: dict = Depends(require_approver)):
+    return list_users()
+
+
+@app.post("/api/users")
+async def api_create_user(req: UserCreateRequest, user: dict = Depends(require_approver)):
+    try:
+        return create_user(
+            req.username, req.password, req.display_name, req.role,
+            req.can_use_canva, created_by=user["display_name"],
+        )
+    except ValueError as e:
+        raise HTTPException(400, detail=str(e))
+
+
+@app.patch("/api/users/{username}")
+async def api_update_user(username: str, req: UserUpdateRequest, user: dict = Depends(require_approver)):
+    try:
+        return update_user(
+            username, display_name=req.display_name, password=req.password,
+            role=req.role, can_use_canva=req.can_use_canva,
+        )
+    except LookupError as e:
+        raise HTTPException(404, detail=str(e))
+    except ValueError as e:
+        raise HTTPException(400, detail=str(e))
+
+
+@app.delete("/api/users/{username}")
+async def api_delete_user(username: str, user: dict = Depends(require_approver)):
+    try:
+        delete_user(username, acting_username=user["username"])
+    except LookupError as e:
+        raise HTTPException(404, detail=str(e))
+    except ValueError as e:
+        raise HTTPException(400, detail=str(e))
+    return {"status": "ok", "deleted": username}

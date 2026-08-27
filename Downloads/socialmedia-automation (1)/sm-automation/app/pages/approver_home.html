@@ -38,6 +38,7 @@
             <div class="tabs" id="sourceTabs">
                 <button class="tab active" data-source="posts">Posts</button>
                 <button class="tab" data-source="designs">Story designs</button>
+                <button class="tab" data-source="team">Team</button>
             </div>
             <div class="tabs" id="filterTabs">
                 <button class="tab active" data-filter="pending">Needs review <span class="count" id="cnt-pending">0</span></button>
@@ -48,6 +49,35 @@
         </div>
 
         <div id="designs-list"></div>
+    </div>
+
+    <!-- Create account modal -->
+    <div id="userModal" class="modal-overlay">
+        <div class="modal" onclick="event.stopPropagation()">
+            <h2>Create account</h2>
+            <p class="sub">The new user signs in with these credentials on the login page.</p>
+            <div id="userFeedback" class="feedback-msg"></div>
+            <form id="userForm">
+                <label for="uUsername">Username</label>
+                <input id="uUsername" type="text" required placeholder="e.g. priya.editor" autocomplete="off">
+                <label for="uName">Display name</label>
+                <input id="uName" type="text" placeholder="e.g. Priya Sharma" autocomplete="off">
+                <label for="uPassword">Password (min 6 characters)</label>
+                <input id="uPassword" type="text" required minlength="6" autocomplete="new-password">
+                <label>Role</label>
+                <div class="radio-group">
+                    <label><input type="radio" name="uRole" value="editor" checked onchange="toggleCanvaRow()"> Editor</label>
+                    <label><input type="radio" name="uRole" value="approver" onchange="toggleCanvaRow()"> Approver / Admin</label>
+                </div>
+                <div id="canvaAccessRow" class="radio-group" style="margin-top:2px;">
+                    <label style="flex:1;"><input type="checkbox" id="uCanva"> Allow this editor to design in Canva</label>
+                </div>
+                <div class="modal-actions">
+                    <button type="button" class="btn" onclick="closeUserModal()">Cancel</button>
+                    <button type="submit" class="btn btn-primary" id="userSubmitBtn">Create account</button>
+                </div>
+            </form>
+        </div>
     </div>
 
     <script src="/static/app.js"></script>
@@ -83,9 +113,121 @@
         }
 
         function renderCurrent() {
-            if (_source === 'posts') renderPosts(activeFilter());
+            document.getElementById('filterTabs').style.display = _source === 'team' ? 'none' : '';
+            if (_source === 'team') renderTeam();
+            else if (_source === 'posts') renderPosts(activeFilter());
             else renderDesigns(activeFilter());
         }
+
+        /* ── Team management ── */
+        let _users = null;
+
+        async function renderTeam() {
+            const list = document.getElementById('designs-list');
+            list.innerHTML = skeletonCards(1);
+            try {
+                const resp = await fetch('/api/users');
+                if (!resp.ok) throw new Error(await resp.text());
+                _users = await resp.json();
+            } catch (e) {
+                list.innerHTML = '<div class="error-box">Error loading team: ' + escHtml(e.message) + '</div>';
+                return;
+            }
+            const ME = '__USER_NAME__';
+            list.innerHTML = '<div class="card" style="padding:0;overflow:hidden;">' +
+                '<div style="display:flex;align-items:center;gap:10px;padding:16px 20px;border-bottom:1px solid var(--border);">' +
+                    '<div style="font-size:15px;font-weight:800;flex:1;">Accounts (' + _users.length + ')</div>' +
+                    '<button class="btn btn-primary btn-sm" onclick="openUserModal()">' + icon('plus', 14) + 'Create account</button>' +
+                '</div>' +
+                _users.map(function (u) {
+                    const isMe = u.display_name === ME;
+                    return '<div style="display:flex;align-items:center;gap:12px;padding:13px 20px;border-bottom:1px solid var(--border);">' +
+                        '<span class="avatar">' + escHtml(initials(u.display_name)) + '</span>' +
+                        '<div style="flex:1;min-width:0;">' +
+                            '<div style="font-size:14px;font-weight:700;">' + escHtml(u.display_name) + (isMe ? ' <span style="font-size:11px;color:var(--muted);font-weight:600;">(you)</span>' : '') + '</div>' +
+                            '<div style="font-size:12px;color:var(--muted);">@' + escHtml(u.username) + (u.created_by ? ' &middot; added by ' + escHtml(u.created_by) : '') + '</div>' +
+                        '</div>' +
+                        '<span class="role-chip ' + (u.role === 'approver' ? 'approver' : 'editor') + '">' + (u.role === 'approver' ? 'Admin / Approver' : 'Editor') + '</span>' +
+                        (u.role === 'editor'
+                            ? '<label style="display:inline-flex;align-items:center;gap:6px;font-size:12.5px;font-weight:600;color:var(--text-2);cursor:pointer;">' +
+                                '<input type="checkbox" style="accent-color:var(--primary);" ' + (u.can_use_canva ? 'checked' : '') + ' onchange="toggleUserCanva(\'' + escHtml(u.username) + '\', this)"> Canva</label>'
+                            : '<span style="width:74px;"></span>') +
+                        '<button class="btn btn-danger-ghost btn-sm" onclick="removeUser(\'' + escHtml(u.username) + '\')"' + (isMe ? ' disabled title="You cannot delete yourself"' : '') + '>' + icon('trash', 13) + '</button>' +
+                    '</div>';
+                }).join('') +
+            '</div>';
+        }
+
+        async function toggleUserCanva(username, checkbox) {
+            try {
+                const resp = await fetch('/api/users/' + encodeURIComponent(username), {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ can_use_canva: checkbox.checked }),
+                });
+                if (!resp.ok) throw new Error((await resp.json()).detail || 'Failed');
+                toast('Canva access ' + (checkbox.checked ? 'enabled' : 'disabled') + ' for ' + username, 'success');
+            } catch (e) {
+                checkbox.checked = !checkbox.checked;
+                toast('Error: ' + e.message, 'error');
+            }
+        }
+
+        async function removeUser(username) {
+            if (!confirm('Delete the account "' + username + '"? They will no longer be able to sign in.')) return;
+            try {
+                const resp = await fetch('/api/users/' + encodeURIComponent(username), { method: 'DELETE' });
+                if (!resp.ok) throw new Error((await resp.json()).detail || 'Failed');
+                toast('Account deleted', 'success');
+                renderTeam();
+            } catch (e) {
+                toast('Error: ' + e.message, 'error');
+            }
+        }
+
+        function openUserModal() {
+            document.getElementById('userModal').classList.add('open');
+            document.getElementById('userFeedback').className = 'feedback-msg';
+            document.getElementById('userForm').reset();
+            toggleCanvaRow();
+            setTimeout(() => document.getElementById('uUsername').focus(), 60);
+        }
+        function closeUserModal() { document.getElementById('userModal').classList.remove('open'); }
+        function toggleCanvaRow() {
+            const role = document.querySelector('input[name=uRole]:checked').value;
+            document.getElementById('canvaAccessRow').style.display = role === 'editor' ? '' : 'none';
+        }
+        document.getElementById('userModal').addEventListener('click', function (e) { if (e.target === this) closeUserModal(); });
+
+        document.getElementById('userForm').addEventListener('submit', async function (e) {
+            e.preventDefault();
+            const fb = document.getElementById('userFeedback');
+            const btn = document.getElementById('userSubmitBtn');
+            btn.disabled = true;
+            try {
+                const resp = await fetch('/api/users', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        username: document.getElementById('uUsername').value.trim(),
+                        display_name: document.getElementById('uName').value.trim(),
+                        password: document.getElementById('uPassword').value,
+                        role: document.querySelector('input[name=uRole]:checked').value,
+                        can_use_canva: document.getElementById('uCanva').checked,
+                    }),
+                });
+                const data = await resp.json();
+                if (!resp.ok) throw new Error(data.detail || 'Failed');
+                closeUserModal();
+                toast('Account created — they can sign in now', 'success');
+                renderTeam();
+            } catch (ex) {
+                fb.className = 'feedback-msg error';
+                fb.textContent = 'Error: ' + ex.message;
+            } finally {
+                btn.disabled = false;
+            }
+        });
 
         async function loadDesigns() {
             const list = document.getElementById('designs-list');
