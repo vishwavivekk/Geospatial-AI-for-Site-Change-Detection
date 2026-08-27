@@ -33,6 +33,23 @@
         .plat-check label:has(input:checked) { border-color: var(--primary); background: var(--primary-soft); color: var(--primary); }
         .plat-check input { accent-color: var(--primary); }
         .caption-row { display: flex; gap: 8px; align-items: center; margin-bottom: 6px; justify-content: space-between; }
+        /* ── Guided workflow stepper ── */
+        .wf-step { display: flex; gap: 12px; padding: 12px 0; }
+        .wf-step + .wf-step { border-top: 1px dashed var(--border); }
+        .wf-n {
+            width: 26px; height: 26px; flex-shrink: 0;
+            border-radius: 50%; display: flex; align-items: center; justify-content: center;
+            font-size: 13px; font-weight: 800;
+            background: var(--bg-subtle); color: var(--text-2);
+            border: 1.5px solid var(--border-strong);
+        }
+        .wf-n.done { background: var(--primary); border-color: var(--primary); color: white; }
+        .wf-body { flex: 1; min-width: 0; }
+        .wf-t { font-size: 13.5px; font-weight: 700; margin-bottom: 2px; }
+        .wf-d { font-size: 12px; color: var(--muted); line-height: 1.5; margin-bottom: 8px; }
+        .wf-body .btn { width: 100%; margin-bottom: 6px; }
+        .wf-alt { display: flex; gap: 6px; }
+        .wf-alt .btn { width: auto; flex: 1; }
         @media (max-width: 1000px) { .pe-layout { flex-direction: column; } .pe-sidebar { width: 100%; position: static; max-height: none; } }
     </style>
 </head>
@@ -172,24 +189,52 @@
             if (card) renderComments(card.dataset.commentId);
         });
 
-        /* ── Actions by status ── */
+        /* ── Guided workflow: 1 Design in Canva → 2 Bring back → 3 Send to admin ── */
+        let _pulledThisSession = false;
+
         function renderActions() {
             const box = document.getElementById('pe-actions');
             const canEdit = ['draft', 'feedback', 'rejected'].indexOf(POST.status) !== -1;
             let html = '';
             if (canEdit) {
-                html += '<button class="btn btn-primary" onclick="openShareModal()">' + icon('send', 15) +
-                    (POST.status === 'feedback' ? 'Re-share with approver' : 'Share with approver') + '</button>';
-                if (POST.kind === 'html') {
-                    html += '<a class="btn" href="/html-editor?post_id=' + POST.id + '">' + icon('edit', 14) + 'Edit HTML design</a>';
-                }
-                html += '<button class="btn" onclick="canvaOpen()">' + icon('edit', 14) + (POST.canva_design_id ? 'Edit in Canva' : 'Open in Canva') + '</button>';
-                if (POST.canva_design_id) {
-                    html += '<button class="btn" onclick="canvaPull()" id="canvaPullBtn">' + icon('download', 14) + 'Pull latest from Canva</button>';
-                }
-                html += '<button class="btn" onclick="document.getElementById(\'replaceFile\').click()">' + icon('image', 14) + 'Replace image</button>';
+                const linked = !!POST.canva_design_id;
+                html += '<div>' +
+                    // Step 1 — design
+                    '<div class="wf-step">' +
+                        '<span class="wf-n' + (linked ? ' done' : '') + '">' + (linked ? '&#10003;' : '1') + '</span>' +
+                        '<div class="wf-body">' +
+                            '<div class="wf-t">Edit the design in Canva</div>' +
+                            '<div class="wf-d">' + (linked
+                                ? 'This post is linked to a Canva design — open it to keep editing.'
+                                : 'Opens Canva in a new tab with this image as the starting layer.') + '</div>' +
+                            '<button class="btn btn-primary" onclick="canvaOpen()">' + icon('edit', 14) + (linked ? 'Edit in Canva' : 'Open in Canva') + '</button>' +
+                            '<div class="wf-alt">' +
+                                (POST.kind === 'html' ? '<a class="btn btn-sm" href="/html-editor?post_id=' + POST.id + '">' + icon('edit', 13) + 'HTML editor</a>' : '') +
+                                '<button class="btn btn-sm" onclick="document.getElementById(\'replaceFile\').click()">' + icon('image', 13) + 'Replace image</button>' +
+                            '</div>' +
+                        '</div>' +
+                    '</div>' +
+                    // Step 2 — bring it back
+                    '<div class="wf-step">' +
+                        '<span class="wf-n' + (_pulledThisSession ? ' done' : '') + '" id="wf-n-2">' + (_pulledThisSession ? '&#10003;' : '2') + '</span>' +
+                        '<div class="wf-body">' +
+                            '<div class="wf-t">Save &amp; bring it back</div>' +
+                            '<div class="wf-d">Canva autosaves your work — this pulls the latest design into the portal.</div>' +
+                            '<button class="btn" onclick="canvaPull()" id="canvaPullBtn"' + (linked ? '' : ' disabled title="Open the design in Canva first"') + '>' + icon('download', 14) + 'Pull latest from Canva</button>' +
+                        '</div>' +
+                    '</div>' +
+                    // Step 3 — send for approval
+                    '<div class="wf-step">' +
+                        '<span class="wf-n">3</span>' +
+                        '<div class="wf-body">' +
+                            '<div class="wf-t">' + (POST.status === 'feedback' ? 'Resend to the admin' : 'Send to the admin') + '</div>' +
+                            '<div class="wf-d">Pick LinkedIn / X, write or AI-generate the caption, and submit for approval.</div>' +
+                            '<button class="btn btn-success" onclick="openShareModal()">' + icon('send', 14) + (POST.status === 'feedback' ? 'Re-share with approver' : 'Share with approver') + '</button>' +
+                        '</div>' +
+                    '</div>' +
+                '</div>';
                 if (POST.status === 'draft') {
-                    html += '<button class="btn btn-danger-ghost" onclick="deletePost()">' + icon('trash', 14) + 'Delete draft</button>';
+                    html += '<button class="btn btn-danger-ghost btn-sm" onclick="deletePost()">' + icon('trash', 13) + 'Delete draft</button>';
                 }
             } else if (POST.status === 'pending') {
                 html += '<div style="font-size:13px;color:var(--muted);text-align:center;padding:6px;">' + icon('clock', 14) + ' Waiting for the approver\'s review.</div>';
@@ -250,7 +295,9 @@
                 if (!resp.ok) throw new Error(data.detail || 'Failed');
                 POST.image_path = data.image_path;
                 document.getElementById('postImg').src = '/bank/' + data.image_path + '?v=' + Date.now();
-                toast('Latest Canva design pulled in', 'success');
+                _pulledThisSession = true;
+                renderActions();
+                toast('Latest Canva design pulled in — ready to send for approval', 'success');
             } catch (e) {
                 toast('Error: ' + e.message, 'error');
             } finally {
@@ -275,8 +322,9 @@
                 POST.status === 'feedback' ? 'Re-share with approver' : 'Share with approver';
             document.getElementById('sm-caption').value = POST.caption || '';
             const plats = POST.platforms || [];
+            // LinkedIn + X are the primary targets — default both on for new posts
             document.getElementById('plat-linkedin').checked = !plats.length || plats.indexOf('linkedin') !== -1;
-            document.getElementById('plat-x').checked = plats.indexOf('x') !== -1;
+            document.getElementById('plat-x').checked = !plats.length || plats.indexOf('x') !== -1;
             document.getElementById('plat-instagram').checked = plats.indexOf('instagram') !== -1;
             document.getElementById('shareModal').classList.add('open');
         }

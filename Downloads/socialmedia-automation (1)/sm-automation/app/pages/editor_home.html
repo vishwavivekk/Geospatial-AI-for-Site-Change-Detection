@@ -159,6 +159,10 @@
             <h2>Create a design</h2>
             <p class="sub">Choose how you want to design this post.</p>
             <div style="display:flex;gap:14px;" id="chooserOptions">
+                <button onclick="showCanvaForm()" style="flex:1;text-align:left;font-family:inherit;cursor:pointer;background:var(--primary-soft);border:1.5px solid var(--primary);border-radius:14px;padding:20px 18px;transition:box-shadow 0.15s;" onmouseover="this.style.boxShadow='var(--shadow-md)'" onmouseout="this.style.boxShadow='none'">
+                    <div style="font-size:15px;font-weight:800;margin-bottom:6px;">Canva <span style="font-size:10px;font-weight:700;background:var(--primary);color:white;border-radius:9999px;padding:2px 8px;vertical-align:2px;">Recommended</span></div>
+                    <div style="font-size:12.5px;color:var(--text-2);line-height:1.5;">Design in Canva itself — when you finish, the design comes straight back into the portal to send for approval.</div>
+                </button>
                 <a href="/html-editor" style="flex:1;text-decoration:none;color:inherit;border:1px solid var(--border-strong);border-radius:14px;padding:20px 18px;display:block;transition:border-color 0.15s, background 0.15s;" onmouseover="this.style.borderColor='var(--primary)'" onmouseout="this.style.borderColor='var(--border-strong)'">
                     <div style="font-size:15px;font-weight:800;margin-bottom:6px;">HTML designer</div>
                     <div style="font-size:12.5px;color:var(--muted);line-height:1.5;">Write HTML/CSS on a 1080×1080 canvas with live preview; saved straight to the post bank.</div>
@@ -166,10 +170,6 @@
                 <button onclick="closeCreateChooser();document.querySelector('#mainTabs .tab[data-tab=stories]').click();toast('Pick a story and click Design post — AI designs are submitted from the canvas editor.','info')" style="flex:1;text-align:left;font-family:inherit;cursor:pointer;background:white;border:1px solid var(--border-strong);border-radius:14px;padding:20px 18px;transition:border-color 0.15s;" onmouseover="this.style.borderColor='var(--primary)'" onmouseout="this.style.borderColor='var(--border-strong)'">
                     <div style="font-size:15px;font-weight:800;margin-bottom:6px;">Canvas / AI designer</div>
                     <div style="font-size:12.5px;color:var(--muted);line-height:1.5;">Generate branded layouts from a story with AI and fine-tune them on the canvas.</div>
-                </button>
-                <button onclick="showCanvaForm()" style="flex:1;text-align:left;font-family:inherit;cursor:pointer;background:white;border:1px solid var(--border-strong);border-radius:14px;padding:20px 18px;transition:border-color 0.15s;" onmouseover="this.style.borderColor='var(--primary)'" onmouseout="this.style.borderColor='var(--border-strong)'">
-                    <div style="font-size:15px;font-weight:800;margin-bottom:6px;">Canva <span style="font-size:10px;font-weight:700;background:var(--primary-soft);color:var(--primary);border-radius:9999px;padding:2px 8px;vertical-align:2px;">connects to canva.com</span></div>
-                    <div style="font-size:12.5px;color:var(--muted);line-height:1.5;">Design in Canva itself — the finished design is pulled back into the post bank.</div>
                 </button>
             </div>
             <div id="canvaNewForm" style="display:none;">
