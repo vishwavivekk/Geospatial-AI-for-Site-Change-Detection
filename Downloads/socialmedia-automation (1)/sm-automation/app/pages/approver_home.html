@@ -21,7 +21,7 @@
         <div id="pane-posts">
             <div class="filters">
                 <div class="chips" id="postChips"></div>
-                <label class="search">⌕<input id="postSearch" placeholder="Search posts..."></label>
+                <label class="search"><i class="ic-wrap" data-icon="search" data-icon-size="13"></i><input id="postSearch" placeholder="Search posts..."></label>
             </div>
             <div id="queue-callout"></div>
             <div class="grid" id="posts-grid"></div>
@@ -34,7 +34,7 @@
         <div id="pane-team" class="hidden">
             <div class="team-top">
                 <div class="team-count"><b id="teamSummary">—</b><small id="teamBreakdown"></small></div>
-                <button class="btn primary" onclick="openAccountDialog()">♙ Create account</button>
+                <button class="btn primary" onclick="openAccountDialog()"><i class="ic-wrap" data-icon="user-plus" data-icon-size="14"></i> Create account</button>
             </div>
             <div class="table" id="teamTable"></div>
         </div>
@@ -71,10 +71,10 @@
             const all = posts.concat(designs);
             const count = st => all.filter(x => x.status === st).length;
             document.getElementById('statsRow').innerHTML =
-                statCard('⏱', count('pending'), 'Needs review', count('pending') ? 'Waiting now' : 'All clear') +
-                statCard('↩', count('feedback'), 'With editor', 'Updated now') +
-                statCard('✓', count('published') + count('approved'), 'Published', 'Updated now') +
-                statCard('▧', all.length, 'Total posts', 'Updated now');
+                statCard('clock', count('pending'), 'Needs review', count('pending') ? 'Waiting now' : 'All clear') +
+                statCard('reply', count('feedback'), 'With editor', 'Updated now') +
+                statCard('check-circle', count('published') + count('approved'), 'Published', 'Updated now') +
+                statCard('inbox', all.length, 'Total posts', 'Updated now');
         }
 
         /* ── Posts queue ── */
@@ -120,9 +120,9 @@
 
             const pending = _posts.filter(p => p.status === 'pending');
             document.getElementById('queue-callout').innerHTML = pending.length
-                ? '<div class="callout"><span>⚡</span><div><b>' + pending.length + ' post' + (pending.length > 1 ? 's are' : ' is') + ' waiting for review</b>' +
+                ? '<div class="callout"><span>' + svg('zap', 14) + '</span><div><b>' + pending.length + ' post' + (pending.length > 1 ? 's are' : ' is') + ' waiting for review</b>' +
                   '<p>Review “' + escHtml(pending[0].title) + '”' + (pending.length > 1 ? ' and more to keep publishing on schedule.' : ' to keep publishing on schedule.') + '</p></div>' +
-                  '<a class="btn ghost" href="/review-post/' + pending[0].id + '">Review first →</a></div>'
+                  '<a class="btn ghost" href="/review-post/' + pending[0].id + '">Review first ' + svg('arrow-right', 11) + '</a></div>'
                 : '';
 
             grid.innerHTML = posts.length
@@ -139,13 +139,13 @@
                             (p.submitted_by ? '<p style="font-size:8px;color:#7e8981;margin:0 0 7px">Submitted by <b>' + escHtml(p.submitted_by) + '</b></p>' : '') +
                             (p.caption ? '<p style="font-size:8px;color:#657168;margin:0 0 7px;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;">' + escHtml(p.caption) + '</p>' : '') +
                             '<div class="card-bottom">' + platformChips(p.platforms) +
-                                '<span class="comments">◉ ' + comments.length + '</span>' +
-                                '<a class="open-card" href="/review-post/' + p.id + '">' + (p.status === 'pending' ? 'Review post →' : 'Open →') + '</a>' +
+                                '<span class="comments">' + svg('comment', 10) + ' ' + comments.length + '</span>' +
+                                '<a class="open-card" href="/review-post/' + p.id + '">' + (p.status === 'pending' ? 'Review post ' : 'Open ') + svg('arrow-right', 11) + '</a>' +
                             '</div>' +
                         '</div>' +
                     '</article>';
                 }).join('')
-                : emptyState('✓', _postFilter === 'All' ? 'No posts submitted yet' : 'You’re all caught up',
+                : emptyState('check-circle', _postFilter === 'All' ? 'No posts submitted yet' : 'You’re all caught up',
                     _postFilter === 'Needs review' ? 'There are no posts waiting for review right now.' : 'Nothing here.');
         }
 
@@ -159,7 +159,7 @@
                 document.getElementById('designCount').textContent = _designs.length;
                 renderStats();
                 if (!_designs.length) {
-                    grid.innerHTML = emptyState('✦', 'No story designs', 'AI canvas designs submitted by editors appear here.');
+                    grid.innerHTML = emptyState('sparkles', 'No story designs', 'AI canvas designs submitted by editors appear here.');
                     return;
                 }
                 const sorted = _designs.slice().reverse();
@@ -172,8 +172,8 @@
                         '<div class="card-info">' +
                             '<div class="card-meta">' + statusBadge(d.status, true) + '<span class="date">' + fmtTime(d.submitted_at).split(',')[0] + '</span></div>' +
                             '<h3>' + escHtml(d.topic) + '</h3>' +
-                            '<div class="card-bottom"><span class="comments">◉ ' + (d.comments || []).length + '</span>' +
-                                '<a class="open-card" href="/review/' + d.id + '">' + (d.status === 'pending' ? 'Review →' : 'Open →') + '</a></div>' +
+                            '<div class="card-bottom"><span class="comments">' + svg('comment', 10) + ' ' + (d.comments || []).length + '</span>' +
+                                '<a class="open-card" href="/review/' + d.id + '">' + (d.status === 'pending' ? 'Review ' : 'Open ') + svg('arrow-right', 11) + '</a></div>' +
                         '</div>' +
                     '</article>';
                 }).join('');
@@ -215,7 +215,7 @@
                             ? '<button class="toggle ' + (u.can_use_canva ? 'on' : '') + '" data-user="' + escHtml(u.username) + '" title="Toggle Canva access"></button>'
                             : 'Not applicable') + '</span>' +
                         '<span>' + escHtml(u.created_by || '—') + '</span>' +
-                        '<span><button class="row-del" data-del="' + escHtml(u.username) + '"' + (isMe ? ' disabled title="You cannot delete yourself"' : '') + '>✕</button></span>' +
+                        '<span><button class="row-del" data-del="' + escHtml(u.username) + '"' + (isMe ? ' disabled title="You cannot delete yourself"' : '') + '>' + svg('trash', 12) + '</button></span>' +
                     '</div>';
                 }).join('');
         }
@@ -248,7 +248,7 @@
         });
 
         function openAccountDialog() {
-            openDialog('♙', 'Create team account', 'Set up secure access and workspace permissions.',
+            openDialog('user-plus', 'Create team account', 'Set up secure access and workspace permissions.',
                 '<div class="feedback-msg" id="acErr"></div>' +
                 '<div style="display:grid;grid-template-columns:1fr 1fr;gap:9px">' +
                     '<label class="field">Username<input id="acUser" placeholder="e.g. arun.kumar" autocomplete="off"></label>' +

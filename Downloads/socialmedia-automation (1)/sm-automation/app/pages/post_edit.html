@@ -10,7 +10,7 @@
 <body data-role="editor" data-active="/" data-user="__USER_NAME__">
     <main class="workspace" id="screen">
         <div class="detail-head">
-            <a class="back" href="/">← Post bank</a>
+            <a class="back" href="/"><i class="ic-wrap" data-icon="arrow-left" data-icon-size="12"></i> Post bank</a>
             <div>
                 <h1 id="pe-title"></h1>
                 <div class="submeta" id="pe-meta"></div>
@@ -29,7 +29,7 @@
                 <div class="comment-list" id="pe-comments"></div>
                 <div class="workflow" id="pe-workflow"></div>
                 <details class="history" id="pe-history-wrap" style="display:none;">
-                    <summary>◫ Revision history　<small id="pe-history-count"></small>　⌄</summary>
+                    <summary><i class="ic-wrap" data-icon="history" data-icon-size="12"></i> Revision history <small id="pe-history-count"></small> <i class="ic-wrap" data-icon="chev-down" data-icon-size="11"></i></summary>
                     <div id="pe-history"></div>
                 </details>
             </aside>
@@ -64,7 +64,7 @@
         /* Change banner */
         if (POST.status === 'feedback') {
             document.getElementById('change-banner-slot').innerHTML =
-                '<div class="change-banner"><span>◉</span><div>' +
+                '<div class="change-banner"><span>' + svg('alert', 15) + '</span><div>' +
                 '<b>' + _comments.length + ' change' + (_comments.length !== 1 ? 's' : '') + ' requested' + (POST.reviewed_by ? ' by ' + escHtml(POST.reviewed_by) : '') + '</b>' +
                 (POST.reviewer_note ? '<p>“' + escHtml(POST.reviewer_note) + '”</p>' : '<p>Address the pinned comments and resubmit.</p>') +
                 '</div><small>' + fmtTime(POST.reviewed_at) + '</small></div>';
@@ -132,26 +132,26 @@
             if (!EDITABLE) {
                 if (POST.status === 'pending') {
                     wf.innerHTML = '<div class="workflow-title"><span>STATUS</span></div>' +
-                        '<div style="font-size:9px;color:#7b867e;">⏱ Waiting for the admin\'s review. You\'ll see pinned feedback here if changes are requested.</div>';
+                        '<div style="font-size:9px;color:#7b867e;">' + svg('clock', 10) + ' Waiting for the admin\'s review. You\'ll see pinned feedback here if changes are requested.</div>';
                 } else {
                     wf.innerHTML = '<div class="workflow-title"><span>PUBLISHED</span></div>' + publishResults(POST.publish_results) +
-                        (POST.published_image_url ? '<a class="btn" style="width:100%;height:30px;font-size:8px;margin-top:8px;" href="' + escHtml(POST.published_image_url) + '" target="_blank">↗ Published image</a>' : '');
+                        (POST.published_image_url ? '<a class="btn" style="width:100%;height:30px;font-size:8px;margin-top:8px;" href="' + escHtml(POST.published_image_url) + '" target="_blank">' + svg('external', 10) + ' Published image</a>' : '');
                 }
                 return;
             }
             const linked = !!POST.canva_design_id;
             const canvaBtns = _canUseCanva
-                ? '<button class="btn primary" onclick="canvaOpen()">↗ ' + (linked ? 'Open in Canva' : 'Edit in Canva') + '</button>' +
+                ? '<button class="btn primary" onclick="canvaOpen()">' + svg('external', 11) + ' ' + (linked ? 'Open in Canva' : 'Edit in Canva') + '</button>' +
                   (POST.kind === 'html' ? '<a class="btn ghost" href="/html-editor?post_id=' + POST.id + '">HTML editor</a>' : '<button class="btn ghost" onclick="document.getElementById(\'replaceFile\').click()">Replace image</button>')
-                : (POST.kind === 'html' ? '<a class="btn primary" href="/html-editor?post_id=' + POST.id + '">&lt;/&gt; HTML editor</a>' : '<button class="btn primary" onclick="document.getElementById(\'replaceFile\').click()">▧ Replace image</button>');
+                : (POST.kind === 'html' ? '<a class="btn primary" href="/html-editor?post_id=' + POST.id + '">&lt;/&gt; HTML editor</a>' : '<button class="btn primary" onclick="document.getElementById(\'replaceFile\').click()">' + svg('image', 12) + ' Replace image</button>');
             wf.innerHTML =
                 '<div class="workflow-title"><span>YOUR WORKFLOW</span><span>3 steps</span></div>' +
-                '<div class="step ' + (linked ? 'done' : 'current') + '"><i>' + (linked ? '✓' : '1') + '</i><div><b>Edit the design' + (_canUseCanva ? ' in Canva' : '') + '</b>' +
+                '<div class="step ' + (linked ? 'done' : 'current') + '"><i>' + (linked ? svg('check', 11) : '1') + '</i><div><b>Edit the design' + (_canUseCanva ? ' in Canva' : '') + '</b>' +
                     '<p>' + (_canUseCanva ? 'Open the original and apply the feedback.' : 'Update the design, or replace the image with a new export.') + '</p>' + canvaBtns + '</div></div>' +
-                '<div class="step' + (_pulled ? ' done' : (linked ? ' current' : '')) + '"><i>' + (_pulled ? '✓' : '2') + '</i><div><b>Save &amp; bring it back</b><p>Pull the latest finished design into this post.</p>' +
-                    (_canUseCanva ? '<button class="btn" id="pullBtn" onclick="canvaPull()"' + (linked ? '' : ' disabled') + '>↻ Import from Canva</button>' : '<p style="font-style:italic;">Not needed — replacing the image updates this post.</p>') + '</div></div>' +
+                '<div class="step' + (_pulled ? ' done' : (linked ? ' current' : '')) + '"><i>' + (_pulled ? svg('check', 11) : '2') + '</i><div><b>Save &amp; bring it back</b><p>Pull the latest finished design into this post.</p>' +
+                    (_canUseCanva ? '<button class="btn" id="pullBtn" onclick="canvaPull()"' + (linked ? '' : ' disabled') + '>' + svg('refresh', 11) + ' Import from Canva</button>' : '<p style="font-style:italic;">Not needed — replacing the image updates this post.</p>') + '</div></div>' +
                 '<div class="step' + (_pulled ? ' current' : '') + '"><i>3</i><div><b>Send to the admin</b><p>Share the ' + (POST.status === 'feedback' ? 'revised' : 'finished') + ' design for approval.</p>' +
-                    '<button class="btn primary" onclick="openShareDialog()">↗ Share for approval</button></div></div>' +
+                    '<button class="btn primary" onclick="openShareDialog()">' + svg('send', 12) + ' Share for approval</button></div></div>' +
                 (POST.status === 'draft' ? '<button class="btn" style="width:100%;height:30px;font-size:8px;color:var(--rust);" onclick="deletePost()">Delete draft</button>' : '');
         }
 
@@ -169,7 +169,7 @@
         }
         async function canvaPull() {
             const btn = document.getElementById('pullBtn');
-            if (btn) { btn.disabled = true; btn.textContent = '↻ Importing...'; }
+            if (btn) { btn.disabled = true; btn.innerHTML = svg('refresh', 11) + ' Importing...'; }
             try {
                 const resp = await fetch('/api/posts/' + POST.id + '/canva/pull', { method: 'POST' });
                 const data = await resp.json();
@@ -182,7 +182,7 @@
                 toast('Latest Canva design imported');
             } catch (e) {
                 toast(e.message, 'error');
-                if (btn) { btn.disabled = false; btn.textContent = '↻ Import from Canva'; }
+                if (btn) { btn.disabled = false; btn.innerHTML = svg('refresh', 11) + ' Import from Canva'; }
             }
         }
 
@@ -215,16 +215,16 @@
         function openShareDialog() {
             const plats = POST.platforms || [];
             const ck = p => (!plats.length && (p === 'linkedin' || p === 'x')) || plats.indexOf(p) !== -1 ? 'checked' : '';
-            openDialog('↗', 'Share for approval', 'Choose where this post should publish after admin approval.',
+            openDialog('send', 'Share for approval', 'Choose where this post should publish after admin approval.',
                 '<div class="feedback-msg" id="shErr"></div>' +
                 '<span class="eyebrow">PUBLISH TO</span>' +
                 '<div class="platform-select" style="margin-top:8px;">' +
-                    '<label><input type="checkbox" id="pl-linkedin" ' + ck('linkedin') + '> in　LinkedIn</label>' +
-                    '<label><input type="checkbox" id="pl-x" ' + ck('x') + '> 𝕏　X</label>' +
-                    '<label><input type="checkbox" id="pl-instagram" ' + ck('instagram') + '> ◎　Instagram</label>' +
+                    '<label><input type="checkbox" id="pl-linkedin" ' + ck('linkedin') + '> ' + svg('linkedin', 12) + ' LinkedIn</label>' +
+                    '<label><input type="checkbox" id="pl-x" ' + ck('x') + '> ' + svg('x-brand', 11) + ' X</label>' +
+                    '<label><input type="checkbox" id="pl-instagram" ' + ck('instagram') + '> ' + svg('instagram', 12) + ' Instagram</label>' +
                 '</div>' +
                 '<label class="field">Caption<textarea id="shCaption" style="height:120px;">' + escHtml(POST.caption || '') + '</textarea></label>' +
-                '<button class="btn ghost" style="height:30px;font-size:9px;padding:0;" id="aiCapBtn" onclick="genCaption()">✦ Generate caption with AI</button>',
+                '<button class="btn ghost" style="height:30px;font-size:9px;padding:0;" id="aiCapBtn" onclick="genCaption()">' + svg('sparkles', 12) + ' Generate caption with AI</button>',
                 '<button class="btn" onclick="closeDialog()">Cancel</button><button class="btn primary" id="shGo" onclick="sharePost()">Share with admin</button>');
         }
         function pickedPlatforms() {
@@ -232,7 +232,7 @@
         }
         async function genCaption() {
             const btn = document.getElementById('aiCapBtn');
-            btn.disabled = true; btn.textContent = '✦ Writing caption...';
+            btn.disabled = true; btn.innerHTML = svg('sparkles', 12) + ' Writing caption...';
             try {
                 const resp = await fetch('/api/generate-caption', {
                     method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -245,7 +245,7 @@
                 if (!resp.ok) throw new Error(data.detail || 'Failed');
                 document.getElementById('shCaption').value = data.caption;
             } catch (e) { toast('Caption generation failed: ' + e.message, 'error'); }
-            btn.disabled = false; btn.textContent = '✦ Generate caption with AI';
+            btn.disabled = false; btn.innerHTML = svg('sparkles', 12) + ' Generate caption with AI';
         }
         async function sharePost() {
             const platforms = pickedPlatforms();

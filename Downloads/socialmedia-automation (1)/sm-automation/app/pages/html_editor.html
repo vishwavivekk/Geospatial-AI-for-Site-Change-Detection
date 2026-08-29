@@ -16,23 +16,23 @@
     <main class="workspace" id="screen">
         <div class="designer">
             <div class="designer-bar">
-                <a class="back" href="/">← Post bank</a>
+                <a class="back" href="/"><i class="ic-wrap" data-icon="arrow-left" data-icon-size="12"></i> Post bank</a>
                 <label class="title-field"><small>DESIGN TITLE</small><input id="postTitle" placeholder="Give this design a title"></label>
                 <div class="designer-actions">
-                    <button class="btn" onclick="renderPreview()">◉ Preview</button>
-                    <button class="btn primary" id="saveBtn" onclick="saveToBank()">✓ Save to post bank</button>
+                    <button class="btn" onclick="renderPreview()"><i class="ic-wrap" data-icon="eye" data-icon-size="14"></i> Preview</button>
+                    <button class="btn primary" id="saveBtn" onclick="saveToBank()"><i class="ic-wrap" data-icon="check" data-icon-size="14"></i> Save to post bank</button>
                 </div>
             </div>
             <div class="split">
                 <section class="code-pane">
-                    <div class="code-tabs"><button class="active">&lt;/&gt; HTML / CSS</button><span class="live">● Live</span></div>
+                    <div class="code-tabs"><button class="active">&lt;/&gt; HTML / CSS</button><span class="live"><i class="ic-wrap" data-icon="dot" data-icon-size="10"></i> Live</span></div>
                     <div class="code-area">
                         <pre class="lines" id="lineNums">1</pre>
                         <textarea id="htmlSource" spellcheck="false"></textarea>
                     </div>
                 </section>
                 <section class="preview-pane">
-                    <div class="preview-tools"><span>Fit canvas</span><span>1080 × 1080 px</span><span style="cursor:pointer" onclick="renderPreview()">↻ Refresh</span></div>
+                    <div class="preview-tools"><span>Fit canvas</span><span>1080 × 1080 px</span><span style="cursor:pointer" onclick="renderPreview()"><i class="ic-wrap" data-icon="refresh" data-icon-size="11"></i> Refresh</span></div>
                     <div class="preview-box">
                         <div id="renderWrap"><div id="renderFrame"></div></div>
                     </div>

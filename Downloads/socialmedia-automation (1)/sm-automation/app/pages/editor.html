@@ -45,31 +45,31 @@
     <main class="workspace" id="screen">
         <div class="designer">
             <div class="designer-bar">
-                <a class="back" href="/">← Post bank</a>
+                <a class="back" href="/"><i class="ic-wrap" data-icon="arrow-left" data-icon-size="12"></i> Post bank</a>
                 <label class="title-field"><small>CANVAS / AI DESIGNER</small><input id="topicField" readonly value="__TOPIC__"></label>
                 <div class="designer-actions">
                     <div class="chips" id="variantTabs" style="display:none;">
                         <button class="chip active" id="variantTab0" onclick="switchVariation(0)">Variation 1</button>
                         <button class="chip" id="variantTab1" onclick="switchVariation(1)">Variation 2</button>
                     </div>
-                    <button class="btn" id="undoBtn" onclick="undo()" disabled title="Undo">↶</button>
-                    <button class="btn" id="redoBtn" onclick="redo()" disabled title="Redo">↷</button>
-                    <button class="btn" id="deleteBtn" onclick="deleteSelected()" disabled title="Delete selected">✕</button>
-                    <button class="btn" id="exportBtn" onclick="exportPNG()">⇩ Export</button>
-                    <button class="btn primary" id="approvalBtn" onclick="sendForApproval()">↗ Send for approval</button>
+                    <button class="btn" id="undoBtn" onclick="undo()" disabled title="Undo"><i class="ic-wrap" data-icon="undo" data-icon-size="15"></i></button>
+                    <button class="btn" id="redoBtn" onclick="redo()" disabled title="Redo"><i class="ic-wrap" data-icon="redo" data-icon-size="15"></i></button>
+                    <button class="btn" id="deleteBtn" onclick="deleteSelected()" disabled title="Delete selected"><i class="ic-wrap" data-icon="trash" data-icon-size="14"></i></button>
+                    <button class="btn" id="exportBtn" onclick="exportPNG()"><i class="ic-wrap" data-icon="download" data-icon-size="14"></i> Export</button>
+                    <button class="btn primary" id="approvalBtn" onclick="sendForApproval()"><i class="ic-wrap" data-icon="send" data-icon-size="14"></i> Send for approval</button>
                 </div>
             </div>
             <div class="change-banner" id="feedbackBanner" style="margin:12px 19px 0;">
-                <span>◉</span><div><b id="feedbackBannerText"></b></div>
+                <span><i class="ic-wrap" data-icon="alert" data-icon-size="15"></i></span><div><b id="feedbackBannerText"></b></div>
                 <button class="btn" style="height:29px;font-size:8px;" onclick="switchPanel('feedback')">View comments</button>
             </div>
             <span id="topicLabel" class="hidden">Topic: __TOPIC__</span>
             <span id="categoryData" class="hidden">__CATEGORY__</span>
             <div class="canvas-layout">
                 <aside class="toolrail">
-                    <button class="active" id="rail-templates" onclick="assetsTab('templates')">▦<span>Templates</span></button>
-                    <button id="rail-elements" onclick="assetsTab('elements')">＋<span>Elements</span></button>
-                    <button onclick="generateLayout()">✦<span>AI create</span></button>
+                    <button class="active" id="rail-templates" onclick="assetsTab('templates')"><i class="ic-wrap" data-icon="layout" data-icon-size="16"></i><span>Templates</span></button>
+                    <button id="rail-elements" onclick="assetsTab('elements')"><i class="ic-wrap" data-icon="shapes" data-icon-size="16"></i><span>Elements</span></button>
+                    <button onclick="generateLayout()"><i class="ic-wrap" data-icon="sparkles" data-icon-size="16"></i><span>AI create</span></button>
                 </aside>
                 <section class="assets">
                     <div id="assets-templates">
@@ -82,32 +82,32 @@
                         <p>Add building blocks to the canvas</p>
                         <div style="display:grid;grid-template-columns:1fr 1fr;gap:7px;">
                             <button class="btn" style="height:32px;font-size:9px;" onclick="addElement('text')">T Text</button>
-                            <button class="btn" style="height:32px;font-size:9px;" onclick="addElement('rect')">▭ Rect</button>
-                            <button class="btn" style="height:32px;font-size:9px;" onclick="addElement('circle')">◯ Circle</button>
-                            <button class="btn" style="height:32px;font-size:9px;" onclick="addElement('ellipse')">⬭ Ellipse</button>
-                            <button class="btn" style="height:32px;font-size:9px;" onclick="addElement('line')">╱ Line</button>
-                            <button class="btn" style="height:32px;font-size:9px;" onclick="addElement('star')">★ Star</button>
-                            <button class="btn" style="height:32px;font-size:9px;" onclick="addElement('ring')">◎ Ring</button>
-                            <button class="btn" style="height:32px;font-size:9px;" onclick="addElement('polygon')">⬠ Polygon</button>
+                            <button class="btn" style="height:32px;font-size:9px;" onclick="addElement('rect')"><i class="ic-wrap" data-icon="square" data-icon-size="12"></i> Rect</button>
+                            <button class="btn" style="height:32px;font-size:9px;" onclick="addElement('circle')"><i class="ic-wrap" data-icon="circle" data-icon-size="12"></i> Circle</button>
+                            <button class="btn" style="height:32px;font-size:9px;" onclick="addElement('ellipse')"><i class="ic-wrap" data-icon="ellipse" data-icon-size="12"></i> Ellipse</button>
+                            <button class="btn" style="height:32px;font-size:9px;" onclick="addElement('line')"><i class="ic-wrap" data-icon="line" data-icon-size="12"></i> Line</button>
+                            <button class="btn" style="height:32px;font-size:9px;" onclick="addElement('star')"><i class="ic-wrap" data-icon="star" data-icon-size="12"></i> Star</button>
+                            <button class="btn" style="height:32px;font-size:9px;" onclick="addElement('ring')"><i class="ic-wrap" data-icon="ring" data-icon-size="12"></i> Ring</button>
+                            <button class="btn" style="height:32px;font-size:9px;" onclick="addElement('polygon')"><i class="ic-wrap" data-icon="pentagon" data-icon-size="12"></i> Polygon</button>
                         </div>
                     </div>
                 </section>
                 <section class="canvas-stage">
                     <div class="canvas-top"><span id="statusBar">Ready</span><span>1080 × 1080 px</span></div>
                     <div class="editable" id="canvasArea"><div id="canvas-container"></div></div>
-                    <div class="canvas-bottom"><span>Page 1 of 1</span><span>⌖ Click an element to edit · double-click text to type</span></div>
+                    <div class="canvas-bottom"><span>Page 1 of 1</span><span><i class="ic-wrap" data-icon="crosshair" data-icon-size="11"></i> Click an element to edit · double-click text to type</span></div>
                 </section>
                 <aside class="rightpanel">
                     <div class="right-tabs">
-                        <button class="active" id="panelTabChat" onclick="switchPanel('chat')">✦ AI</button>
+                        <button class="active" id="panelTabChat" onclick="switchPanel('chat')"><i class="ic-wrap" data-icon="sparkles" data-icon-size="11"></i> AI</button>
                         <button id="panelTabProps" onclick="switchPanel('props')">Properties</button>
                         <button id="panelTabLayers" onclick="switchPanel('layers')">Layers</button>
                         <button id="panelTabFeedback" onclick="switchPanel('feedback')">Feedback <span id="editorCommentsCount"></span></button>
                     </div>
                     <div class="ai" id="chatPanel">
-                        <div class="ai-intro"><span class="ai-orb">✦</span><h3>Design with AI</h3><p>Tell me what to change. I’ll keep it within NICDC brand rules.</p></div>
+                        <div class="ai-intro"><span class="ai-orb"><i class="ic-wrap" data-icon="sparkles" data-icon-size="15"></i></span><h3>Design with AI</h3><p>Tell me what to change. I’ll keep it within NICDC brand rules.</p></div>
                         <div id="chatMessages" style="flex:1;overflow:auto;margin:10px 0;min-height:120px;"></div>
-                        <div class="chat"><input id="chatInput" placeholder="Describe an edit..." onkeydown="chatKeydown(event)"><button id="chatSendBtn" onclick="sendChatMessage()">→</button></div>
+                        <div class="chat"><input id="chatInput" placeholder="Describe an edit..." onkeydown="chatKeydown(event)"><button id="chatSendBtn" onclick="sendChatMessage()"><i class="ic-wrap" data-icon="send" data-icon-size="13"></i></button></div>
                     </div>
                     <div class="ai hidden" id="propsPane">
                         <h3 style="font-size:11px;color:var(--ink);margin:0 0 9px;">Properties</h3>

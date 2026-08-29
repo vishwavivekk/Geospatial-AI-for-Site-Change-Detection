@@ -11,7 +11,7 @@
     <main class="workspace" id="screen">
         <div id="review-view">
             <div class="detail-head">
-                <a class="back" href="/review">← Review queue</a>
+                <a class="back" href="/review"><i class="ic-wrap" data-icon="arrow-left" data-icon-size="12"></i> Review queue</a>
                 <div>
                     <h1 id="pr-title"></h1>
                     <div class="submeta" id="pr-meta"></div>
@@ -20,7 +20,7 @@
             </div>
             <div class="review-layout">
                 <section class="stage">
-                    <div class="review-tip" id="pr-tip">⌖ <b style="margin-left:5px">Click or drag on the design</b>&nbsp; to pin feedback to an exact region.</div>
+                    <div class="review-tip" id="pr-tip"><i class="ic-wrap" data-icon="crosshair" data-icon-size="12"></i> <b style="margin-left:5px">Click or drag on the design</b>&nbsp; to pin feedback to an exact region.</div>
                     <div class="preview-bar"><span>Design preview · 1080 × 1080 px</span><span id="pr-plats"></span></div>
                     <div class="large-art" id="imgHolder" style="cursor:crosshair;user-select:none;"><img id="postImg" draggable="false" alt="Post design"></div>
                     <div class="caption" id="pr-caption-card"></div>
@@ -29,17 +29,17 @@
                     <div class="panel-head"><div><h2>Review comments</h2><span id="pr-cmt-sub">None yet</span></div><span></span></div>
                     <div class="comment-list" id="pr-comments"></div>
                     <div class="compose" id="composeBox">
-                        <div class="pinned" id="pinState"><span>◉ General comment — click the design to pin</span></div>
+                        <div class="pinned" id="pinState"><span><i class="ic-wrap" data-icon="pin" data-icon-size="11"></i> General comment — click the design to pin</span></div>
                         <textarea id="newComment" placeholder="Write clear, actionable feedback..." maxlength="500"></textarea>
                         <div class="compose-foot"><span id="charCount">0 / 500</span><button onclick="addComment()" id="addBtn">Add comment</button></div>
                     </div>
                     <div class="decision" id="decisionBox">
                         <span>REVIEW DECISION</span>
-                        <button class="btn sendback" onclick="openSendbackDialog()">← Send back to editor</button>
-                        <button class="btn primary" onclick="openApproveDialog()">✓ Approve &amp; publish</button>
+                        <button class="btn sendback" onclick="openSendbackDialog()"><i class="ic-wrap" data-icon="reply" data-icon-size="13"></i> Send back to editor</button>
+                        <button class="btn primary" onclick="openApproveDialog()"><i class="ic-wrap" data-icon="check" data-icon-size="13"></i> Approve &amp; publish</button>
                     </div>
                     <details class="history" id="pr-history-wrap" style="display:none;">
-                        <summary>◫ Revision history　<small id="pr-history-count"></small>　⌄</summary>
+                        <summary><i class="ic-wrap" data-icon="history" data-icon-size="12"></i> Revision history <small id="pr-history-count"></small> <i class="ic-wrap" data-icon="chev-down" data-icon-size="11"></i></summary>
                         <div id="pr-history"></div>
                     </details>
                 </aside>
@@ -115,8 +115,8 @@
         }
         function updatePinState() {
             document.getElementById('pinState').innerHTML = _pendingRegion
-                ? '<span>✓ Pinned to selected region</span><button onclick="clearRegion()">clear ×</button>'
-                : '<span>◉ General comment — click the design to pin</span>';
+                ? '<span>' + svg('check', 11) + ' Pinned to selected region</span><button onclick="clearRegion()">clear ×</button>'
+                : '<span>' + svg('pin', 11) + ' General comment — click the design to pin</span>';
         }
 
         /* ── Comments ── */
@@ -216,8 +216,8 @@
         /* ── Send back ── */
         function openSendbackDialog() {
             if (!_comments.length) { toast('Add at least one comment first, so the editor knows what to fix.', 'error'); return; }
-            openDialog('◉', 'Send back to editor', 'Add a clear summary so the editor knows what to fix.',
-                '<div class="callout"><span>◉</span><div><b>' + _comments.length + ' open comment' + (_comments.length !== 1 ? 's' : '') + '</b><p>The editor will see these comments with your note.</p></div><span></span></div>' +
+            openDialog('reply', 'Send back to editor', 'Add a clear summary so the editor knows what to fix.',
+                '<div class="callout"><span>' + svg('comment', 14) + '</span><div><b>' + _comments.length + ' open comment' + (_comments.length !== 1 ? 's' : '') + '</b><p>The editor will see these comments with your note.</p></div><span></span></div>' +
                 '<label class="field">Summary note<textarea id="sbNote" placeholder="e.g. Please address all pinned design comments and resubmit."></textarea></label>',
                 '<button class="btn" onclick="closeDialog()">Cancel</button><button class="btn rust" id="sbGo" onclick="sendBack()">Send back</button>');
         }
@@ -240,12 +240,12 @@
         function openApproveDialog() {
             if (_comments.length && !confirm('There are ' + _comments.length + ' open comment(s). Approve anyway?')) return;
             const ck = p => PLATS.length ? (PLATS.indexOf(p) !== -1 ? 'checked' : '') : 'checked';
-            openDialog('✓', 'Approve & publish', 'Confirm the final caption and publishing destinations.',
+            openDialog('check-circle', 'Approve & publish', 'Confirm the final caption and publishing destinations.',
                 '<span class="eyebrow">PUBLISH TO</span>' +
                 '<div class="platform-select" style="margin-top:8px;">' +
-                    '<label><input type="checkbox" disabled ' + ck('linkedin') + '> in　LinkedIn</label>' +
-                    '<label><input type="checkbox" disabled ' + ck('x') + '> 𝕏　X</label>' +
-                    '<label><input type="checkbox" disabled ' + ck('instagram') + '> ◎　Instagram</label>' +
+                    '<label><input type="checkbox" disabled ' + ck('linkedin') + '> ' + svg('linkedin', 12) + ' LinkedIn</label>' +
+                    '<label><input type="checkbox" disabled ' + ck('x') + '> ' + svg('x-brand', 11) + ' X</label>' +
+                    '<label><input type="checkbox" disabled ' + ck('instagram') + '> ' + svg('instagram', 12) + ' Instagram</label>' +
                 '</div>' +
                 '<label class="field">Caption<textarea id="apCaption" style="height:120px;">' + escHtml(POST.caption || POST.title) + '</textarea></label>',
                 '<button class="btn" onclick="closeDialog()">Cancel</button><button class="btn primary" id="apGo" onclick="approvePublish()">Approve &amp; publish</button>');
@@ -277,7 +277,7 @@
             const platCount = PLATS.length || 3;
             v.innerHTML =
                 '<div class="success-page">' +
-                    '<div class="success-check">✓</div>' +
+                    '<div class="success-check">' + svg('check', 26) + '</div>' +
                     '<span class="eyebrow">PUBLISHING COMPLETE</span>' +
                     '<h1>' + (data.status === 'published' ? 'Your post is live' : 'Approved, with issues') + '</h1>' +
                     '<p>“' + escHtml(POST.title) + '” was approved' + (data.status === 'published' ? ' and published successfully.' : ' — check the platform results below.') + '</p>' +
