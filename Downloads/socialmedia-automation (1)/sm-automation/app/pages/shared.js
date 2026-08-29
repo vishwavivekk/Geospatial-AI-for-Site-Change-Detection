@@ -191,6 +191,53 @@ function closeDialog() {
     if (root) root.innerHTML = '';
 }
 
+/* ── Resizable panels ── */
+function clampNum(v, min, max) { return Math.max(min, Math.min(max, v)); }
+
+function makeGutter() {
+    const g = document.createElement('div');
+    g.className = 'gutter';
+    return g;
+}
+
+/* Drag primitive: cb({type:'start'|'move'|'end', dx}) */
+function dragHorizontal(handle, cb) {
+    handle.addEventListener('pointerdown', function (e) {
+        e.preventDefault();
+        try { handle.setPointerCapture(e.pointerId); } catch (err) {}
+        handle.classList.add('drag');
+        document.body.style.cursor = 'col-resize';
+        const sx = e.clientX;
+        cb({ type: 'start', dx: 0 });
+        function mv(ev) { cb({ type: 'move', dx: ev.clientX - sx }); }
+        function up(ev) {
+            handle.classList.remove('drag');
+            document.body.style.cursor = '';
+            handle.removeEventListener('pointermove', mv);
+            handle.removeEventListener('pointerup', up);
+            cb({ type: 'end', dx: ev.clientX - sx });
+        }
+        handle.addEventListener('pointermove', mv);
+        handle.addEventListener('pointerup', up);
+    });
+}
+
+/* Column resizer bound to a stored width. dir=1: dragging right grows;
+   dir=-1: dragging right shrinks (right-hand panels). */
+function columnResizer(gutter, opts) {
+    let value = +(localStorage.getItem(opts.key) || opts.value);
+    value = clampNum(value, opts.min, opts.max);
+    let start = value;
+    opts.apply(value);
+    dragHorizontal(gutter, function (e) {
+        if (e.type === 'start') { start = value; return; }
+        value = clampNum(start + e.dx * (opts.dir || 1), opts.min, opts.max);
+        opts.apply(value);
+        if (e.type === 'end') try { localStorage.setItem(opts.key, String(Math.round(value))); } catch (err) {}
+    });
+    return { get: function () { return value; } };
+}
+
 /* ── Read-only Konva mini preview (templates / story designs) ── */
 function createReadOnlyNode(el) {
     const a = el.attrs || {};

@@ -126,6 +126,23 @@
             }
         }
 
+        /* ── Resizable split: code | preview ── */
+        (function () {
+            if (window.matchMedia('(max-width: 1000px)').matches) return;
+            const split = document.querySelector('.split');
+            const code = split.querySelector('.code-pane');
+            const g = makeGutter();
+            split.insertBefore(g, code.nextSibling);
+            columnResizer(g, {
+                key: 'html.codeW', value: Math.round(split.clientWidth / 2) || 600,
+                min: 320, max: Math.max(500, split.clientWidth - 380), dir: 1,
+                apply: function (v) {
+                    split.style.gridTemplateColumns = v + 'px 8px minmax(320px,1fr)';
+                    fitPreview();
+                },
+            });
+        })();
+
         (async function init() {
             if (POST_ID) {
                 try {

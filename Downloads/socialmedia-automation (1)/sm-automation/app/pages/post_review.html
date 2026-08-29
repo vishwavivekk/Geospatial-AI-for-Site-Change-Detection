@@ -292,6 +292,19 @@
             window.scrollTo(0, 0);
         }
 
+        /* ── Resizable feedback panel ── */
+        (function () {
+            if (window.matchMedia('(max-width: 1000px)').matches) return;
+            const layout = document.querySelector('.review-layout');
+            const fb = layout.querySelector('.feedback');
+            const g = makeGutter();
+            layout.insertBefore(g, fb);
+            columnResizer(g, {
+                key: 'review.fbW', value: 350, min: 270, max: 620, dir: -1,
+                apply: function (v) { layout.style.gridTemplateColumns = 'minmax(0,1fr) 8px ' + v + 'px'; },
+            });
+        })();
+
         /* ── Init / read-only ── */
         document.getElementById('postImg').addEventListener('load', () => renderComments());
         renderComments();
