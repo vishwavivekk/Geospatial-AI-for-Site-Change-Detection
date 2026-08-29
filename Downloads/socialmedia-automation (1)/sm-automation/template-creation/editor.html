@@ -1,0 +1,446 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ICLP Template Generator</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  background: #1a1a2e; color: #e1e8ed; height: 100vh; overflow: hidden;
+}
+.app { display: flex; flex-direction: column; height: 100vh; }
+.toolbar {
+  display: flex; align-items: center; gap: 10px; padding: 10px 18px;
+  background: #16213e; border-bottom: 1px solid #0f3460; flex-shrink: 0;
+}
+.toolbar .spacer { flex: 1; }
+.toolbar button {
+  padding: 7px 16px; border: none; border-radius: 6px; font-size: 13px; font-weight: 600;
+  cursor: pointer; background: #0f3460; color: #e1e8ed; white-space: nowrap;
+}
+.toolbar button:hover { opacity: 0.85; }
+.toolbar button:disabled { opacity: 0.4; cursor: not-allowed; }
+.toolbar input {
+  padding: 7px 12px; border: 1px solid #0f3460; border-radius: 6px;
+  background: #0d1117; color: #e1e8ed; font-size: 13px; outline: none; width: 200px;
+}
+.toolbar input:focus { border-color: #1d9bf0; }
+.btn-gen { background: #E65100 !important; color: white !important; }
+.btn-export { background: #2E7D32 !important; color: white !important; }
+.btn-lock { background: #546E7A !important; color: white !important; }
+.canvas-area {
+  flex: 1; display: flex; align-items: center; justify-content: center;
+  background: #0d1117; overflow: hidden;
+}
+#canvas-wrapper {
+  position: relative;
+  border-radius: 4px; box-shadow: 0 4px 24px rgba(0,0,0,0.5);
+}
+#canvas { position: relative; overflow: hidden; }
+.el {
+  position: absolute; overflow: hidden; cursor: grab; user-select: none;
+}
+.el.locked { cursor: default; }
+.el.dragging { cursor: grabbing; z-index: 9999 !important; }
+.el.selected { outline: 2px solid #1d9bf0; outline-offset: -1px; }
+.el img { width: 100%; height: 100%; display: block; pointer-events: none; }
+.el .text-content {
+  width: 100%; height: 100%; font-family: 'Inter', sans-serif;
+  word-wrap: break-word; overflow: hidden; outline: none; cursor: text;
+}
+.el.slot.text-slot { outline: 1px dashed rgba(0, 180, 255, 0.25); }
+.el.slot.image-slot { outline: 1px dashed rgba(255, 150, 0, 0.25); }
+.el.slot.selected { outline: 2px solid #1d9bf0; }
+.el .slot-badge {
+  position: absolute; top: 0; left: 0; font-size: 8px; padding: 1px 5px;
+  border-radius: 0 0 4px 0; pointer-events: none; z-index: 10;
+  background: rgba(0,131,143,0.7); color: white;
+}
+#statusBar {
+  padding: 6px 16px; background: #0d1117; border-top: 1px solid #0f3460;
+  font-size: 12px; color: #8899a6; flex-shrink: 0;
+}
+.modal-overlay {
+  position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+  background: rgba(0,0,0,0.6); display: none; align-items: center;
+  justify-content: center; z-index: 2000;
+}
+.modal {
+  background: #16213e; border-radius: 12px; padding: 24px; max-width: 400px;
+  width: 90%; text-align: center;
+}
+.modal h2 { margin-bottom: 8px; font-size: 18px; }
+.modal p { color: #8899a6; margin: 8px 0; font-size: 14px; }
+.spinner {
+  width: 40px; height: 40px; border: 4px solid #0f3460;
+  border-top-color: #E65100; border-radius: 50%;
+  animation: spin 0.8s linear infinite; margin: 16px auto;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="toolbar">
+    <span style="font-weight:700;color:#1d9bf0;font-size:14px;">ICLP Generator</span>
+    <span class="spacer"></span>
+    <button class="btn-lock" onclick="toggleLock()" id="lockBtn">Lock</button>
+    <input id="topicInput" placeholder="Enter topic (e.g. Smart Industrial Corridors)">
+    <button class="btn-gen" onclick="generatePost()" id="genBtn">Generate Post</button>
+    <button class="btn-export" onclick="exportPNG()" id="exportBtn">Export PNG</button>
+    <span id="templateLabel" style="font-size:12px;color:#8899a6;"></span>
+  </div>
+  <div class="canvas-area" id="canvasArea">
+    <div id="canvas-wrapper"><div id="canvas"></div></div>
+  </div>
+  <div id="statusBar">Ready</div>
+</div>
+<div id="loadingOverlay" class="modal-overlay">
+  <div class="modal">
+    <h2>Generating Post...</h2>
+    <p>Creating content for your topic</p>
+    <div class="spinner"></div>
+  </div>
+</div>
+<script>
+let templateData = null;
+let isGenerating = false;
+let selectedEl = null;
+let currentScale = 1;
+
+/* ── Init ── */
+function boot() {
+  fitCanvas();
+  window.addEventListener('resize', fitCanvas);
+  document.addEventListener('keydown', function(e) {
+    if (e.target.tagName === 'INPUT') return;
+    if (e.key === 'Delete' || e.key === 'Backspace') { deleteSelected(); e.preventDefault(); }
+    if (e.key === 'Escape') deselectAll();
+  });
+  fetch('/api/templates/iclp_page_4_-_tools_grid_(layered).json')
+    .then(r => r.json())
+    .then(function(data) {
+      templateData = data;
+      const state = data.design_state || data;
+      renderCanvas(state);
+      document.getElementById('templateLabel').textContent = '\uD83D\uDCC4 ' + (data.name || 'Page 4');
+      fitCanvas();
+      setStatus('Template loaded');
+    })
+    .catch(function(err) { setStatus('Error: ' + err.message); });
+}
+
+function fitCanvas() {
+  const area = document.getElementById('canvasArea');
+  const areaW = area.clientWidth - 32;
+  const areaH = area.clientHeight - 32;
+  const cw = 1080, ch = 1080;
+  currentScale = Math.min(areaW / cw, areaH / ch, 1.6);
+  const wrapper = document.getElementById('canvas-wrapper');
+  wrapper.style.transform = 'scale(' + currentScale + ')';
+  wrapper.style.width = cw + 'px';
+  wrapper.style.height = ch + 'px';
+}
+
+/* ── Render ── */
+function renderCanvas(state) {
+  const canvas = document.getElementById('canvas');
+  canvas.innerHTML = '';
+  const bg = (state.canvas && state.canvas.background) || '#0D1B2A';
+  canvas.style.background = bg;
+  canvas.style.width = '1080px';
+  canvas.style.height = '1080px';
+  selectedEl = null;
+  document.getElementById('lockBtn').textContent = 'Lock';
+
+  const elements = state.elements || [];
+  elements.forEach(function(el, idx) {
+    const a = el.attrs || {};
+    const div = document.createElement('div');
+    div.className = 'el';
+    div.dataset.elId = el.id;
+    div.dataset.type = el.type;
+    div.dataset.locked = 'false';
+
+    div.style.left = (a.x || 0) + 'px';
+    div.style.top = (a.y || 0) + 'px';
+    div.style.width = (a.width || 100) + 'px';
+    div.style.height = (a.height || 40) + 'px';
+    div.style.zIndex = idx + 1;
+    if (a.opacity !== undefined) div.style.opacity = a.opacity;
+    if (a.cornerRadius) div.style.borderRadius = a.cornerRadius + 'px';
+    if (div.dataset.locked === 'true') div.classList.add('locked');
+
+    if (el.slot) {
+      div.classList.add('slot');
+      div.classList.add(el.slot_type === 'image' ? 'image-slot' : 'text-slot');
+      div.dataset.slot = 'true';
+      div.dataset.slotLabel = el.slot_label || '';
+      div.dataset.slotType = el.slot_type || 'text';
+      const badge = document.createElement('div');
+      badge.className = 'slot-badge';
+      badge.textContent = (el.slot_type === 'image' ? '\uD83D\uDDBC ' : '\uD83D\uDCDD ') + (el.slot_label || '');
+      div.appendChild(badge);
+    }
+
+    if (el.type === 'image') {
+      const img = document.createElement('img');
+      img.draggable = false;
+      img.src = a.src || '';
+      img.onerror = function() { this.style.display = 'none'; };
+      div.appendChild(img);
+    } else if (el.type === 'text') {
+      const span = document.createElement('span');
+      span.className = 'text-content';
+      span.contentEditable = 'true';
+      span.textContent = a.text || '';
+      if (a.fontSize) span.style.fontSize = a.fontSize + 'px';
+      span.style.color = a.fill || '#ffffff';
+      span.style.fontFamily = a.fontFamily || 'Inter, sans-serif';
+      span.style.fontWeight = '400';
+      if (a.fontStyle) {
+        if (a.fontStyle.includes('bold')) span.style.fontWeight = '700';
+        if (a.fontStyle.includes('italic')) span.style.fontStyle = 'italic';
+      }
+      if (a.align) span.style.textAlign = a.align;
+      if (a.lineHeight) span.style.lineHeight = a.lineHeight;
+      if (a.letterSpacing) span.style.letterSpacing = a.letterSpacing + 'px';
+      span.addEventListener('blur', function() { setStatus('Text updated'); });
+      div.appendChild(span);
+    }
+
+    div.addEventListener('mousedown', onElMouseDown);
+    canvas.appendChild(div);
+  });
+}
+
+/* ── Selection & Drag ── */
+function selectEl(div) {
+  if (selectedEl === div) return;
+  if (selectedEl) selectedEl.classList.remove('selected');
+  selectedEl = div;
+  if (div) {
+    div.classList.add('selected');
+    document.getElementById('lockBtn').textContent = (div.dataset.locked === 'true') ? 'Unlock' : 'Lock';
+  } else {
+    document.getElementById('lockBtn').textContent = 'Lock';
+  }
+}
+
+function deselectAll() {
+  if (selectedEl) selectedEl.classList.remove('selected');
+  selectedEl = null;
+  document.getElementById('lockBtn').textContent = 'Lock';
+}
+
+function deleteSelected() {
+  if (!selectedEl) return;
+  selectedEl.remove();
+  deselectAll();
+}
+
+function onElMouseDown(e) {
+  if (e.button !== 0) return;
+  const div = e.currentTarget;
+  selectEl(div);
+
+  if (div.dataset.locked === 'true') return;
+
+  // If clicking text content, let contenteditable handle it
+  if (e.target.classList.contains('text-content')) return;
+
+  const wrapper = document.getElementById('canvas-wrapper');
+  const wrapperRect = wrapper.getBoundingClientRect();
+  const scale = wrapperRect.width / 1080;
+  const startX = e.clientX;
+  const startY = e.clientY;
+  const origLeft = parseInt(div.style.left) || 0;
+  const origTop = parseInt(div.style.top) || 0;
+
+  div.classList.add('dragging');
+  bringToTop(div);
+
+  function onMove(ev) {
+    const dx = (ev.clientX - startX) / scale;
+    const dy = (ev.clientY - startY) / scale;
+    div.style.left = Math.max(0, origLeft + dx) + 'px';
+    div.style.top = Math.max(0, origTop + dy) + 'px';
+  }
+
+  function onUp() {
+    div.classList.remove('dragging');
+    document.removeEventListener('mousemove', onMove);
+    document.removeEventListener('mouseup', onUp);
+  }
+
+  document.addEventListener('mousemove', onMove);
+  document.addEventListener('mouseup', onUp);
+  e.preventDefault();
+}
+
+function bringToTop(div) {
+  const parent = div.parentNode;
+  const maxZ = Array.from(parent.children).reduce(function(m, c) {
+    return Math.max(m, parseInt(c.style.zIndex) || 0);
+  }, 0);
+  div.style.zIndex = maxZ + 1;
+}
+
+/* ── Lock Toggle ── */
+function toggleLock() {
+  if (!selectedEl) return;
+  const div = selectedEl;
+  const wasLocked = div.dataset.locked === 'true';
+  div.dataset.locked = wasLocked ? 'false' : 'true';
+  div.classList.toggle('locked', !wasLocked);
+  document.getElementById('lockBtn').textContent = wasLocked ? 'Lock' : 'Unlock';
+  setStatus(wasLocked ? 'Unlocked' : 'Locked');
+}
+
+/* ── Collect current state from DOM ── */
+function collectState() {
+  const elements = [];
+  document.querySelectorAll('#canvas .el').forEach(function(div) {
+    const a = {};
+    const s = div.style;
+    a.x = parseInt(s.left) || 0;
+    a.y = parseInt(s.top) || 0;
+    a.width = parseInt(s.width) || 100;
+    a.height = parseInt(s.height) || 40;
+    a.opacity = parseFloat(s.opacity) || 1;
+
+    if (div.dataset.type === 'image') {
+      const img = div.querySelector('img');
+      a.src = img ? img.src : '';
+    } else if (div.dataset.type === 'text') {
+      const span = div.querySelector('.text-content');
+      if (span) {
+        a.text = span.textContent;
+        a.fontSize = parseInt(span.style.fontSize) || 32;
+        a.fill = span.style.color || '#ffffff';
+        a.fontFamily = span.style.fontFamily || 'Inter, sans-serif';
+        a.fontStyle = (span.style.fontWeight === '700' ? 'bold' : 'normal');
+        a.align = span.style.textAlign || 'left';
+        a.lineHeight = parseFloat(span.style.lineHeight) || 1.2;
+      }
+    }
+
+    const el = {
+      id: div.dataset.elId,
+      type: div.dataset.type,
+      locked: div.dataset.locked === 'true',
+      attrs: a,
+    };
+    if (div.dataset.slot === 'true') {
+      el.slot = true;
+      el.slot_label = div.dataset.slotLabel || '';
+      el.slot_type = div.dataset.slotType || 'text';
+    }
+    elements.push(el);
+  });
+  return { elements: elements, canvas: { w: 1080, h: 1080 } };
+}
+
+/* ── Generate ── */
+function generatePost() {
+  if (isGenerating || !templateData) return;
+  const topic = document.getElementById('topicInput').value.trim();
+  if (!topic) { alert('Enter a topic first'); return; }
+
+  const state = collectState();
+  const slots = state.elements.filter(function(e) { return e.slot; });
+  if (slots.length === 0) { alert('No slots found in template'); return; }
+
+  isGenerating = true;
+  document.getElementById('genBtn').disabled = true;
+  document.getElementById('loadingOverlay').style.display = 'flex';
+  setStatus('Generating... ' + slots.length + ' slots');
+
+  const formData = new FormData();
+  formData.append('topic', topic);
+  formData.append('design_state', JSON.stringify(state));
+
+  fetch('/api/generate', { method: 'POST', body: formData })
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      document.getElementById('loadingOverlay').style.display = 'none';
+      isGenerating = false;
+      document.getElementById('genBtn').disabled = false;
+      if (data.status === 'ok') {
+        applyGenerated(data.design_state);
+        setStatus('Generated: ' + topic);
+      } else {
+        alert('Generation failed: ' + (data.message || 'Unknown error'));
+        setStatus('Generation failed');
+      }
+    })
+    .catch(function(err) {
+      document.getElementById('loadingOverlay').style.display = 'none';
+      isGenerating = false;
+      document.getElementById('genBtn').disabled = false;
+      alert('Error: ' + err.message);
+      setStatus('Generation error');
+    });
+}
+
+function applyGenerated(state) {
+  const elements = state.elements || [];
+  elements.forEach(function(el) {
+    if (!el.slot) return;
+    const div = document.querySelector('.el[data-el-id="' + el.id + '"]');
+    if (!div) return;
+    const a = el.attrs || {};
+    if (el.type === 'image') {
+      const img = div.querySelector('img');
+      if (img && a.src) {
+        const img2 = new Image();
+        img2.onload = function() { img.src = a.src; };
+        img2.src = a.src;
+      }
+    } else if (el.type === 'text') {
+      const span = div.querySelector('.text-content');
+      if (span && a.text !== undefined) span.textContent = a.text;
+    }
+  });
+}
+
+/* ── Export ── */
+function exportPNG() {
+  if (isGenerating) return;
+  const canvas = document.getElementById('canvas');
+  document.getElementById('exportBtn').disabled = true;
+  setStatus('Exporting...');
+
+  html2canvas(canvas, {
+    width: 1080, height: 1080,
+    scale: 2,
+    useCORS: true,
+    allowTaint: false,
+    backgroundColor: canvas.style.background || '#0D1B2A',
+  }).then(function(cnv) {
+    document.getElementById('exportBtn').disabled = false;
+    const link = document.createElement('a');
+    link.download = 'iclp-generated-post.png';
+    link.href = cnv.toDataURL('image/png');
+    link.click();
+    setStatus('Exported PNG');
+  }).catch(function(err) {
+    document.getElementById('exportBtn').disabled = false;
+    alert('Export failed: ' + err.message);
+    setStatus('Export failed');
+  });
+}
+
+/* ── Status ── */
+function setStatus(msg) {
+  document.getElementById('statusBar').textContent = msg;
+}
+
+boot();
+</script>
+<script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+</body>
+</html>

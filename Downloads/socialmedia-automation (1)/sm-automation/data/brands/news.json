@@ -1,0 +1,13 @@
+{
+  "name": "News",
+  "palette": {
+    "primary": "#092240",
+    "accent": "#1565C0",
+    "highlight": "#E65100",
+    "success": "#2E7D32",
+    "background": "#F3F7FA"
+  },
+  "fonts": { "heading": "Georgia, serif", "body": "Inter, sans-serif" },
+  "logo": "/images/nicdc-logo.png",
+  "tone": "authoritative, institutional, news-driven"
+}

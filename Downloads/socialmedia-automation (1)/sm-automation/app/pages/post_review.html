@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Review post — NICDC Social Studio</title>
+    <link rel="stylesheet" href="/static/app.css">
+    <link rel="icon" type="image/png" href="/assets/favicon.png">
+</head>
+<body data-role="approver" data-active="/review" data-user="__USER_NAME__">
+    <main class="workspace" id="screen">
+        <div id="review-view">
+            <div class="detail-head">
+                <a class="back" href="/review"><i class="ic-wrap" data-icon="arrow-left" data-icon-size="12"></i> Review queue</a>
+                <div>
+                    <h1 id="pr-title"></h1>
+                    <div class="submeta" id="pr-meta"></div>
+                </div>
+                <span></span>
+            </div>
+            <div class="review-layout">
+                <section class="stage">
+                    <div class="review-tip" id="pr-tip"><i class="ic-wrap" data-icon="crosshair" data-icon-size="12"></i> <b style="margin-left:5px">Click or drag on the design</b>&nbsp; to pin feedback to an exact region.</div>
+                    <div class="preview-bar"><span>Design preview · 1080 × 1080 px</span><span id="pr-plats"></span></div>
+                    <div class="large-art" id="imgHolder" style="cursor:crosshair;user-select:none;"><img id="postImg" draggable="false" alt="Post design"></div>
+                    <div class="caption" id="pr-caption-card"></div>
+                </section>
+                <aside class="feedback">
+                    <div class="panel-head"><div><h2>Review comments</h2><span id="pr-cmt-sub">None yet</span></div><span></span></div>
+                    <div class="comment-list" id="pr-comments"></div>
+                    <div class="compose" id="composeBox">
+                        <div class="pinned" id="pinState"><span><i class="ic-wrap" data-icon="pin" data-icon-size="11"></i> General comment — click the design to pin</span></div>
+                        <textarea id="newComment" placeholder="Write clear, actionable feedback..." maxlength="500"></textarea>
+                        <div class="compose-foot"><span id="charCount">0 / 500</span><button onclick="addComment()" id="addBtn">Add comment</button></div>
+                    </div>
+                    <div class="decision" id="decisionBox">
+                        <span>REVIEW DECISION</span>
+                        <button class="btn sendback" onclick="openSendbackDialog()"><i class="ic-wrap" data-icon="reply" data-icon-size="13"></i> Send back to editor</button>
+                        <button class="btn primary" onclick="openApproveDialog()"><i class="ic-wrap" data-icon="check" data-icon-size="13"></i> Approve &amp; publish</button>
+                    </div>
+                    <details class="history" id="pr-history-wrap" style="display:none;">
+                        <summary><i class="ic-wrap" data-icon="history" data-icon-size="12"></i> Revision history <small id="pr-history-count"></small> <i class="ic-wrap" data-icon="chev-down" data-icon-size="11"></i></summary>
+                        <div id="pr-history"></div>
+                    </details>
+                </aside>
+            </div>
+        </div>
+        <div id="success-view" class="hidden"></div>
+    </main>
+
+    <script src="/static/app.js"></script>
+    <script>
+        mountShell();
+        const POST = __POST_JSON__;
+        let _comments = POST.comments || [];
+        let _pendingRegion = null, _drag = null, _pendingEl = null;
+        const READ_ONLY = ['approved', 'published'].indexOf(POST.status) !== -1;
+        const PLATS = POST.platforms || [];
+
+        document.getElementById('pr-title').textContent = POST.title;
+        document.getElementById('postImg').src = '/bank/' + POST.image_path + '?v=' + Date.now();
+        document.getElementById('pr-plats').textContent = 'Publishes to: ' + (PLATS.map(p => PLATFORM_NAMES[p] || p).join(', ') || 'all platforms');
+        document.getElementById('pr-meta').innerHTML =
+            statusBadge(POST.status, true) +
+            '<span>Revision ' + (POST.revision || 1) + '</span>' +
+            (POST.submitted_by ? '<span>By ' + escHtml(POST.submitted_by) + '</span>' : '') +
+            (POST.submitted_at ? '<span>' + fmtTime(POST.submitted_at) + '</span>' : '');
+        document.getElementById('pr-caption-card').innerHTML =
+            '<div><b>Caption submitted by editor</b><span>' + (POST.caption || '').length + ' / 3,000</span></div>' +
+            '<p>' + (POST.caption ? escHtml(POST.caption) : '<i style="color:#9aa39d">No caption — you can write one when approving.</i>') + '</p>';
+
+        /* ── Region drawing ── */
+        const holder = document.getElementById('imgHolder');
+        function relPos(e) {
+            const r = holder.getBoundingClientRect();
+            return { x: Math.max(0, Math.min(1, (e.clientX - r.left) / r.width)), y: Math.max(0, Math.min(1, (e.clientY - r.top) / r.height)) };
+        }
+        holder.addEventListener('mousedown', function (e) {
+            if (READ_ONLY) return;
+            _drag = relPos(e);
+            if (_pendingEl) { _pendingEl.remove(); _pendingEl = null; }
+            e.preventDefault();
+        });
+        holder.addEventListener('mousemove', function (e) { if (_drag) drawPending(_drag, relPos(e)); });
+        window.addEventListener('mouseup', function (e) {
+            if (!_drag) return;
+            const cur = relPos(e);
+            let x = Math.min(_drag.x, cur.x), y = Math.min(_drag.y, cur.y);
+            let w = Math.abs(cur.x - _drag.x), h = Math.abs(cur.y - _drag.y);
+            if (w < 0.02 && h < 0.02) {
+                w = 0.06; h = 0.06;
+                x = Math.max(0, Math.min(0.94, x - 0.03));
+                y = Math.max(0, Math.min(0.94, y - 0.03));
+            }
+            _pendingRegion = { x: x, y: y, w: w, h: h };
+            drawPending({ x: x, y: y }, { x: x + w, y: y + h });
+            _drag = null;
+            updatePinState();
+        });
+        function drawPending(a, b) {
+            if (!_pendingEl) {
+                _pendingEl = document.createElement('div');
+                _pendingEl.className = 'region-box pending';
+                holder.appendChild(_pendingEl);
+            }
+            _pendingEl.style.left = Math.min(a.x, b.x) * 100 + '%';
+            _pendingEl.style.top = Math.min(a.y, b.y) * 100 + '%';
+            _pendingEl.style.width = Math.abs(b.x - a.x) * 100 + '%';
+            _pendingEl.style.height = Math.abs(b.y - a.y) * 100 + '%';
+        }
+        function clearRegion() {
+            _pendingRegion = null;
+            if (_pendingEl) { _pendingEl.remove(); _pendingEl = null; }
+            updatePinState();
+        }
+        function updatePinState() {
+            document.getElementById('pinState').innerHTML = _pendingRegion
+                ? '<span>' + svg('check', 11) + ' Pinned to selected region</span><button onclick="clearRegion()">clear ×</button>'
+                : '<span>' + svg('pin', 11) + ' General comment — click the design to pin</span>';
+        }
+
+        /* ── Comments ── */
+        function renderRegions(activeId) {
+            holder.querySelectorAll('.region-box:not(.pending)').forEach(el => el.remove());
+            let n = 0;
+            _comments.forEach(function (c) {
+                if (!c.region) return;
+                n += 1;
+                const el = document.createElement('div');
+                el.className = 'region-box' + (c.id === activeId ? ' hl' : '');
+                el.style.left = (c.region.x * 100) + '%';
+                el.style.top = (c.region.y * 100) + '%';
+                el.style.width = (c.region.w * 100) + '%';
+                el.style.height = (c.region.h * 100) + '%';
+                el.innerHTML = '<span class="pin-n">' + n + '</span>';
+                holder.appendChild(el);
+            });
+        }
+        function renderComments(activeId) {
+            const list = document.getElementById('pr-comments');
+            document.getElementById('pr-cmt-sub').textContent = _comments.length
+                ? _comments.length + ' open comment' + (_comments.length !== 1 ? 's' : '') : 'None yet';
+            if (!_comments.length) {
+                list.innerHTML = '<div style="padding:14px;text-align:center;font-size:9px;color:#8b958e;">Highlight a part of the design, then write your first comment.</div>';
+                renderRegions();
+                return;
+            }
+            let n = 0;
+            list.innerHTML = _comments.map(function (c) {
+                const num = c.region ? ++n : null;
+                return '<div class="comment' + (c.id === activeId ? ' active' : '') + '" data-id="' + c.id + '" data-linked="' + (c.region ? '1' : '') + '" style="position:relative;">' +
+                    '<span class="comment-num' + (num ? '' : ' general') + '">' + (num || '•') + '</span>' +
+                    '<span><b>' + escHtml(c.author || 'You') + '</b><small>' + fmtTime(c.created_at) + '</small><p>' + escHtml(c.text) + '</p>' +
+                    (READ_ONLY ? '' : '<button style="border:0;background:none;color:#a7b1aa;font-size:8px;padding:4px 0 0;cursor:pointer;" data-del="' + c.id + '">Delete comment</button>') +
+                    '</span></div>';
+            }).join('');
+            renderRegions(activeId);
+        }
+        document.getElementById('pr-comments').addEventListener('click', function (e) {
+            const del = e.target.closest('[data-del]');
+            if (del) { deleteComment(del.dataset.del); return; }
+            const c = e.target.closest('.comment');
+            if (c && c.dataset.linked) renderComments(c.dataset.id);
+        });
+
+        const ta = document.getElementById('newComment');
+        ta.addEventListener('input', function () {
+            document.getElementById('charCount').textContent = this.value.length + ' / 500';
+        });
+        ta.addEventListener('keydown', function (e) {
+            if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); addComment(); }
+        });
+
+        async function addComment() {
+            const text = ta.value.trim();
+            if (!text) return;
+            const btn = document.getElementById('addBtn');
+            btn.disabled = true;
+            try {
+                const resp = await fetch('/api/posts/' + POST.id + '/comments', {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ region: _pendingRegion, text: text }),
+                });
+                if (!resp.ok) throw new Error((await resp.json()).detail || 'Failed');
+                _comments.push(await resp.json());
+                ta.value = '';
+                document.getElementById('charCount').textContent = '0 / 500';
+                clearRegion();
+                renderComments();
+                toast('Comment ' + (_pendingRegion ? 'pinned to design' : 'added'));
+            } catch (e) { toast(e.message, 'error'); }
+            btn.disabled = false;
+        }
+        async function deleteComment(id) {
+            try {
+                const resp = await fetch('/api/posts/' + POST.id + '/comments/' + id, { method: 'DELETE' });
+                if (!resp.ok) throw new Error((await resp.json()).detail || 'Failed');
+                _comments = _comments.filter(c => c.id !== id);
+                renderComments();
+            } catch (e) { toast(e.message, 'error'); }
+        }
+
+        /* ── History ── */
+        const history = POST.feedback_history || [];
+        if (history.length) {
+            document.getElementById('pr-history-wrap').style.display = '';
+            document.getElementById('pr-history-count').textContent = history.length + ' round' + (history.length !== 1 ? 's' : '');
+            document.getElementById('pr-history').innerHTML = history.map(function (h) {
+                return '<div style="margin-top:9px;"><span class="eyebrow">REVISION ' + h.revision + '</span>' +
+                    (h.reviewer_note ? '<p style="font-size:8.5px;color:#59665d;margin:5px 0;">“' + escHtml(h.reviewer_note) + '”</p>' : '') +
+                    (h.comments || []).map(c => '<div class="comment"><span class="comment-num general">•</span><span><b>' + escHtml(c.author || 'Admin') + '</b><p>' + escHtml(c.text) + '</p></span></div>').join('') +
+                '</div>';
+            }).join('');
+        }
+
+        /* ── Send back ── */
+        function openSendbackDialog() {
+            if (!_comments.length) { toast('Add at least one comment first, so the editor knows what to fix.', 'error'); return; }
+            openDialog('reply', 'Send back to editor', 'Add a clear summary so the editor knows what to fix.',
+                '<div class="callout"><span>' + svg('comment', 14) + '</span><div><b>' + _comments.length + ' open comment' + (_comments.length !== 1 ? 's' : '') + '</b><p>The editor will see these comments with your note.</p></div><span></span></div>' +
+                '<label class="field">Summary note<textarea id="sbNote" placeholder="e.g. Please address all pinned design comments and resubmit."></textarea></label>',
+                '<button class="btn" onclick="closeDialog()">Cancel</button><button class="btn rust" id="sbGo" onclick="sendBack()">Send back</button>');
+        }
+        async function sendBack() {
+            const btn = document.getElementById('sbGo');
+            btn.disabled = true;
+            try {
+                const resp = await fetch('/api/posts/' + POST.id + '/status', {
+                    method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ status: 'feedback', reviewer_note: document.getElementById('sbNote').value.trim() }),
+                });
+                if (!resp.ok) throw new Error((await resp.json()).detail || 'Failed');
+                closeDialog();
+                toast('Post sent back to ' + (POST.submitted_by || 'the editor'));
+                setTimeout(() => location.href = '/review', 900);
+            } catch (e) { toast(e.message, 'error'); btn.disabled = false; }
+        }
+
+        /* ── Approve & publish ── */
+        function openApproveDialog() {
+            if (_comments.length && !confirm('There are ' + _comments.length + ' open comment(s). Approve anyway?')) return;
+            const ck = p => PLATS.length ? (PLATS.indexOf(p) !== -1 ? 'checked' : '') : 'checked';
+            openDialog('check-circle', 'Approve & publish', 'Confirm the final caption and publishing destinations.',
+                '<span class="eyebrow">PUBLISH TO</span>' +
+                '<div class="platform-select" style="margin-top:8px;">' +
+                    '<label><input type="checkbox" disabled ' + ck('linkedin') + '> ' + svg('linkedin', 12) + ' LinkedIn</label>' +
+                    '<label><input type="checkbox" disabled ' + ck('x') + '> ' + svg('x-brand', 11) + ' X</label>' +
+                    '<label><input type="checkbox" disabled ' + ck('instagram') + '> ' + svg('instagram', 12) + ' Instagram</label>' +
+                '</div>' +
+                '<label class="field">Caption<textarea id="apCaption" style="height:120px;">' + escHtml(POST.caption || POST.title) + '</textarea></label>',
+                '<button class="btn" onclick="closeDialog()">Cancel</button><button class="btn primary" id="apGo" onclick="approvePublish()">Approve &amp; publish</button>');
+        }
+        async function approvePublish() {
+            const btn = document.getElementById('apGo');
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner"></span> Publishing...';
+            try {
+                const resp = await fetch('/api/posts/' + POST.id + '/approve', {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ caption: document.getElementById('apCaption').value.trim() }),
+                });
+                const data = await resp.json();
+                if (!resp.ok) throw new Error(data.detail || 'Publish failed');
+                closeDialog();
+                showSuccess(data);
+            } catch (e) {
+                toast(e.message, 'error');
+                btn.disabled = false;
+                btn.textContent = 'Approve & publish';
+            }
+        }
+
+        function showSuccess(data) {
+            document.getElementById('review-view').classList.add('hidden');
+            const v = document.getElementById('success-view');
+            v.classList.remove('hidden');
+            const platCount = PLATS.length || 3;
+            v.innerHTML =
+                '<div class="success-page">' +
+                    '<div class="success-check">' + svg('check', 26) + '</div>' +
+                    '<span class="eyebrow">PUBLISHING COMPLETE</span>' +
+                    '<h1>' + (data.status === 'published' ? 'Your post is live' : 'Approved, with issues') + '</h1>' +
+                    '<p>“' + escHtml(POST.title) + '” was approved' + (data.status === 'published' ? ' and published successfully.' : ' — check the platform results below.') + '</p>' +
+                    '<div class="success-box">' +
+                        '<img src="/bank/' + escHtml(POST.image_path) + '" alt="">' +
+                        '<div><h3>Published to ' + platCount + ' platform' + (platCount !== 1 ? 's' : '') + '</h3>' +
+                        '<p>' + fmtTime(new Date().toISOString()) + ' · Revision ' + (POST.revision || 1) + '</p>' +
+                        publishResults(data.publish_results) + '</div>' +
+                    '</div>' +
+                    '<a class="btn" href="/review">Back to review queue</a>' +
+                '</div>';
+            window.scrollTo(0, 0);
+        }
+
+        /* ── Resizable feedback panel ── */
+        (function () {
+            if (window.matchMedia('(max-width: 1000px)').matches) return;
+            const layout = document.querySelector('.review-layout');
+            const fb = layout.querySelector('.feedback');
+            const g = makeGutter();
+            layout.insertBefore(g, fb);
+            columnResizer(g, {
+                key: 'review.fbW', value: 350, min: 270, max: 620, dir: -1,
+                apply: function (v) { layout.style.gridTemplateColumns = 'minmax(0,1fr) 8px ' + v + 'px'; },
+            });
+        })();
+
+        /* ── Init / read-only ── */
+        document.getElementById('postImg').addEventListener('load', () => renderComments());
+        renderComments();
+        updatePinState();
+        if (READ_ONLY) {
+            document.getElementById('composeBox').style.display = 'none';
+            document.getElementById('pr-tip').style.display = 'none';
+            holder.style.cursor = 'default';
+            document.getElementById('decisionBox').innerHTML =
+                '<span>PUBLISHED</span>' + publishResults(POST.publish_results);
+        }
+    </script>
+</body>
+</html>

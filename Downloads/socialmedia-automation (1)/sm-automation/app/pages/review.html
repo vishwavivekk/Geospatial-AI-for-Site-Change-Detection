@@ -1,0 +1,534 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Review design — NICDC Social Studio</title>
+    <script src="https://unpkg.com/konva@9/konva.min.js"></script>
+    <link rel="stylesheet" href="/static/app.css">
+    <link rel="icon" type="image/png" href="/assets/favicon.png">
+    <style>
+        /* Story-design review restyled to the mockup system */
+        .rv-layout{display:grid;grid-template-columns:minmax(0,1fr) 350px;background:#fff;border:1px solid var(--line);min-height:600px;padding:0;max-width:none;margin:0}
+        .rv-canvas-col{background:#f0f3f1;padding:15px 24px;min-width:0}
+        .rv-canvas-wrap{background:transparent;border:0;padding:0;box-shadow:none}
+        .rv-canvas-head{display:flex;align-items:center;gap:10px;margin:0 auto 10px;max-width:650px;flex-wrap:wrap}
+        .rv-canvas-head h1{font:19px Georgia,serif;color:var(--ink);letter-spacing:-.02em;flex:1;min-width:180px;margin:0}
+        #rv-canvas-container{position:relative;display:block;margin:auto;width:fit-content;box-shadow:0 8px 28px rgba(26,45,31,.2)}
+        #rv-canvas-container canvas{display:block;cursor:crosshair}
+        .rv-hint{max-width:650px;margin:10px auto 0;border:1px solid #cddbc6;background:#f5f9f3;border-radius:5px;display:flex;align-items:center;gap:6px;padding:8px 11px;font-size:8px;color:#657260}
+        .rv-selected{max-width:650px;margin:10px auto 0;padding:8px 11px;background:#f0f7ed;border:1px solid #cadcc2;border-radius:6px;display:none;align-items:center;gap:9px;font-size:9px;color:var(--green-dark)}
+        .rv-selected.visible{display:flex}
+        .rv-selected .el-name{font-weight:800}
+        .rv-sidebar{border-left:1px solid var(--line);display:flex;flex-direction:column;background:#fff;max-height:none;position:static;width:auto;border-radius:0;box-shadow:none}
+        .rv-sidebar-head{height:68px;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:8px;padding:0 17px;font-size:15px;color:var(--ink);font-weight:700}
+        .rv-sidebar-head .count-pill{font-size:8px;background:#e9edeb;color:#6f7a73;border-radius:8px;padding:2px 7px}
+        .rv-comments{padding:9px;border-bottom:1px solid var(--line);max-height:270px;overflow:auto}
+        .rv-comment{display:grid;grid-template-columns:1fr;gap:4px;border:1px solid transparent;background:#fff;border-radius:6px;text-align:left;padding:9px 8px;margin-bottom:4px;position:relative;font-size:8.5px;color:#59665d}
+        .rv-comment.linked{border-left:3px solid #d8473b;cursor:pointer}
+        .rv-comment.linked:hover{background:#f8faf8}
+        .rv-comment-meta{display:flex;align-items:center;gap:7px;flex-wrap:wrap}
+        .rv-tag{display:inline-flex;align-items:center;gap:4px;font-size:7px;font-weight:850;padding:2px 7px;border-radius:8px;background:#fdeeec;color:#ad3d27}
+        .rv-tag.general{background:#eef1ef;color:#68746c}
+        .rv-time{font-size:7px;color:#929c95}
+        .rv-del{position:absolute;top:6px;right:7px;background:none;border:0;font-size:12px;color:#a7b1aa;cursor:pointer;border-radius:4px;padding:2px 4px}
+        .rv-del:hover{color:var(--rust);background:#fff1ed}
+        .rv-comment-text{line-height:1.5;white-space:pre-wrap;color:#59665d}
+        .rv-input-area{margin:10px 13px;border:1px solid var(--line);border-radius:6px;overflow:hidden;padding:0}
+        .rv-input-area textarea{width:100%;height:60px;border:0;outline:0;resize:none;padding:8px;font-size:9px;box-sizing:border-box}
+        .rv-attach{display:flex;align-items:center;gap:5px;background:#f0f7ed;border-bottom:1px solid var(--line);padding:6px 8px;font-size:8px;color:var(--green);margin:0;order:-1}
+        .rv-input-area{display:flex;flex-direction:column}
+        .rv-input-row{display:flex;justify-content:flex-end;gap:6px;padding:5px 8px;border-top:1px solid #edf0ee}
+        .rv-input-row .btn{height:25px;font-size:8px;padding:0 9px}
+        .rv-actions{border-top:1px solid var(--line);padding:13px;display:flex;flex-direction:column;gap:7px}
+        .rv-actions .btn{width:100%;height:36px;font-size:9px}
+        .rv-actions .btn.warningish{border-color:#e2b6aa;background:#fff7f4;color:var(--rust)}
+        .rv-note-row{font-size:8px;color:#87928b;text-align:center}
+        .rv-history{padding:0 13px 12px}
+        .rv-history details{border:1px solid var(--line);border-radius:6px;padding:8px 11px;margin-bottom:7px;font-size:9px;background:#fafbfa}
+        .rv-history summary{cursor:pointer;font-weight:700;color:#5b675f}
+        .publish-progress{display:none;padding:12px 13px;border-top:1px solid var(--line);font-size:9px}
+        .publish-progress.visible{display:block}
+        /* dialogs keep old ids/classes, mockup look */
+        .modal-overlay{position:fixed;inset:0;background:#12201888;z-index:100;display:none;place-items:center;padding:18px}
+        .modal-overlay.open{display:grid}
+        .modal{width:min(560px,100%);max-height:90vh;overflow:auto;background:#fff;border-radius:10px;box-shadow:0 25px 80px #0004;padding:22px}
+        .modal h2{font:21px Georgia,serif;color:var(--ink);margin:0 0 4px}
+        .modal .sub{font-size:9px;color:#7f8a83;margin:0 0 16px}
+        .modal label{display:block;font-size:11px;font-weight:700;color:#48534c;margin-bottom:6px}
+        .modal textarea{width:100%;border:1px solid #d4dbd6;border-radius:7px;padding:11px;font:inherit;font-size:11px;min-height:90px;box-sizing:border-box;margin-bottom:14px}
+        .modal-actions{display:flex;justify-content:flex-end;gap:8px;border-top:1px solid var(--line);padding-top:13px}
+        @media(max-width:1000px){.rv-layout{grid-template-columns:1fr}.rv-sidebar{border-left:0;border-top:1px solid var(--line)}}
+    </style>
+</head>
+<body data-role="approver" data-active="/review" data-user="__USER_NAME__">
+    <main class="workspace" id="screen">
+        <div class="detail-head">
+            <a class="back" href="/review"><i class="ic-wrap" data-icon="arrow-left" data-icon-size="12"></i> Review queue</a>
+            <div>
+                <h1 id="rv-topic" style="font:25px Georgia,serif;color:var(--ink);margin:0 0 7px;"></h1>
+                <div class="submeta" id="rv-badges"></div>
+            </div>
+            <span></span>
+        </div>
+    <div class="rv-layout">
+        <div class="rv-canvas-col">
+            <div class="rv-canvas-wrap">
+                
+                <div id="rv-canvas-container"></div>
+                <div class="rv-selected" id="rv-selected">
+                    <span>Selected: <span class="el-name" id="rv-sel-name"></span> <span style="color:var(--muted);" id="rv-sel-type"></span></span>
+                    <button class="btn" style="height:25px;font-size:8px;padding:0 9px" style="margin-left:auto;" onclick="clearSelection()">Clear</button>
+                </div>
+                <p class="rv-hint" id="rv-hint-row"><span>Click any element on the design to highlight it — your next comment will be pinned to it. Elements with comments show a red badge. Click the background to switch back to a general comment.</span></p>
+            </div>
+        </div>
+
+        <div class="rv-sidebar">
+            <div class="rv-sidebar-head" id="rv-head">Feedback <span class="count-pill" id="rv-count">0</span></div>
+            <div class="rv-comments" id="rv-comments"></div>
+            <div class="rv-history" id="rv-history"></div>
+            <div class="rv-input-area" id="rv-input-area">
+                <textarea id="rv-input" placeholder="Describe the issue or the change you want..."></textarea>
+                <div class="rv-attach" id="rv-attach"></div>
+                <button class="btn primary" style="height:25px;font-size:8px;padding:0 9px" id="rv-add-btn" onclick="addComment()">Add comment</button>
+            </div>
+            <div class="publish-progress" id="publish-progress"></div>
+            <div class="rv-actions" id="rv-actions">
+                <button class="btn warningish" id="btn-request" onclick="openReturnModal()"></button>
+                <button class="btn primary" id="btn-approve" onclick="openApproveModal()"></button>
+                <div class="rv-note-row">Approving posts to the connected social accounts automatically.</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Send back to editor modal -->
+    </main>
+
+    <div id="returnModal" class="modal-overlay">
+        <div class="modal" onclick="event.stopPropagation()">
+            <h2>Send back to editor</h2>
+            <p class="sub">The editor will see your <b id="rm-count"></b> pinned comment(s) and this note, fix the design, and resubmit it for another review.</p>
+            <label for="rm-note">Note for the editor (optional)</label>
+            <textarea id="rm-note" placeholder="e.g. Please fix these before Friday..."></textarea>
+            <div class="modal-actions">
+                <button type="button" class="btn" onclick="closeReturnModal()">Cancel</button>
+                <button type="button" class="btn warningish" id="rm-send" onclick="requestChanges()">Send back</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Approve & publish modal -->
+    <div id="approveModal" class="modal-overlay">
+        <div class="modal" onclick="event.stopPropagation()">
+            <h2>Approve &amp; publish</h2>
+            <p class="sub">This posts the design to the connected social media accounts. Review the caption before publishing.</p>
+            <label for="ap-caption">Caption</label>
+            <textarea id="ap-caption" style="min-height:140px;"></textarea>
+            <div class="modal-actions">
+                <button type="button" class="btn" onclick="closeApproveModal()">Cancel</button>
+                <button type="button" class="btn primary" id="ap-confirm" onclick="approveAndPublish()">Publish now</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="/static/app.js"></script>
+    <script>
+        const DESIGN_ID = '__DESIGN_ID__';
+        const DESIGN_STATE = __DESIGN_JSON__;
+        const DESIGN_META = __META_JSON__;
+        let _comments = __COMMENTS_JSON__;
+
+        let _stage = null, _layer = null, _badgeLayer = null;
+        let _selectedNode = null, _selectedElementId = null, _selectedElementType = null;
+        let _nodeMap = {};
+        const READ_ONLY = ['approved', 'published'].indexOf(DESIGN_META.status) !== -1;
+
+        /* ── Chrome ── */
+        document.getElementById('btn-request').innerHTML = icon('comment', 15) + 'Send back to editor';
+        document.getElementById('btn-approve').innerHTML = icon('rocket', 15) + 'Approve & publish';
+        document.getElementById('rv-topic').textContent = DESIGN_META.topic;
+        document.getElementById('rv-badges').innerHTML =
+            catBadge(DESIGN_META.category) + statusBadge(DESIGN_META.status) +
+            '<span style="font-size:12px;color:var(--muted);font-weight:600;">Rev ' + (DESIGN_META.revision || 1) + '</span>';
+
+        /* Variant navigation — each variation is reviewed on its own page */
+        if ((DESIGN_META.variants || []).length > 1) {
+            const pills = DESIGN_META.variants.map(function (v) {
+                const label = 'Variation ' + ((v.variant_index || 0) + 1);
+                if (v.id === DESIGN_ID) {
+                    return '<button class="tab active" disabled>' + label + '</button>';
+                }
+                return '<a class="tab" href="/review/' + v.id + '" style="text-decoration:none;">' + label + '</a>';
+            }).join('');
+            document.getElementById('rv-badges').insertAdjacentHTML('beforebegin',
+                '<div class="tabs" style="margin:0;">' + pills + '</div>');
+        }
+
+        /* ── Canvas ── */
+        function initCanvas(designState) {
+            const cw = designState.canvas ? designState.canvas.width || 1080 : 1080;
+            const ch = designState.canvas ? designState.canvas.height || 1080 : 1080;
+            const scale = Math.min(640 / cw, 640 / ch, 1);
+
+            _stage = new Konva.Stage({ container: 'rv-canvas-container', width: cw * scale, height: ch * scale });
+            _layer = new Konva.Layer();
+            _stage.add(_layer);
+
+            const bg = new Konva.Rect({
+                x: 0, y: 0, width: cw * scale, height: ch * scale,
+                fill: (designState.canvas && designState.canvas.background) || '#F3F7FA',
+                listening: true,
+            });
+            bg.on('click tap', clearSelection);
+            _layer.add(bg);
+
+            const group = new Konva.Group({ scaleX: scale, scaleY: scale, listening: true });
+            _layer.add(group);
+
+            (designState.elements || []).forEach(function (el) {
+                const node = createFeedbackNode(el);
+                if (!node) return;
+                node.on('click tap', function (evt) {
+                    evt.cancelBubble = true;
+                    selectElement(el.id, el.type, node);
+                });
+                _nodeMap[el.id] = node;
+                group.add(node);
+                if (el.type === 'image') {
+                    const imgEl = node.image();
+                    if (imgEl && !imgEl.complete) imgEl.onload = function () { _layer.batchDraw(); };
+                }
+            });
+
+            _badgeLayer = new Konva.Layer({ listening: false });
+            _stage.add(_badgeLayer);
+
+            _layer.batchDraw();
+            renderBadges();
+            requestAnimationFrame(function () { _layer.batchDraw(); renderBadges(); });
+        }
+
+        function createFeedbackNode(el) {
+            const a = el.attrs || {};
+            const config = {};
+            for (const k in a) { if (a[k] !== undefined && a[k] !== null) config[k] = a[k]; }
+            config.draggable = false;
+            config.listening = true;
+            switch (el.type) {
+                case 'rect': return new Konva.Rect(config);
+                case 'text': return new Konva.Text(config);
+                case 'circle': return new Konva.Circle(config);
+                case 'ellipse': return new Konva.Ellipse(config);
+                case 'line': return new Konva.Line(config);
+                case 'path': return new Konva.Path(config);
+                case 'star': return new Konva.Star(config);
+                case 'ring': return new Konva.Ring(config);
+                case 'polygon': return new Konva.Line(Object.assign({}, config, { closed: true }));
+                case 'image': {
+                    if (!a.src) return null;
+                    const img = new Image();
+                    if (a.src.indexOf('/') !== 0) img.crossOrigin = 'anonymous';
+                    img.src = a.src;
+                    const node = new Konva.Image(Object.assign({}, config, { image: img }));
+                    img.onerror = function () { node.destroy(); };
+                    return node;
+                }
+                default: return null;
+            }
+        }
+
+        /* Red count badges on commented elements */
+        function renderBadges() {
+            if (!_badgeLayer) return;
+            _badgeLayer.destroyChildren();
+            const counts = {};
+            _comments.forEach(function (c) {
+                if (c.element_id) counts[c.element_id] = (counts[c.element_id] || 0) + 1;
+            });
+            Object.keys(counts).forEach(function (elId) {
+                const node = _nodeMap[elId];
+                if (!node) return;
+                const rect = node.getClientRect();
+                if (!rect || !rect.width) return;
+                const text = String(counts[elId]);
+                const radius = text.length > 1 ? 12 : 10;
+                const g = new Konva.Group({ x: rect.x + rect.width - 4, y: rect.y + 4, listening: false });
+                g.add(new Konva.Circle({ radius: radius, fill: '#dc2626', stroke: 'white', strokeWidth: 1.5 }));
+                g.add(new Konva.Text({
+                    text: text, fontSize: 11, fontStyle: 'bold', fill: 'white',
+                    align: 'center', verticalAlign: 'middle',
+                    width: radius * 2, height: radius * 2, offsetX: radius, offsetY: radius,
+                }));
+                _badgeLayer.add(g);
+            });
+            _badgeLayer.draw();
+        }
+
+        /* ── Selection / highlight ── */
+        function selectElement(id, type, node) {
+            if (READ_ONLY) return;
+            if (_selectedNode) { _selectedNode.stroke(_selectedNode._origStroke || null); _selectedNode.strokeWidth(_selectedNode._origStrokeW || 0); }
+            _selectedNode = node;
+            _selectedElementId = id;
+            _selectedElementType = type;
+            if (node._origStroke === undefined) { node._origStroke = node.stroke(); node._origStrokeW = node.strokeWidth(); }
+            node.stroke('#4f46e5');
+            node.strokeWidth(4);
+            _layer.batchDraw();
+            document.getElementById('rv-sel-name').textContent = id;
+            document.getElementById('rv-sel-type').textContent = '(' + type + ')';
+            document.getElementById('rv-selected').classList.add('visible');
+            updateAttachHint();
+        }
+
+        function clearSelection() {
+            if (_selectedNode) {
+                _selectedNode.stroke(_selectedNode._origStroke || null);
+                _selectedNode.strokeWidth(_selectedNode._origStrokeW || 0);
+                _layer.batchDraw();
+            }
+            _selectedNode = null;
+            _selectedElementId = null;
+            _selectedElementType = null;
+            document.getElementById('rv-selected').classList.remove('visible');
+            updateAttachHint();
+        }
+
+        function highlightElement(elementId) {
+            const node = _nodeMap[elementId];
+            if (!node) return;
+            selectElement(elementId, (node.getClassName() || '').toLowerCase(), node);
+            const sx = node.scaleX(), sy = node.scaleY();
+            node.to({
+                scaleX: sx * 1.08, scaleY: sy * 1.08, duration: 0.15, easing: Konva.Easings.EaseOut,
+                onFinish: function () { node.to({ scaleX: sx, scaleY: sy, duration: 0.15, easing: Konva.Easings.EaseIn }); }
+            });
+        }
+
+        function updateAttachHint() {
+            const hint = document.getElementById('rv-attach');
+            if (_selectedElementId) {
+                hint.innerHTML = icon('pin', 12) + ' Pinned to <b style="color:var(--primary);">' + escHtml(_selectedElementId) + '</b>';
+            } else {
+                hint.innerHTML = icon('comment', 12) + ' General comment (no element selected)';
+            }
+        }
+
+        /* ── Comments ── */
+        async function addComment() {
+            const input = document.getElementById('rv-input');
+            const text = input.value.trim();
+            if (!text) return;
+            const btn = document.getElementById('rv-add-btn');
+            btn.disabled = true;
+            try {
+                const resp = await fetch('/api/designs/' + DESIGN_ID + '/comments', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        element_id: _selectedElementId || null,
+                        element_type: _selectedElementType || null,
+                        text: text,
+                    }),
+                });
+                if (!resp.ok) throw new Error((await resp.json()).detail || 'Failed');
+                _comments.push(await resp.json());
+                input.value = '';
+                renderComments();
+                renderBadges();
+            } catch (e) {
+                toast('Error adding comment: ' + e.message, 'error');
+            } finally {
+                btn.disabled = false;
+            }
+        }
+
+        async function deleteComment(commentId) {
+            try {
+                const resp = await fetch('/api/designs/' + DESIGN_ID + '/comments/' + commentId, { method: 'DELETE' });
+                if (!resp.ok) throw new Error((await resp.json()).detail || 'Failed');
+                _comments = _comments.filter(c => c.id !== commentId);
+                renderComments();
+                renderBadges();
+            } catch (e) {
+                toast('Error deleting comment: ' + e.message, 'error');
+            }
+        }
+
+        function commentCard(c, readOnly) {
+            const tag = c.element_id
+                ? '<span class="rv-tag">' + icon('pin', 10) + escHtml(c.element_id) + '</span>'
+                : '<span class="rv-tag general">General</span>';
+            return '<div class="rv-comment' + (c.element_id ? ' linked' : '') + '"' +
+                (c.element_id ? ' data-element-id="' + escHtml(c.element_id) + '"' : '') + '>' +
+                (readOnly ? '' : '<button class="rv-del" data-comment-id="' + c.id + '" title="Delete">&times;</button>') +
+                '<div class="rv-comment-meta">' + tag + '<span class="rv-time">' + fmtTime(c.created_at) + '</span></div>' +
+                '<div class="rv-comment-text">' + escHtml(c.text) + '</div>' +
+            '</div>';
+        }
+
+        function renderComments() {
+            const list = document.getElementById('rv-comments');
+            document.getElementById('rv-count').textContent = _comments.length;
+            if (!_comments.length) {
+                list.innerHTML = '<div style="text-align:center;padding:26px 10px;color:var(--muted);font-size:13px;">' +
+                    icon('pin', 26) + '<br><b style="color:var(--text-2);">No comments yet</b><br>Click an element, then describe the change you want.</div>';
+                return;
+            }
+            list.innerHTML = _comments.map(c => commentCard(c, READ_ONLY)).join('');
+            list.scrollTop = list.scrollHeight;
+        }
+
+        function renderHistory() {
+            const hist = DESIGN_META.feedback_history || [];
+            if (!hist.length) return;
+            document.getElementById('rv-history').innerHTML = hist.map(function (h) {
+                return '<details><summary>Feedback on revision ' + h.revision + ' (' + (h.comments || []).length + ' comments)</summary>' +
+                    (h.reviewer_note ? '<div class="rv-comment-text" style="margin-top:8px;"><b>Note:</b> ' + escHtml(h.reviewer_note) + '</div>' : '') +
+                    (h.comments || []).map(c => commentCard(c, true)).join('') +
+                '</details>';
+            }).join('');
+        }
+
+        /* ── Send back modal ── */
+        function openReturnModal() {
+            if (!_comments.length) {
+                toast('Add at least one comment first, so the editor knows what to fix.', 'error');
+                return;
+            }
+            document.getElementById('rm-count').textContent = _comments.length;
+            document.getElementById('returnModal').classList.add('open');
+            setTimeout(() => document.getElementById('rm-note').focus(), 60);
+        }
+        function closeReturnModal() { document.getElementById('returnModal').classList.remove('open'); }
+        document.getElementById('returnModal').addEventListener('click', function (e) {
+            if (e.target === this) closeReturnModal();
+        });
+
+        async function requestChanges() {
+            const note = document.getElementById('rm-note').value.trim();
+            const btn = document.getElementById('rm-send');
+            btn.disabled = true;
+            try {
+                const resp = await fetch('/api/designs/' + DESIGN_ID + '/status', {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ status: 'feedback', reviewer_note: note }),
+                });
+                if (!resp.ok) throw new Error((await resp.json()).detail || 'Update failed');
+                window.location.href = '/review';
+            } catch (e) {
+                toast('Error: ' + e.message, 'error');
+                btn.disabled = false;
+            }
+        }
+
+        function deriveCaption() {
+            if (DESIGN_META.caption) return DESIGN_META.caption;
+            let headline = '', body = '';
+            (DESIGN_STATE.elements || []).forEach(function (el) {
+                if (el.type !== 'text') return;
+                const id = el.id || '';
+                const text = (el.attrs || {}).text || '';
+                if (id.indexOf('headline') !== -1 && !headline) headline = text;
+                else if (id.indexOf('body') !== -1 && !body) body = text;
+            });
+            return (headline + '\n\n' + body).trim() || DESIGN_META.topic;
+        }
+
+        function openApproveModal() {
+            if (_comments.length && !confirm('There are ' + _comments.length + ' open comment(s) on this revision. Approve anyway?')) return;
+            document.getElementById('ap-caption').value = deriveCaption();
+            document.getElementById('approveModal').classList.add('open');
+        }
+        function closeApproveModal() { document.getElementById('approveModal').classList.remove('open'); }
+        document.getElementById('approveModal').addEventListener('click', function (e) {
+            if (e.target === this) closeApproveModal();
+        });
+
+        async function approveAndPublish() {
+            closeApproveModal();
+            const caption = document.getElementById('ap-caption').value.trim();
+            const progress = document.getElementById('publish-progress');
+            const btnA = document.getElementById('btn-approve');
+            const btnR = document.getElementById('btn-request');
+            btnA.disabled = true;
+            btnR.disabled = true;
+            progress.classList.add('visible');
+            progress.innerHTML = '<span class="spinner dark"></span> Preparing final image...';
+            try {
+                clearSelection();
+                let pngDataUrl = '';
+                if (!DESIGN_META.has_png) {
+                    // older designs have no stored export — render one client-side
+                    pngDataUrl = _stage.toDataURL({ pixelRatio: 1080 / _stage.width(), mimeType: 'image/png' });
+                }
+                progress.innerHTML = '<span class="spinner dark"></span> Publishing to social media...';
+                const resp = await fetch('/api/designs/' + DESIGN_ID + '/approve', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ caption: caption, png_data_url: pngDataUrl }),
+                });
+                const data = await resp.json();
+                if (!resp.ok) throw new Error(data.detail || 'Publish failed');
+                progress.innerHTML = (data.status === 'published'
+                    ? '<b style="color:var(--success);">' + icon('check', 14) + ' Published to all platforms!</b>'
+                    : '<b style="color:var(--warning);">Approved, but some platforms failed:</b>')
+                    + publishPills(data.publish_results);
+                document.getElementById('rv-actions').innerHTML =
+                    '<a class="btn primary" href="/review">' + icon('back', 14) + 'Back to queue</a>';
+                document.getElementById('rv-badges').innerHTML =
+                    catBadge(DESIGN_META.category) + statusBadge(data.status);
+                toast('Design published', 'success');
+            } catch (e) {
+                progress.innerHTML = '<b style="color:var(--danger);">Error: ' + escHtml(e.message) + '</b>';
+                btnA.disabled = false;
+                btnR.disabled = false;
+            }
+        }
+
+        /* ── Init ── */
+        initCanvas(DESIGN_STATE);
+        renderComments();
+        renderHistory();
+        updateAttachHint();
+
+        if (READ_ONLY) {
+            document.getElementById('rv-input-area').style.display = 'none';
+            const prog = document.getElementById('publish-progress');
+            if (DESIGN_META.publish_results) {
+                prog.classList.add('visible');
+                prog.innerHTML = '<b>Publish results</b>' + publishPills(DESIGN_META.publish_results);
+            }
+            document.getElementById('rv-actions').innerHTML = '<a class="btn primary" href="/review">' + icon('back', 14) + 'Back to queue</a>';
+        }
+
+        document.getElementById('rv-comments').addEventListener('click', function (e) {
+            const del = e.target.closest('.rv-del');
+            if (del) { deleteComment(del.dataset.commentId); return; }
+            const card = e.target.closest('.rv-comment');
+            if (card && card.dataset.elementId) highlightElement(card.dataset.elementId);
+        });
+
+        document.getElementById('rv-input').addEventListener('keydown', function (e) {
+            if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); addComment(); }
+        });
+    
+        mountShell();
+
+        /* ── Resizable feedback panel ── */
+        (function () {
+            if (window.matchMedia('(max-width: 1000px)').matches) return;
+            const layout = document.querySelector('.rv-layout');
+            const fb = layout.querySelector('.rv-sidebar');
+            const g = makeGutter();
+            layout.insertBefore(g, fb);
+            columnResizer(g, {
+                key: 'review.fbW', value: 350, min: 270, max: 620, dir: -1,
+                apply: function (v) { layout.style.gridTemplateColumns = 'minmax(0,1fr) 8px ' + v + 'px'; },
+            });
+        })();
+    </script>
+</body>
+</html>

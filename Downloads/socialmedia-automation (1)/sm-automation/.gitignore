@@ -1,0 +1,21 @@
+# Environments & secrets
+venv/
+.env
+data/.session_secret
+data/users.json
+
+# Python artifacts
+__pycache__/
+*.pyc
+
+# Runtime data
+server.log
+data/images/
+data/published/
+data/designs.json
+data/designs/
+data/bank/
+data/canva_tokens.json
+data/sm-automation.db
+mock-apis/published_posts.json
+template-creation/uploads/

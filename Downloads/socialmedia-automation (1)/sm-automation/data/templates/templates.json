@@ -1,0 +1,632 @@
+[
+  {
+    "id": "myth-vs-fact",
+    "name": "Myth vs Fact",
+    "description": "Bust a misconception about industrial land",
+    "design_state": {
+      "canvas": {
+        "width": 1080,
+        "height": 1080,
+        "background": "#dce9f5"
+      },
+      "elements": [
+        {
+          "id": "template-bg",
+          "type": "image",
+          "locked": true,
+          "attrs": {
+            "x": 0,
+            "y": 0,
+            "width": 1080,
+            "height": 1080,
+            "src": "/templates/myth-vs-fact.png"
+          }
+        },
+        {
+          "id": "myth-text",
+          "type": "text",
+          "locked": false,
+          "attrs": {
+            "x": 110,
+            "y": 420,
+            "text": "Finding verified\nindustrial land\ntakes months.",
+            "fontSize": 36,
+            "fontFamily": "Poppins, sans-serif",
+            "fontStyle": "bold",
+            "fill": "#12395f",
+            "align": "center",
+            "width": 380,
+            "wrap": "word",
+            "lineHeight": 1.3
+          }
+        },
+        {
+          "id": "fact-text-1",
+          "type": "text",
+          "locked": false,
+          "attrs": {
+            "x": 565,
+            "y": 415,
+            "text": "With Industrial Corridor\nLand Platform,",
+            "fontSize": 34,
+            "fontFamily": "Poppins, sans-serif",
+            "fontStyle": "bold",
+            "fill": "#12395f",
+            "align": "center",
+            "width": 430,
+            "wrap": "word",
+            "lineHeight": 1.25
+          }
+        },
+        {
+          "id": "fact-text-2",
+          "type": "text",
+          "locked": false,
+          "attrs": {
+            "x": 565,
+            "y": 505,
+            "text": "it takes minutes.",
+            "fontSize": 36,
+            "fontFamily": "Poppins, sans-serif",
+            "fontStyle": "bold",
+            "fill": "#2f9e44",
+            "align": "center",
+            "width": 430,
+            "wrap": "word",
+            "lineHeight": 1.2
+          }
+        },
+        {
+          "id": "banner-line-1",
+          "type": "text",
+          "locked": false,
+          "attrs": {
+            "x": 85,
+            "y": 930,
+            "text": "Verified industrial land information,",
+            "fontSize": 32,
+            "fontFamily": "Poppins, sans-serif",
+            "fontStyle": "bold",
+            "fill": "#ffffff",
+            "align": "left",
+            "width": 640,
+            "wrap": "word",
+            "lineHeight": 1.2
+          }
+        },
+        {
+          "id": "banner-line-2",
+          "type": "text",
+          "locked": false,
+          "attrs": {
+            "x": 85,
+            "y": 978,
+            "text": "now just a search away.",
+            "fontSize": 32,
+            "fontFamily": "Poppins, sans-serif",
+            "fontStyle": "bold",
+            "fill": "#8fd463",
+            "align": "left",
+            "width": 640,
+            "wrap": "word",
+            "lineHeight": 1.2
+          }
+        }
+      ]
+    }
+  },
+  {
+    "id": "sector-spotlight",
+    "name": "Sector Spotlight",
+    "description": "Promote land for a specific industry sector",
+    "design_state": {
+      "canvas": {
+        "width": 1080,
+        "height": 1080,
+        "background": "#0b1f38"
+      },
+      "elements": [
+        {
+          "id": "template-bg",
+          "type": "image",
+          "locked": true,
+          "attrs": {
+            "x": 0,
+            "y": 0,
+            "width": 1080,
+            "height": 1080,
+            "src": "/templates/sector-spotlight.png"
+          }
+        },
+        {
+          "id": "sector-pill",
+          "type": "text",
+          "locked": false,
+          "attrs": {
+            "x": 155,
+            "y": 318,
+            "text": "REFINED PETROLEUM PRODUCTS",
+            "fontSize": 27,
+            "fontFamily": "Poppins, sans-serif",
+            "fontStyle": "bold",
+            "fill": "#ffffff",
+            "align": "center",
+            "width": 550,
+            "wrap": "word",
+            "lineHeight": 1.2
+          }
+        },
+        {
+          "id": "headline-1",
+          "type": "text",
+          "locked": false,
+          "attrs": {
+            "x": 56,
+            "y": 405,
+            "text": "Locate industrial\nland built for the",
+            "fontSize": 64,
+            "fontFamily": "Poppins, sans-serif",
+            "fontStyle": "bold",
+            "fill": "#ffffff",
+            "align": "left",
+            "width": 690,
+            "wrap": "word",
+            "lineHeight": 1.12
+          }
+        },
+        {
+          "id": "headline-2",
+          "type": "text",
+          "locked": false,
+          "attrs": {
+            "x": 56,
+            "y": 570,
+            "text": "refining sector.",
+            "fontSize": 64,
+            "fontFamily": "Poppins, sans-serif",
+            "fontStyle": "bold",
+            "fill": "#7ed957",
+            "align": "left",
+            "width": 690,
+            "wrap": "word",
+            "lineHeight": 1.1
+          }
+        },
+        {
+          "id": "body",
+          "type": "text",
+          "locked": false,
+          "attrs": {
+            "x": 60,
+            "y": 765,
+            "text": "Explore sector-ready industrial parks,\nverified infrastructure and connectivity,\nall on one national platform.",
+            "fontSize": 29,
+            "fontFamily": "Poppins, sans-serif",
+            "fontStyle": "normal",
+            "fill": "#eef4fb",
+            "align": "left",
+            "width": 580,
+            "wrap": "word",
+            "lineHeight": 1.45
+          }
+        }
+      ]
+    }
+  },
+  {
+    "id": "did-you-know",
+    "name": "Did You Know",
+    "description": "Share a fact with origin/destination or key stats",
+    "design_state": {
+      "canvas": {
+        "width": 1080,
+        "height": 1080,
+        "background": "#0b1f38"
+      },
+      "elements": [
+        {
+          "id": "template-bg",
+          "type": "image",
+          "locked": true,
+          "attrs": {
+            "x": 0,
+            "y": 0,
+            "width": 1080,
+            "height": 1080,
+            "src": "/templates/did-you-know.png"
+          }
+        },
+        {
+          "id": "headline",
+          "type": "text",
+          "locked": false,
+          "attrs": {
+            "x": 48,
+            "y": 472,
+            "text": "India's first\nindustrial corridor:\nthe DMIC",
+            "fontSize": 66,
+            "fontFamily": "Poppins, sans-serif",
+            "fontStyle": "bold",
+            "fill": "#ffffff",
+            "align": "left",
+            "width": 760,
+            "wrap": "word",
+            "lineHeight": 1.15
+          }
+        },
+        {
+          "id": "body",
+          "type": "text",
+          "locked": false,
+          "attrs": {
+            "x": 52,
+            "y": 722,
+            "text": "The Delhi\u2013Mumbai Industrial Corridor (DMIC) spans 1,504 km along the Western Dedicated Freight Corridor, linking Dadri (UP) to Jawaharlal Nehru Port near Mumbai.",
+            "fontSize": 25,
+            "fontFamily": "Poppins, sans-serif",
+            "fontStyle": "normal",
+            "fill": "#dfe8f5",
+            "align": "left",
+            "width": 750,
+            "wrap": "word",
+            "lineHeight": 1.45
+          }
+        },
+        {
+          "id": "origin-value",
+          "type": "text",
+          "locked": false,
+          "attrs": {
+            "x": 192,
+            "y": 888,
+            "text": "Dadri,\nUttar Pradesh",
+            "fontSize": 31,
+            "fontFamily": "Poppins, sans-serif",
+            "fontStyle": "bold",
+            "fill": "#ffffff",
+            "align": "left",
+            "width": 240,
+            "wrap": "word",
+            "lineHeight": 1.2
+          }
+        },
+        {
+          "id": "dest-value",
+          "type": "text",
+          "locked": false,
+          "attrs": {
+            "x": 700,
+            "y": 888,
+            "text": "JNPT,\nMumbai",
+            "fontSize": 31,
+            "fontFamily": "Poppins, sans-serif",
+            "fontStyle": "bold",
+            "fill": "#ffffff",
+            "align": "right",
+            "width": 190,
+            "wrap": "word",
+            "lineHeight": 1.2
+          }
+        },
+        {
+          "id": "pill-text",
+          "type": "text",
+          "locked": false,
+          "attrs": {
+            "x": 372,
+            "y": 1023,
+            "text": "Western Dedicated Freight Corridor",
+            "fontSize": 21,
+            "fontFamily": "Poppins, sans-serif",
+            "fontStyle": "600",
+            "fill": "#ffffff",
+            "align": "left",
+            "width": 420,
+            "wrap": "word",
+            "lineHeight": 1.2
+          }
+        }
+      ]
+    }
+  },
+  {
+    "id": "state-spotlight",
+    "name": "State Spotlight",
+    "description": "Showcase a state's industrial strengths and stats",
+    "design_state": {
+      "canvas": {
+        "width": 1080,
+        "height": 1080,
+        "background": "#eef3fa"
+      },
+      "elements": [
+        {
+          "id": "template-bg",
+          "type": "image",
+          "locked": true,
+          "attrs": {
+            "x": 0,
+            "y": 0,
+            "width": 1080,
+            "height": 1080,
+            "src": "/templates/state-spotlight.png"
+          }
+        },
+        {
+          "id": "state-title",
+          "type": "text",
+          "locked": false,
+          "attrs": {
+            "x": 280,
+            "y": 218,
+            "text": "Gujarat",
+            "fontSize": 96,
+            "fontFamily": "Poppins, sans-serif",
+            "fontStyle": "bold",
+            "fill": "#153a67",
+            "align": "center",
+            "width": 520,
+            "wrap": "word",
+            "lineHeight": 1.1
+          }
+        },
+        {
+          "id": "subtitle",
+          "type": "text",
+          "locked": false,
+          "attrs": {
+            "x": 110,
+            "y": 350,
+            "text": "Home to India's gem and jewellery manufacturing hub",
+            "fontSize": 28,
+            "fontFamily": "Poppins, sans-serif",
+            "fontStyle": "600",
+            "fill": "#2e4159",
+            "align": "center",
+            "width": 860,
+            "wrap": "word",
+            "lineHeight": 1.2
+          }
+        },
+        {
+          "id": "big-stat",
+          "type": "text",
+          "locked": false,
+          "attrs": {
+            "x": 222,
+            "y": 432,
+            "text": "80%",
+            "fontSize": 95,
+            "fontFamily": "Poppins, sans-serif",
+            "fontStyle": "bold",
+            "fill": "#ffffff",
+            "align": "left",
+            "width": 300,
+            "wrap": "word",
+            "lineHeight": 1.1
+          }
+        },
+        {
+          "id": "stat-caption",
+          "type": "text",
+          "locked": false,
+          "attrs": {
+            "x": 228,
+            "y": 560,
+            "text": "of India's diamond cutting\nand polishing happens in Gujarat",
+            "fontSize": 21,
+            "fontFamily": "Poppins, sans-serif",
+            "fontStyle": "normal",
+            "fill": "#ffffff",
+            "align": "left",
+            "width": 385,
+            "wrap": "word",
+            "lineHeight": 1.35
+          }
+        },
+        {
+          "id": "stat-1",
+          "type": "text",
+          "locked": false,
+          "attrs": {
+            "x": 118,
+            "y": 762,
+            "text": "450+",
+            "fontSize": 44,
+            "fontFamily": "Poppins, sans-serif",
+            "fontStyle": "bold",
+            "fill": "#153a67",
+            "align": "center",
+            "width": 214,
+            "wrap": "word",
+            "lineHeight": 1.2
+          }
+        },
+        {
+          "id": "stat-2",
+          "type": "text",
+          "locked": false,
+          "attrs": {
+            "x": 420,
+            "y": 764,
+            "text": "3.2L acres",
+            "fontSize": 40,
+            "fontFamily": "Poppins, sans-serif",
+            "fontStyle": "bold",
+            "fill": "#153a67",
+            "align": "center",
+            "width": 220,
+            "wrap": "word",
+            "lineHeight": 1.2
+          }
+        },
+        {
+          "id": "stat-3",
+          "type": "text",
+          "locked": false,
+          "attrs": {
+            "x": 736,
+            "y": 762,
+            "text": "Surat",
+            "fontSize": 44,
+            "fontFamily": "Poppins, sans-serif",
+            "fontStyle": "bold",
+            "fill": "#153a67",
+            "align": "center",
+            "width": 220,
+            "wrap": "word",
+            "lineHeight": 1.2
+          }
+        },
+        {
+          "id": "banner-cta",
+          "type": "text",
+          "locked": false,
+          "attrs": {
+            "x": 525,
+            "y": 1008,
+            "text": "Explore Gujarat's industrial land  \u2192",
+            "fontSize": 26,
+            "fontFamily": "Poppins, sans-serif",
+            "fontStyle": "600",
+            "fill": "#ffffff",
+            "align": "center",
+            "width": 480,
+            "wrap": "word",
+            "lineHeight": 1.2
+          }
+        }
+      ]
+    }
+  },
+  {
+    "id": "platform-promo",
+    "name": "Platform Overview",
+    "description": "ICLP platform promo with laptop mockup",
+    "design_state": {
+      "canvas": {
+        "width": 1080,
+        "height": 1080,
+        "background": "#e3f0fe"
+      },
+      "elements": [
+        {
+          "id": "template-bg",
+          "type": "image",
+          "locked": true,
+          "attrs": {
+            "x": 0,
+            "y": 0,
+            "width": 1080,
+            "height": 1080,
+            "src": "/templates/platform-promo.png"
+          }
+        }
+      ]
+    }
+  },
+  {
+    "id": "portal-live",
+    "name": "Portal Live",
+    "description": "The portal is now live announcement",
+    "design_state": {
+      "canvas": {
+        "width": 1080,
+        "height": 1080,
+        "background": "#07182c"
+      },
+      "elements": [
+        {
+          "id": "template-bg",
+          "type": "image",
+          "locked": true,
+          "attrs": {
+            "x": 0,
+            "y": 0,
+            "width": 1080,
+            "height": 1080,
+            "src": "/templates/portal-live.png"
+          }
+        }
+      ]
+    }
+  },
+  {
+    "id": "national-platform",
+    "name": "National Platform",
+    "description": "A national digital platform for industrial land",
+    "design_state": {
+      "canvas": {
+        "width": 1080,
+        "height": 1080,
+        "background": "#fbfcfd"
+      },
+      "elements": [
+        {
+          "id": "template-bg",
+          "type": "image",
+          "locked": true,
+          "attrs": {
+            "x": 0,
+            "y": 0,
+            "width": 1080,
+            "height": 1080,
+            "src": "/templates/national-platform.png"
+          }
+        }
+      ]
+    }
+  },
+  {
+    "id": "key-features",
+    "name": "Key Features",
+    "description": "Six key features of ICLP",
+    "design_state": {
+      "canvas": {
+        "width": 1080,
+        "height": 1080,
+        "background": "#f7fafe"
+      },
+      "elements": [
+        {
+          "id": "template-bg",
+          "type": "image",
+          "locked": true,
+          "attrs": {
+            "x": 0,
+            "y": 0,
+            "width": 1080,
+            "height": 1080,
+            "src": "/templates/key-features.png"
+          }
+        }
+      ]
+    }
+  },
+  {
+    "id": "investor-tools",
+    "name": "Investor Tools",
+    "description": "All investor tools in one place",
+    "design_state": {
+      "canvas": {
+        "width": 1080,
+        "height": 1080,
+        "background": "#ffffff"
+      },
+      "elements": [
+        {
+          "id": "template-bg",
+          "type": "image",
+          "locked": true,
+          "attrs": {
+            "x": 0,
+            "y": 0,
+            "width": 1080,
+            "height": 1080,
+            "src": "/templates/investor-tools.png"
+          }
+        }
+      ]
+    }
+  }
+]

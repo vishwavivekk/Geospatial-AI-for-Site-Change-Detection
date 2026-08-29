@@ -1,0 +1,17 @@
+[Unit]
+Description=NICDC Social Studio (main app)
+After=network.target
+
+[Service]
+Type=simple
+User=www-data
+Group=www-data
+WorkingDirectory=/opt/sm-automation
+Environment=PUBLIC_BASE_URL=__PUBLIC_BASE_URL__
+Environment=MOCK_API_BASE=http://127.0.0.1:8100
+ExecStart=/opt/sm-automation/venv/bin/python -m uvicorn app.main:app --host 127.0.0.1 --port 8000 --workers 1
+Restart=always
+RestartSec=3
+
+[Install]
+WantedBy=multi-user.target

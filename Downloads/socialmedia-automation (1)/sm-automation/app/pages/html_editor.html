@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HTML designer — NICDC Social Studio</title>
+    <link rel="stylesheet" href="/static/app.css">
+    <link rel="icon" type="image/png" href="/assets/favicon.png">
+    <script src="https://unpkg.com/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+    <style>
+        #renderWrap{width:min(76%,520px);aspect-ratio:1;background:#fff;box-shadow:0 10px 35px #1d382527;overflow:hidden;position:relative}
+        #renderFrame{width:1080px;height:1080px;transform-origin:top left;overflow:hidden;position:relative}
+    </style>
+</head>
+<body data-role="editor" data-active="/html-editor" data-user="__USER_NAME__">
+    <main class="workspace" id="screen">
+        <div class="designer">
+            <div class="designer-bar">
+                <a class="back" href="/"><i class="ic-wrap" data-icon="arrow-left" data-icon-size="12"></i> Post bank</a>
+                <label class="title-field"><small>DESIGN TITLE</small><input id="postTitle" placeholder="Give this design a title"></label>
+                <div class="designer-actions">
+                    <button class="btn" onclick="renderPreview()"><i class="ic-wrap" data-icon="eye" data-icon-size="14"></i> Preview</button>
+                    <button class="btn primary" id="saveBtn" onclick="saveToBank()"><i class="ic-wrap" data-icon="check" data-icon-size="14"></i> Save to post bank</button>
+                </div>
+            </div>
+            <div class="split">
+                <section class="code-pane">
+                    <div class="code-tabs"><button class="active">&lt;/&gt; HTML / CSS</button><span class="live"><i class="ic-wrap" data-icon="dot" data-icon-size="10"></i> Live</span></div>
+                    <div class="code-area">
+                        <pre class="lines" id="lineNums">1</pre>
+                        <textarea id="htmlSource" spellcheck="false"></textarea>
+                    </div>
+                </section>
+                <section class="preview-pane">
+                    <div class="preview-tools"><span>Fit canvas</span><span>1080 × 1080 px</span><span style="cursor:pointer" onclick="renderPreview()"><i class="ic-wrap" data-icon="refresh" data-icon-size="11"></i> Refresh</span></div>
+                    <div class="preview-box">
+                        <div id="renderWrap"><div id="renderFrame"></div></div>
+                    </div>
+                </section>
+            </div>
+        </div>
+    </main>
+
+    <script src="/static/app.js"></script>
+    <script>
+        mountShell();
+        const POST_ID = '__POST_ID__';
+
+        const DEFAULT_HTML = [
+            '<style>',
+            '  .post { width: 1080px; height: 1080px; background: linear-gradient(160deg, #224c27, #416f2b); color: white;',
+            '          font-family: Georgia, serif; padding: 96px; box-sizing: border-box;',
+            '          display: flex; flex-direction: column; }',
+            '  .kicker { font-family: Inter, Arial, sans-serif; color: #f3c66b; font-size: 26px; font-weight: 800; letter-spacing: 4px; }',
+            '  h1 { font-size: 88px; line-height: 1.05; letter-spacing: -2px; margin: 30px 0; }',
+            '  p { font-family: Inter, Arial, sans-serif; font-size: 32px; color: #dbe8d4; line-height: 1.5; max-width: 80%; }',
+            '  .footer { margin-top: auto; display: flex; justify-content: space-between; font-family: Inter, Arial, sans-serif; font-size: 24px; font-weight: 700; }',
+            '</style>',
+            '<div class="post">',
+            '  <div class="kicker">INDUSTRIAL CORRIDORS</div>',
+            '  <h1>Connected today.<br>Ready for tomorrow.</h1>',
+            '  <p>Building future-ready industrial cities with world-class infrastructure.</p>',
+            '  <div class="footer"><span>nicdc.in</span><span>INDIA REIMAGINED</span></div>',
+            '</div>',
+        ].join('\n');
+
+        const src = document.getElementById('htmlSource');
+        const frame = document.getElementById('renderFrame');
+
+        function fitPreview() {
+            const wrap = document.getElementById('renderWrap');
+            frame.style.transform = 'scale(' + (wrap.clientWidth / 1080) + ')';
+        }
+        function renderPreview() {
+            frame.innerHTML = src.value;
+            fitPreview();
+            const n = src.value.split('\n').length;
+            document.getElementById('lineNums').textContent = Array.from({ length: n }, (_, i) => i + 1).join('\n');
+        }
+        let _t = null;
+        src.addEventListener('input', function () { clearTimeout(_t); _t = setTimeout(renderPreview, 400); });
+        src.addEventListener('scroll', function () { document.getElementById('lineNums').scrollTop = this.scrollTop; });
+        window.addEventListener('resize', fitPreview);
+
+        async function saveToBank() {
+            const title = document.getElementById('postTitle').value.trim();
+            if (!title) { toast('Give the design a title first.', 'error'); return; }
+            if (!src.value.trim()) { toast('The HTML is empty.', 'error'); return; }
+            const btn = document.getElementById('saveBtn');
+            btn.disabled = true;
+            let stage = null;
+            try {
+                stage = document.createElement('div');
+                stage.style.cssText = 'position:fixed;left:0;top:0;width:1080px;height:1080px;overflow:hidden;background:#ffffff;z-index:-1;';
+                stage.innerHTML = src.value;
+                document.body.appendChild(stage);
+                await new Promise(r => setTimeout(r, 400));
+                const canvas = await html2canvas(stage, {
+                    width: 1080, height: 1080, scale: 2,
+                    windowWidth: 1080, windowHeight: 1080, scrollX: 0, scrollY: 0,
+                    useCORS: true, backgroundColor: '#ffffff',
+                });
+                const png = canvas.toDataURL('image/png');
+                let resp;
+                if (POST_ID) {
+                    const fd = new FormData();
+                    fd.append('title', title);
+                    fd.append('html_source', src.value);
+                    fd.append('png_data_url', png);
+                    resp = await fetch('/api/posts/' + POST_ID, { method: 'PUT', body: fd });
+                } else {
+                    resp = await fetch('/api/posts/create-html', {
+                        method: 'POST', headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ title: title, html_source: src.value, png_data_url: png }),
+                    });
+                }
+                const data = await resp.json();
+                if (!resp.ok) throw new Error(data.detail || 'Save failed');
+                toast('Design saved to post bank');
+                setTimeout(() => { window.location.href = '/post/' + data.id; }, 700);
+            } catch (e) {
+                toast(e.message, 'error');
+            } finally {
+                if (stage) stage.remove();
+                btn.disabled = false;
+            }
+        }
+
+        /* ── Resizable split: code | preview ── */
+        (function () {
+            if (window.matchMedia('(max-width: 1000px)').matches) return;
+            const split = document.querySelector('.split');
+            const code = split.querySelector('.code-pane');
+            const g = makeGutter();
+            split.insertBefore(g, code.nextSibling);
+            columnResizer(g, {
+                key: 'html.codeW', value: Math.round(split.clientWidth / 2) || 600,
+                min: 320, max: Math.max(500, split.clientWidth - 380), dir: 1,
+                apply: function (v) {
+                    split.style.gridTemplateColumns = v + 'px 8px minmax(320px,1fr)';
+                    fitPreview();
+                },
+            });
+        })();
+
+        (async function init() {
+            if (POST_ID) {
+                try {
+                    const resp = await fetch('/api/posts/' + POST_ID);
+                    if (resp.ok) {
+                        const p = await resp.json();
+                        document.getElementById('postTitle').value = p.title || '';
+                        src.value = p.html_source || DEFAULT_HTML;
+                    }
+                } catch (e) { src.value = DEFAULT_HTML; }
+            } else {
+                src.value = DEFAULT_HTML;
+            }
+            renderPreview();
+        })();
+    </script>
+</body>
+</html>

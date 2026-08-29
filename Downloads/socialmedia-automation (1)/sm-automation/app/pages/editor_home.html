@@ -1,0 +1,437 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Content workspace — NICDC Social Studio</title>
+    <script src="https://unpkg.com/konva@9/konva.min.js"></script>
+    <link rel="stylesheet" href="/static/app.css">
+    <link rel="icon" type="image/png" href="/assets/favicon.png">
+</head>
+<body data-role="editor" data-active="/" data-user="__USER_NAME__">
+    <main class="workspace" id="screen">
+        <div id="page-head-slot"></div>
+        <div class="stats" id="statsRow"></div>
+        <div class="tabs" id="mainTabs">
+            <button class="tab active" data-tab="bank">Post bank <em id="bankCount">0</em></button>
+            <button class="tab" data-tab="stories">Stories <em id="storyCount">0</em></button>
+            <button class="tab" data-tab="designs">Story designs <em id="designCount">0</em></button>
+        </div>
+
+        <div id="pane-bank">
+            <div class="filters">
+                <div class="chips" id="bankChips"></div>
+                <label class="search"><i class="ic-wrap" data-icon="search" data-icon-size="13"></i><input id="bankSearch" placeholder="Search posts..."></label>
+            </div>
+            <div id="bank-callout"></div>
+            <div class="grid" id="bank-grid"></div>
+        </div>
+
+        <div id="pane-stories" class="hidden">
+            <div class="filters">
+                <div class="chips" id="storyChips"></div>
+                <div class="page-actions"><button class="btn primary" onclick="openStoryDialog()">' + svg('plus', 13) + ' Add story</button></div>
+            </div>
+            <div id="stories-list"></div>
+        </div>
+
+        <div id="pane-designs" class="hidden">
+            <div class="grid" id="designs-grid"></div>
+        </div>
+    </main>
+
+    <div id="lightbox" class="lightbox"><img id="lightbox-img" alt=""></div>
+    <input type="file" id="uploadFile" accept=".png,.jpg,.jpeg,.webp" class="hidden">
+    <input type="file" id="storyImagesFile" accept=".jpg,.jpeg,.png,.webp,.gif" multiple class="hidden">
+
+    <script src="/static/app.js"></script>
+    <script>
+        mountShell();
+        const USER = '__USER_NAME__';
+        let _posts = null, _stories = null, _designs = null, _designTopics = {};
+        let _bankFilter = 'All', _bankSearch = '', _storyFilter = 'All', _canUseCanva = true;
+
+        /* ── Page head ── */
+        const hour = new Date().getHours();
+        const greeting = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening';
+        document.getElementById('page-head-slot').innerHTML = pageHead(
+            'CONTENT WORKSPACE',
+            greeting + ', ' + escHtml(USER.split(' ')[0]),
+            'Create, refine and track every NICDC story from one place.',
+            '<button class="btn" onclick="openUploadDialog()">' + svg('upload', 13) + ' Upload design</button>' +
+            '<button class="btn primary" onclick="openCreateDialog()">' + svg('plus', 13) + ' Create design</button>'
+        );
+
+        /* ── Stats ── */
+        function renderStats() {
+            const posts = _posts || [], designs = _designs || [];
+            const count = st => posts.filter(p => p.status === st).length + designs.filter(d => d.status === st).length;
+            document.getElementById('statsRow').innerHTML =
+                statCard('inbox', posts.length, 'Posts in bank', 'Updated now') +
+                statCard('clock', count('pending'), 'Waiting for review', 'Updated now') +
+                statCard('alert', count('feedback'), 'Changes requested', 'Updated now') +
+                statCard('check-circle', count('published'), 'Published', 'Updated now');
+        }
+
+        /* ── Tabs ── */
+        document.getElementById('mainTabs').addEventListener('click', function (e) {
+            const tab = e.target.closest('.tab');
+            if (!tab) return;
+            selectTab(tab.dataset.tab);
+        });
+        function selectTab(name) {
+            document.querySelectorAll('#mainTabs .tab').forEach(t => t.classList.toggle('active', t.dataset.tab === name));
+            ['bank', 'stories', 'designs'].forEach(p =>
+                document.getElementById('pane-' + p).classList.toggle('hidden', p !== name));
+            if (name === 'stories' && _stories === null) loadStories();
+            if (name === 'designs') loadDesigns();
+        }
+
+        /* ── Post bank ── */
+        const BANK_FILTERS = ['All', 'Drafts', 'In review', 'Changes requested', 'Published'];
+        const FILTER_MAP = { 'Drafts': 'draft', 'In review': 'pending', 'Changes requested': 'feedback', 'Published': 'published' };
+
+        function renderBankChips() {
+            document.getElementById('bankChips').innerHTML = BANK_FILTERS.map(f =>
+                '<button class="chip ' + (_bankFilter === f ? 'active' : '') + '" data-f="' + f + '">' + f + '</button>').join('');
+        }
+        document.getElementById('bankChips').addEventListener('click', function (e) {
+            const c = e.target.closest('.chip');
+            if (!c) return;
+            _bankFilter = c.dataset.f;
+            renderBankChips();
+            renderBank();
+        });
+        document.getElementById('bankSearch').addEventListener('input', function () {
+            _bankSearch = this.value.trim().toLowerCase();
+            renderBank();
+        });
+
+        async function loadBank(silent) {
+            const grid = document.getElementById('bank-grid');
+            if (!silent) grid.innerHTML = skeletonGrid(3);
+            try {
+                const resp = await fetch('/api/posts');
+                if (!resp.ok) throw new Error(await resp.text());
+                _posts = await resp.json();
+                document.getElementById('bankCount').textContent = _posts.length;
+                renderBank();
+                renderStats();
+            } catch (e) {
+                grid.innerHTML = emptyState('!', 'Could not load posts', escHtml(e.message));
+            }
+        }
+
+        function postCard(p) {
+            const comments = p.comments || [];
+            const st = p.status === 'approved' ? 'published' : p.status;
+            return '<article class="post-card">' +
+                '<a class="thumb" href="/post/' + p.id + '" style="display:block;">' +
+                    '<img src="/bank/' + escHtml(p.image_path) + '" loading="lazy" alt="">' +
+                    '<span class="version">v' + (p.revision || 1) + '</span>' +
+                '</a>' +
+                '<div class="card-info">' +
+                    '<div class="card-meta">' + statusBadge(st) + '<span class="date">' + fmtTime(p.created_at).split(',')[0] + '</span></div>' +
+                    '<h3>' + escHtml(p.title) + '</h3>' +
+                    '<div class="card-bottom">' + platformChips(p.platforms) +
+                        '<span class="comments">' + svg('comment', 10) + ' ' + comments.length + '</span>' +
+                        '<a class="open-card" href="/post/' + p.id + '">Open ' + svg('arrow-right', 11) + '</a>' +
+                    '</div>' +
+                '</div>' +
+            '</article>';
+        }
+
+        function renderBank() {
+            const grid = document.getElementById('bank-grid');
+            if (!_posts) return;
+            let posts = _posts;
+            if (_bankFilter !== 'All') posts = posts.filter(p =>
+                _bankFilter === 'Published' ? (p.status === 'published' || p.status === 'approved') : p.status === FILTER_MAP[_bankFilter]);
+            if (_bankSearch) posts = posts.filter(p =>
+                p.title.toLowerCase().includes(_bankSearch) || (p.caption || '').toLowerCase().includes(_bankSearch));
+
+            const feedbackPosts = _posts.filter(p => p.status === 'feedback');
+            document.getElementById('bank-callout').innerHTML = feedbackPosts.length
+                ? '<div class="callout"><span>' + svg('alert', 14) + '</span><div><b>' + feedbackPosts.length + ' post' + (feedbackPosts.length > 1 ? 's need' : ' needs') + ' your changes</b>' +
+                  '<p>The admin has requested changes on “' + escHtml(feedbackPosts[0].title) + '”' + (feedbackPosts.length > 1 ? ' and more.' : '.') + '</p></div>' +
+                  '<a class="btn ghost" href="/post/' + feedbackPosts[0].id + '">Fix first ' + svg('arrow-right', 11) + '</a></div>'
+                : '';
+
+            grid.innerHTML = posts.length
+                ? posts.map(postCard).join('')
+                : emptyState('inbox', _bankSearch || _bankFilter !== 'All' ? 'Nothing here' : 'Your post bank is ready',
+                    _bankSearch ? 'No posts match your search.' : 'Upload a finished design or create your first NICDC post.',
+                    '<button class="btn primary" onclick="openCreateDialog()">' + svg('plus', 13) + ' Create first post</button>');
+        }
+
+        /* ── Stories ── */
+        async function loadStories() {
+            const list = document.getElementById('stories-list');
+            list.innerHTML = skeletonGrid(2);
+            try {
+                const [sResp, cResp] = await Promise.all([fetch('/api/stories'), fetch('/api/categories')]);
+                _stories = await sResp.json();
+                const cats = cResp.ok ? await cResp.json() : [];
+                document.getElementById('storyCount').textContent = _stories.length;
+                const names = ['All'].concat(cats.map(c => c.name));
+                document.getElementById('storyChips').innerHTML = names.map(n =>
+                    '<button class="chip ' + (_storyFilter === n ? 'active' : '') + '" data-f="' + escHtml(n) + '">' + escHtml(n) + '</button>').join('');
+                const topics = _stories.map(s => s.topic).join(',');
+                if (topics) {
+                    const dr = await fetch('/api/designs/check?topics=' + encodeURIComponent(topics));
+                    if (dr.ok) _designTopics = await dr.json();
+                }
+                renderStories();
+            } catch (e) {
+                list.innerHTML = emptyState('!', 'Could not load stories', escHtml(e.message));
+            }
+        }
+        document.getElementById('storyChips').addEventListener('click', function (e) {
+            const c = e.target.closest('.chip');
+            if (!c) return;
+            _storyFilter = c.dataset.f;
+            this.querySelectorAll('.chip').forEach(x => x.classList.toggle('active', x.dataset.f === _storyFilter));
+            renderStories();
+        });
+
+        function renderStories() {
+            const list = document.getElementById('stories-list');
+            let data = _stories || [];
+            if (_storyFilter !== 'All') data = data.filter(s => s.category === _storyFilter);
+            if (!data.length) {
+                list.innerHTML = emptyState('list', 'No stories yet', 'Add source stories to design AI-assisted posts from them.',
+                    '<button class="btn primary" onclick="openStoryDialog()">' + svg('plus', 13) + ' Add story</button>');
+                return;
+            }
+            list.innerHTML = data.map(function (s) {
+                const info = _designTopics[s.topic];
+                const isLong = s.text.length > 280;
+                const imgs = (s.images || []).map(f => '<img src="/images/' + f + '" data-src="/images/' + f + '" loading="lazy" alt="">').join('');
+                return '<div class="story-block">' +
+                    '<div style="display:flex;align-items:center;gap:9px;justify-content:space-between;flex-wrap:wrap;">' +
+                        '<h3>' + escHtml(s.topic) + '</h3>' +
+                        '<div style="display:flex;gap:7px;align-items:center;">' +
+                            (info ? statusBadge(info.status) : '') +
+                            '<span class="date">' + escHtml(s.date || '') + ' · ' + escHtml(s.category || '') + '</span>' +
+                        '</div>' +
+                    '</div>' +
+                    (imgs ? '<div class="thumb-imgs">' + imgs + '</div>' : '') +
+                    '<div class="story-text' + (isLong ? ' collapsed' : '') + '" id="st-' + escId(s.topic) + '">' + escHtml(s.text) + '</div>' +
+                    (isLong ? '<button class="toggle-text" data-t="' + escId(s.topic) + '">Show more</button>' : '') +
+                    '<div style="display:flex;gap:7px;margin-top:11px;">' +
+                        '<a class="btn primary" style="height:32px;font-size:9px;" href="/create?topic=' + encodeURIComponent(s.topic) + '&category=' + encodeURIComponent(s.category || 'News') + '">' + svg('sparkles', 12) + ' ' + (info ? 'Open design' : 'Design post') + '</a>' +
+                        '<button class="btn" style="height:32px;font-size:9px;" onclick="deleteStory(\'' + escHtml(s.topic).replace(/'/g, "\\'") + '\')">Delete</button>' +
+                    '</div>' +
+                '</div>';
+            }).join('');
+        }
+
+        document.getElementById('stories-list').addEventListener('click', function (e) {
+            const img = e.target.closest('img[data-src]');
+            if (img) {
+                document.getElementById('lightbox-img').src = img.dataset.src;
+                document.getElementById('lightbox').classList.add('open');
+                return;
+            }
+            const t = e.target.closest('.toggle-text');
+            if (t) {
+                const el = document.getElementById('st-' + t.dataset.t);
+                el.classList.toggle('collapsed');
+                t.textContent = el.classList.contains('collapsed') ? 'Show more' : 'Show less';
+            }
+        });
+        document.getElementById('lightbox').addEventListener('click', function () { this.classList.remove('open'); });
+
+        async function deleteStory(topic) {
+            if (!confirm('Delete story “' + topic + '” and its images?')) return;
+            try {
+                const resp = await fetch('/api/stories/' + encodeURIComponent(topic), { method: 'DELETE' });
+                if (!resp.ok) throw new Error((await resp.json()).detail || 'Delete failed');
+                toast('Story deleted');
+                _stories = null;
+                loadStories();
+            } catch (e) { toast(e.message, 'error'); }
+        }
+
+        /* ── Story designs ── */
+        async function loadDesigns() {
+            const grid = document.getElementById('designs-grid');
+            grid.innerHTML = skeletonGrid(3);
+            try {
+                const resp = await fetch('/api/designs');
+                _designs = await resp.json();
+                document.getElementById('designCount').textContent = _designs.length;
+                renderStats();
+                if (!_designs.length) {
+                    grid.innerHTML = emptyState('sparkles', 'No story designs yet', 'Open a story and design a post with AI on the canvas.');
+                    return;
+                }
+                grid.innerHTML = _designs.slice().reverse().map(function (d) {
+                    return '<article class="post-card">' +
+                        '<a class="thumb" href="/create?topic=' + encodeURIComponent(d.topic) + '&category=' + encodeURIComponent(d.category || 'News') + '" style="display:block;">' +
+                            '<span class="tpl-mini" id="dprev-' + d.id + '" style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;"></span>' +
+                            '<span class="version">v' + (d.revision || 1) + '</span>' +
+                        '</a>' +
+                        '<div class="card-info">' +
+                            '<div class="card-meta">' + statusBadge(d.status) + '<span class="date">' + fmtTime(d.submitted_at).split(',')[0] + '</span></div>' +
+                            '<h3>' + escHtml(d.topic) + '</h3>' +
+                            '<div class="card-bottom"><span class="comments">' + svg('comment', 10) + ' ' + (d.comments || []).length + '</span>' +
+                                '<a class="open-card" href="/create?topic=' + encodeURIComponent(d.topic) + '&category=' + encodeURIComponent(d.category || 'News') + '">Open ' + svg('arrow-right', 11) + '</a></div>' +
+                        '</div>' +
+                    '</article>';
+                }).join('');
+                _designs.slice().reverse().forEach(d => renderMiniPreview('dprev-' + d.id, d.design_state, 230));
+            } catch (e) {
+                grid.innerHTML = emptyState('!', 'Could not load designs', escHtml(e.message));
+            }
+        }
+
+        /* ── Upload dialog ── */
+        function openUploadDialog() {
+            openDialog('upload', 'Upload a finished design', 'Add a 1080 × 1080 image created in Canva, Photoshop or another design tool.',
+                '<div class="feedback-msg" id="upErr"></div>' +
+                '<div class="drop" id="dropZone" onclick="document.getElementById(\'uploadFile\').click()"><span>' + svg('image', 24) + '</span><b>Drop your design here</b><p>or <u>browse from computer</u> · PNG or JPG · max 15 MB</p></div>' +
+                '<label class="field">Post title<input id="upTitle" placeholder="Give this post a clear working title"></label>' +
+                '<label class="field">Notes for your team<textarea id="upNotes" placeholder="Add context, source links or design notes..."></textarea></label>',
+                '<button class="btn" onclick="closeDialog()">Cancel</button><button class="btn primary" id="upGo" onclick="submitUpload()">Add to post bank</button>');
+            const dz = document.getElementById('dropZone');
+            dz.addEventListener('dragover', e => { e.preventDefault(); dz.style.borderColor = 'var(--green)'; });
+            dz.addEventListener('drop', e => {
+                e.preventDefault();
+                if (e.dataTransfer.files.length) { document.getElementById('uploadFile').files = e.dataTransfer.files; showDropPreview(); }
+            });
+        }
+        document.getElementById('uploadFile').addEventListener('change', showDropPreview);
+        function showDropPreview() {
+            const f = document.getElementById('uploadFile').files[0];
+            const dz = document.getElementById('dropZone');
+            if (f && dz) dz.innerHTML = '<img src="' + URL.createObjectURL(f) + '" alt=""><p style="margin-top:7px;">' + escHtml(f.name) + ' · <u>change</u></p>';
+        }
+        async function submitUpload() {
+            const f = document.getElementById('uploadFile').files[0];
+            const title = document.getElementById('upTitle').value.trim();
+            const err = document.getElementById('upErr');
+            if (!f) { err.className = 'feedback-msg error'; err.textContent = 'Choose or drop a design image first.'; return; }
+            if (!title) { err.className = 'feedback-msg error'; err.textContent = 'Give the post a title.'; return; }
+            const btn = document.getElementById('upGo');
+            btn.disabled = true;
+            try {
+                const fd = new FormData();
+                fd.append('title', title);
+                fd.append('description', document.getElementById('upNotes').value.trim());
+                fd.append('image', f);
+                const resp = await fetch('/api/posts/upload', { method: 'POST', body: fd });
+                const data = await resp.json();
+                if (!resp.ok) throw new Error(data.detail || 'Upload failed');
+                closeDialog();
+                document.getElementById('uploadFile').value = '';
+                toast('Design added to post bank');
+                window.location.href = '/post/' + data.id;
+            } catch (e) {
+                err.className = 'feedback-msg error';
+                err.textContent = e.message;
+                btn.disabled = false;
+            }
+        }
+
+        /* ── Create dialog ── */
+        function openCreateDialog() {
+            const canvaCard = _canUseCanva
+                ? '<button class="choice recommended" onclick="canvaStep()"><span class="choice-icon">C</span><div><em>RECOMMENDED</em><b>Create in Canva</b><p>Use NICDC brand templates in the familiar Canva editor.</p></div></button>'
+                : '';
+            openDialog('sparkles', 'How would you like to create?', 'Choose the workflow that best fits this post.',
+                '<div class="choice-grid"' + (_canUseCanva ? '' : ' style="grid-template-columns:1fr 1fr;"') + '>' + canvaCard +
+                '<button class="choice" onclick="closeDialog();window.location.href=\'/html-editor\'"><span class="choice-icon">&lt;/&gt;</span><div><b>HTML designer</b><p>Code a precise 1080 × 1080 design with live preview.</p></div></button>' +
+                '<button class="choice" onclick="closeDialog();selectTab(\'stories\');toast(\'Pick a story and click Design post\')"><span class="choice-icon">' + svg('sparkles', 16) + '</span><div><b>Canvas / AI designer</b><p>Build visually with templates and conversational AI edits.</p></div></button></div>',
+                '<button class="btn" onclick="closeDialog()">Cancel</button>');
+        }
+
+        function canvaStep() {
+            openDialog('C', 'Create in Canva', 'A blank 1080 × 1080 design opens in Canva, linked to a new bank post.',
+                '<div class="feedback-msg" id="cvErr"></div>' +
+                '<label class="field">Post title<input id="cvTitle" placeholder="e.g. BHAVYA milestone announcement"></label>' +
+                '<p style="font-size:9px;color:#7c8780;">When you finish designing, open the post and click <b>Import from Canva</b>.</p>',
+                '<button class="btn" onclick="openCreateDialog()">Back</button><button class="btn primary" id="cvGo" onclick="canvaCreate()">Create &amp; open Canva</button>');
+            setTimeout(() => document.getElementById('cvTitle').focus(), 60);
+        }
+        async function canvaCreate() {
+            const title = document.getElementById('cvTitle').value.trim();
+            const err = document.getElementById('cvErr');
+            if (!title) { err.className = 'feedback-msg error'; err.textContent = 'Give the post a title first.'; return; }
+            const btn = document.getElementById('cvGo');
+            btn.disabled = true;
+            try {
+                const resp = await fetch('/api/canva/new-design', {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ title: title }),
+                });
+                const data = await resp.json();
+                if (resp.status === 409) { closeDialog(); toast('Connect your Canva account first — opening the connect page'); setTimeout(() => location.href = '/canva/connect', 1100); return; }
+                if (resp.status === 501) { err.className = 'feedback-msg error'; err.textContent = 'Canva is not configured on this server yet — ask the admin to add the integration keys.'; btn.disabled = false; return; }
+                if (!resp.ok) throw new Error(data.detail || 'Failed');
+                closeDialog();
+                window.open(data.edit_url, '_blank');
+                toast('Design created — Canva opened in a new tab');
+                loadBank(true);
+            } catch (e) {
+                err.className = 'feedback-msg error';
+                err.textContent = e.message;
+                btn.disabled = false;
+            }
+        }
+
+        /* ── Add story dialog ── */
+        async function openStoryDialog() {
+            let cats = [];
+            try { cats = await (await fetch('/api/categories')).json(); } catch (e) {}
+            openDialog('list', 'Add a story', 'Stories are the source material for AI-designed posts.',
+                '<div class="feedback-msg" id="styErr"></div>' +
+                '<label class="field">Topic<input id="styTopic" placeholder="e.g. PM Modi Kurnool Visit"></label>' +
+                '<label class="field">Information<textarea id="styInfo" placeholder="Full text content of the story..."></textarea></label>' +
+                '<label class="field">Category<select id="styCat">' + cats.map(c => '<option>' + escHtml(c.name) + '</option>').join('') + '</select></label>' +
+                '<label class="field">Images (optional)<input type="button" value="Choose images..." onclick="document.getElementById(\'storyImagesFile\').click()" style="text-align:left;color:#748078;"></label>' +
+                '<p id="styFiles" style="font-size:9px;color:#7c8780;margin:-8px 0 0;"></p>',
+                '<button class="btn" onclick="closeDialog()">Cancel</button><button class="btn primary" id="styGo" onclick="submitStory()">Add story</button>');
+        }
+        document.getElementById('storyImagesFile').addEventListener('change', function () {
+            const el = document.getElementById('styFiles');
+            if (el) el.textContent = Array.from(this.files).map(f => f.name).join(', ');
+        });
+        async function submitStory() {
+            const err = document.getElementById('styErr');
+            const topic = document.getElementById('styTopic').value.trim();
+            const info = document.getElementById('styInfo').value.trim();
+            if (!topic || !info) { err.className = 'feedback-msg error'; err.textContent = 'Topic and information are required.'; return; }
+            const btn = document.getElementById('styGo');
+            btn.disabled = true;
+            try {
+                const fd = new FormData();
+                fd.append('topic', topic);
+                fd.append('information', info);
+                fd.append('category', document.getElementById('styCat').value || 'News');
+                Array.from(document.getElementById('storyImagesFile').files).forEach(f => fd.append('images', f));
+                const resp = await fetch('/ingest/story', { method: 'POST', body: fd });
+                const data = await resp.json();
+                if (!resp.ok) throw new Error(data.detail || 'Failed');
+                closeDialog();
+                document.getElementById('storyImagesFile').value = '';
+                toast('Story added');
+                _stories = null;
+                loadStories();
+            } catch (e) {
+                err.className = 'feedback-msg error';
+                err.textContent = e.message;
+                btn.disabled = false;
+            }
+        }
+
+        /* ── Init ── */
+        renderBankChips();
+        loadBank();
+        fetch('/api/me').then(r => r.json()).then(me => { if (me && me.can_use_canva === false) _canUseCanva = false; }).catch(() => {});
+        fetch('/api/stories').then(r => r.json()).then(s => { document.getElementById('storyCount').textContent = s.length; }).catch(() => {});
+        fetch('/api/designs').then(r => r.json()).then(d => { _designs = d; document.getElementById('designCount').textContent = d.length; renderStats(); }).catch(() => {});
+        if (new URLSearchParams(location.search).get('tab') === 'stories') selectTab('stories');
+    </script>
+</body>
+</html>
