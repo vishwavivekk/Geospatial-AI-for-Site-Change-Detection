@@ -23,23 +23,24 @@
 .sidebar{transition:width .18s ease}
 .side-toggle{position:absolute;right:-12px;top:34px;width:24px;height:24px;border-radius:50%;border:1px solid var(--line);background:#fff;color:#68746c;font-size:11px;font-weight:800;box-shadow:0 2px 8px rgba(25,50,32,.14);z-index:40;display:grid;place-items:center;padding:0}
 .side-toggle:hover{color:var(--green);border-color:#9ab98a}
+.main{transition:margin-left .18s ease}
 body.side-collapsed .sidebar{width:64px}
 body.side-collapsed .main{margin-left:64px}
-body.side-collapsed .sidebar:hover{width:248px;box-shadow:14px 0 38px rgba(25,50,32,.14)}
-body.side-collapsed .sidebar:not(:hover) .logo-copy,
-body.side-collapsed .sidebar:not(:hover) .workspace-name,
-body.side-collapsed .sidebar:not(:hover) .nav-label,
-body.side-collapsed .sidebar:not(:hover) .nav-text,
-body.side-collapsed .sidebar:not(:hover) .nav-arrow,
-body.side-collapsed .sidebar:not(:hover) .user span,
-body.side-collapsed .sidebar:not(:hover) .signout .nav-text{display:none}
-body.side-collapsed .sidebar:not(:hover) .side-logo{justify-content:center;padding:10px 6px}
-body.side-collapsed .sidebar:not(:hover) .side-logo .logo img{width:40px;height:40px}
-body.side-collapsed .sidebar:not(:hover) .nav{padding:12px 10px 0}
-body.side-collapsed .sidebar:not(:hover) .nav a,body.side-collapsed .sidebar:not(:hover) .nav button{justify-content:center;padding:0}
-body.side-collapsed .sidebar:not(:hover) .profile{padding:13px 8px}
-body.side-collapsed .sidebar:not(:hover) .user{grid-template-columns:1fr;justify-items:center}
-body.side-collapsed .sidebar:not(:hover) .signout{text-align:center}
+body.side-collapsed .sidebar.peek{width:248px;box-shadow:14px 0 38px rgba(25,50,32,.14)}
+body.side-collapsed .sidebar.rail .logo-copy,
+body.side-collapsed .sidebar.rail .workspace-name,
+body.side-collapsed .sidebar.rail .nav-label,
+body.side-collapsed .sidebar.rail .nav-text,
+body.side-collapsed .sidebar.rail .nav-arrow,
+body.side-collapsed .sidebar.rail .user span,
+body.side-collapsed .sidebar.rail .signout .nav-text{display:none}
+body.side-collapsed .sidebar.rail .side-logo{justify-content:center;padding:10px 6px}
+body.side-collapsed .sidebar.rail .side-logo .logo img{width:40px;height:40px}
+body.side-collapsed .sidebar.rail .nav{padding:12px 10px 0}
+body.side-collapsed .sidebar.rail .nav a,body.side-collapsed .sidebar.rail .nav button{justify-content:center;padding:0}
+body.side-collapsed .sidebar.rail .profile{padding:13px 8px}
+body.side-collapsed .sidebar.rail .user{grid-template-columns:1fr;justify-items:center}
+body.side-collapsed .sidebar.rail .signout{text-align:center}
 }
 @media(max-width:900px){.side-toggle{display:none}}
 .gutter{cursor:col-resize;background:transparent;position:relative;z-index:5;user-select:none;touch-action:none}

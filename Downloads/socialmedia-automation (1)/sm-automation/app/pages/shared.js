@@ -70,15 +70,34 @@ function mountShell() {
 
     // Collapsible sidebar: icons only when collapsed, hover to peek, arrow to pin
     const toggle = document.getElementById('sideToggle');
+    const sidebarEl = document.getElementById('sidebar');
+    let holdPeek = false; // right after collapsing the pointer is still on the panel — show the rail, don't peek until the pointer leaves once
     function setCollapsed(collapsed, save) {
         b.classList.toggle('side-collapsed', collapsed);
+        sidebarEl.classList.toggle('rail', collapsed);
+        sidebarEl.classList.remove('peek');
         toggle.textContent = collapsed ? '›' : '‹';
         toggle.title = collapsed ? 'Expand sidebar' : 'Collapse sidebar';
         if (save) try { localStorage.setItem('side.collapsed', collapsed ? '1' : ''); } catch (e) {}
         setTimeout(function () { window.dispatchEvent(new Event('resize')); }, 200);
     }
     toggle.addEventListener('click', function () {
-        setCollapsed(!b.classList.contains('side-collapsed'), true);
+        const collapse = !b.classList.contains('side-collapsed');
+        holdPeek = collapse;
+        setCollapsed(collapse, true);
+    });
+    sidebarEl.addEventListener('mouseenter', function () {
+        if (b.classList.contains('side-collapsed') && !holdPeek) {
+            sidebarEl.classList.add('peek');
+            sidebarEl.classList.remove('rail');
+        }
+    });
+    sidebarEl.addEventListener('mouseleave', function () {
+        holdPeek = false;
+        if (b.classList.contains('side-collapsed')) {
+            sidebarEl.classList.remove('peek');
+            sidebarEl.classList.add('rail');
+        }
     });
     try { if (localStorage.getItem('side.collapsed') === '1') setCollapsed(true, false); } catch (e) {}
 }
