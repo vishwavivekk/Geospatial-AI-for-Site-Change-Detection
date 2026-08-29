@@ -46,15 +46,17 @@ function mountShell() {
     app.id = 'app';
     app.innerHTML =
         '<aside class="sidebar" id="sidebar">' +
+            '<button class="side-toggle" id="sideToggle" title="Collapse sidebar">‹</button>' +
             '<div class="side-logo"><div class="logo"><img src="/assets/nicdc-wide.png" alt="NICDC logo"><div class="logo-copy"><b>Social Studio</b><span>Approval &amp; publishing</span></div></div></div>' +
             '<div class="workspace-name">' + roleLabel.toUpperCase() + ' WORKSPACE</div>' +
             '<nav class="nav">' + links.map(function (l) {
                 const isActive = l[0] === active;
-                return '<a href="' + l[0] + '" class="' + (isActive ? 'active' : '') + '"><span>' + l[1] + '</span>' + l[2] +
+                const plain = l[2].replace(/&[a-z]+;|<[^>]*>/g, '');
+                return '<a href="' + l[0] + '" class="' + (isActive ? 'active' : '') + '" title="' + plain + '"><span>' + l[1] + '</span><em class="nav-text" style="font-style:normal;">' + l[2] + '</em>' +
                     '<span class="nav-arrow">' + (isActive ? '›' : '') + '</span></a>';
             }).join('') + '</nav>' +
             '<div class="profile"><div class="user"><i class="avatar">' + escHtml(initials(userName)) + '</i><span><b>' + escHtml(userName) + '</b><small>' + subtitle + '</small></span><span></span></div>' +
-            '<button class="signout" onclick="logout()">↪ Sign out</button></div>' +
+            '<button class="signout" onclick="logout()" title="Sign out">↪ <em class="nav-text" style="font-style:normal;">Sign out</em></button></div>' +
         '</aside>' +
         '<div class="main">' +
             '<header class="topbar">' +
@@ -65,6 +67,20 @@ function mountShell() {
         '</div>';
     b.insertBefore(app, screen);
     app.querySelector('.main').appendChild(screen);
+
+    // Collapsible sidebar: icons only when collapsed, hover to peek, arrow to pin
+    const toggle = document.getElementById('sideToggle');
+    function setCollapsed(collapsed, save) {
+        b.classList.toggle('side-collapsed', collapsed);
+        toggle.textContent = collapsed ? '›' : '‹';
+        toggle.title = collapsed ? 'Expand sidebar' : 'Collapse sidebar';
+        if (save) try { localStorage.setItem('side.collapsed', collapsed ? '1' : ''); } catch (e) {}
+        setTimeout(function () { window.dispatchEvent(new Event('resize')); }, 200);
+    }
+    toggle.addEventListener('click', function () {
+        setCollapsed(!b.classList.contains('side-collapsed'), true);
+    });
+    try { if (localStorage.getItem('side.collapsed') === '1') setCollapsed(true, false); } catch (e) {}
 }
 
 /* ── Legacy compat shims ── */
