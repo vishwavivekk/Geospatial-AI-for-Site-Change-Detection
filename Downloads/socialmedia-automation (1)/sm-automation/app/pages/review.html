@@ -8,117 +8,77 @@
     <link rel="stylesheet" href="/static/app.css">
     <link rel="icon" type="image/png" href="/assets/favicon.png">
     <style>
-        .rv-layout { display: flex; gap: 20px; padding: 24px; align-items: flex-start; max-width: 1340px; margin: 0 auto; }
-        .rv-canvas-col { flex: 1; min-width: 0; }
-        .rv-canvas-wrap { background: var(--card); border-radius: var(--radius-lg); border: 1px solid var(--border); padding: 20px; box-shadow: var(--shadow-sm); }
-        .rv-canvas-head { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; flex-wrap: wrap; }
-        .rv-canvas-head h1 { font-size: 18px; font-weight: 800; letter-spacing: -0.02em; flex: 1; min-width: 200px; }
-        #rv-canvas-container { position: relative; display: inline-block; border-radius: 10px; overflow: hidden; border: 1px solid var(--border-strong); box-shadow: var(--shadow-xs); }
-        #rv-canvas-container canvas { display: block; cursor: crosshair; }
-        .rv-hint { font-size: 12.5px; color: var(--muted); margin-top: 12px; line-height: 1.55; display: flex; gap: 8px; align-items: flex-start; }
-        .rv-hint svg { margin-top: 1px; flex-shrink: 0; }
-        .rv-selected {
-            margin-top: 12px; padding: 10px 14px;
-            background: var(--primary-soft); border: 1px solid var(--primary-border); border-radius: 10px;
-            display: none; align-items: center; gap: 10px; font-size: 13px;
-        }
-        .rv-selected.visible { display: flex; }
-        .rv-selected .el-name { font-weight: 700; color: var(--primary); }
-        .rv-sidebar {
-            width: 390px; flex-shrink: 0;
-            background: var(--card);
-            border-radius: var(--radius-lg);
-            border: 1px solid var(--border);
-            box-shadow: var(--shadow-sm);
-            display: flex; flex-direction: column;
-            max-height: calc(100vh - 110px);
-            position: sticky; top: 84px;
-        }
-        .rv-sidebar-head {
-            padding: 15px 18px; border-bottom: 1px solid var(--border);
-            font-size: 14.5px; font-weight: 700;
-            display: flex; align-items: center; gap: 8px;
-        }
-        .rv-sidebar-head .count-pill { font-size: 11px; font-weight: 700; background: var(--bg-subtle); color: var(--text-2); border-radius: 9999px; padding: 2px 9px; }
-        .rv-comments { flex: 1; overflow-y: auto; padding: 14px 18px; min-height: 110px; }
-        .rv-comment {
-            padding: 12px 13px;
-            border: 1px solid var(--border); border-radius: 11px;
-            margin-bottom: 10px; position: relative;
-            transition: background 0.15s, border-color 0.15s;
-        }
-        .rv-comment.linked { border-left: 3px solid var(--primary); cursor: pointer; }
-        .rv-comment.linked:hover { background: #f7f9ff; border-color: var(--primary-border); }
-        .rv-comment-meta { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; flex-wrap: wrap; }
-        .rv-tag {
-            display: inline-flex; align-items: center; gap: 4px;
-            font-size: 10.5px; font-weight: 700; padding: 2px 9px;
-            border-radius: 9999px; background: var(--primary-soft); color: var(--primary);
-            border: 1px solid var(--primary-border);
-        }
-        .rv-tag svg { width: 10px; height: 10px; }
-        .rv-tag.general { background: var(--bg-subtle); color: var(--text-2); border-color: var(--border); }
-        .rv-time { font-size: 11px; color: var(--muted); font-weight: 500; }
-        .rv-del {
-            position: absolute; top: 8px; right: 9px;
-            background: none; border: none;
-            font-size: 15px; color: #c0c9d6; cursor: pointer; padding: 2px 5px;
-            border-radius: 6px; line-height: 1;
-            transition: color 0.15s, background 0.15s;
-        }
-        .rv-del:hover { color: var(--danger); background: var(--danger-soft); }
-        .rv-comment-text { font-size: 13.5px; line-height: 1.55; white-space: pre-wrap; color: var(--text); }
-        .rv-input-area { padding: 15px 18px; border-top: 1px solid var(--border); background: #fbfcfe; }
-        .rv-input-area textarea {
-            width: 100%;
-            border: 1px solid var(--border-strong); border-radius: 10px;
-            padding: 10px 12px; font-size: 13.5px; font-family: inherit;
-            resize: vertical; min-height: 58px; max-height: 130px; outline: none;
-            transition: border-color 0.15s, box-shadow 0.15s;
-        }
-        .rv-input-area textarea:focus { border-color: var(--primary); box-shadow: var(--ring); }
-        .rv-attach { font-size: 12px; margin: 8px 0 10px; color: var(--muted); font-weight: 500; display: flex; align-items: center; gap: 6px; }
-        .rv-attach svg { width: 12px; height: 12px; }
-        .rv-actions { padding: 15px 18px; border-top: 1px solid var(--border); display: flex; flex-direction: column; gap: 9px; }
-        .rv-actions .btn { width: 100%; }
-        .rv-note-row { font-size: 12px; color: var(--muted); text-align: center; line-height: 1.5; }
-        .rv-history { padding: 0 18px 12px; }
-        .rv-history details { border: 1px solid var(--border); border-radius: 10px; padding: 9px 13px; margin-bottom: 8px; font-size: 13px; background: #fbfcfe; }
-        .rv-history summary { cursor: pointer; font-weight: 600; color: var(--text-2); }
-        .rv-history .rv-comment { margin-top: 8px; background: white; }
-        .publish-progress { display: none; padding: 13px 18px; border-top: 1px solid var(--border); font-size: 13.5px; }
-        .publish-progress.visible { display: block; }
-        @media (max-width: 1000px) { .rv-layout { flex-direction: column; } .rv-sidebar { width: 100%; position: static; max-height: none; } }
+        /* Story-design review restyled to the mockup system */
+        .rv-layout{display:grid;grid-template-columns:minmax(0,1fr) 350px;background:#fff;border:1px solid var(--line);min-height:600px;padding:0;max-width:none;margin:0}
+        .rv-canvas-col{background:#f0f3f1;padding:15px 24px;min-width:0}
+        .rv-canvas-wrap{background:transparent;border:0;padding:0;box-shadow:none}
+        .rv-canvas-head{display:flex;align-items:center;gap:10px;margin:0 auto 10px;max-width:650px;flex-wrap:wrap}
+        .rv-canvas-head h1{font:19px Georgia,serif;color:var(--ink);letter-spacing:-.02em;flex:1;min-width:180px;margin:0}
+        #rv-canvas-container{position:relative;display:block;margin:auto;width:fit-content;box-shadow:0 8px 28px rgba(26,45,31,.2)}
+        #rv-canvas-container canvas{display:block;cursor:crosshair}
+        .rv-hint{max-width:650px;margin:10px auto 0;border:1px solid #cddbc6;background:#f5f9f3;border-radius:5px;display:flex;align-items:center;gap:6px;padding:8px 11px;font-size:8px;color:#657260}
+        .rv-selected{max-width:650px;margin:10px auto 0;padding:8px 11px;background:#f0f7ed;border:1px solid #cadcc2;border-radius:6px;display:none;align-items:center;gap:9px;font-size:9px;color:var(--green-dark)}
+        .rv-selected.visible{display:flex}
+        .rv-selected .el-name{font-weight:800}
+        .rv-sidebar{border-left:1px solid var(--line);display:flex;flex-direction:column;background:#fff;max-height:none;position:static;width:auto;border-radius:0;box-shadow:none}
+        .rv-sidebar-head{height:68px;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:8px;padding:0 17px;font-size:15px;color:var(--ink);font-weight:700}
+        .rv-sidebar-head .count-pill{font-size:8px;background:#e9edeb;color:#6f7a73;border-radius:8px;padding:2px 7px}
+        .rv-comments{padding:9px;border-bottom:1px solid var(--line);max-height:270px;overflow:auto}
+        .rv-comment{display:grid;grid-template-columns:1fr;gap:4px;border:1px solid transparent;background:#fff;border-radius:6px;text-align:left;padding:9px 8px;margin-bottom:4px;position:relative;font-size:8.5px;color:#59665d}
+        .rv-comment.linked{border-left:3px solid #d8473b;cursor:pointer}
+        .rv-comment.linked:hover{background:#f8faf8}
+        .rv-comment-meta{display:flex;align-items:center;gap:7px;flex-wrap:wrap}
+        .rv-tag{display:inline-flex;align-items:center;gap:4px;font-size:7px;font-weight:850;padding:2px 7px;border-radius:8px;background:#fdeeec;color:#ad3d27}
+        .rv-tag.general{background:#eef1ef;color:#68746c}
+        .rv-time{font-size:7px;color:#929c95}
+        .rv-del{position:absolute;top:6px;right:7px;background:none;border:0;font-size:12px;color:#a7b1aa;cursor:pointer;border-radius:4px;padding:2px 4px}
+        .rv-del:hover{color:var(--rust);background:#fff1ed}
+        .rv-comment-text{line-height:1.5;white-space:pre-wrap;color:#59665d}
+        .rv-input-area{margin:10px 13px;border:1px solid var(--line);border-radius:6px;overflow:hidden;padding:0}
+        .rv-input-area textarea{width:100%;height:60px;border:0;outline:0;resize:none;padding:8px;font-size:9px;box-sizing:border-box}
+        .rv-attach{display:flex;align-items:center;gap:5px;background:#f0f7ed;border-bottom:1px solid var(--line);padding:6px 8px;font-size:8px;color:var(--green);margin:0;order:-1}
+        .rv-input-area{display:flex;flex-direction:column}
+        .rv-input-row{display:flex;justify-content:flex-end;gap:6px;padding:5px 8px;border-top:1px solid #edf0ee}
+        .rv-input-row .btn{height:25px;font-size:8px;padding:0 9px}
+        .rv-actions{border-top:1px solid var(--line);padding:13px;display:flex;flex-direction:column;gap:7px}
+        .rv-actions .btn{width:100%;height:36px;font-size:9px}
+        .rv-actions .btn.warningish{border-color:#e2b6aa;background:#fff7f4;color:var(--rust)}
+        .rv-note-row{font-size:8px;color:#87928b;text-align:center}
+        .rv-history{padding:0 13px 12px}
+        .rv-history details{border:1px solid var(--line);border-radius:6px;padding:8px 11px;margin-bottom:7px;font-size:9px;background:#fafbfa}
+        .rv-history summary{cursor:pointer;font-weight:700;color:#5b675f}
+        .publish-progress{display:none;padding:12px 13px;border-top:1px solid var(--line);font-size:9px}
+        .publish-progress.visible{display:block}
+        /* dialogs keep old ids/classes, mockup look */
+        .modal-overlay{position:fixed;inset:0;background:#12201888;z-index:100;display:none;place-items:center;padding:18px}
+        .modal-overlay.open{display:grid}
+        .modal{width:min(560px,100%);max-height:90vh;overflow:auto;background:#fff;border-radius:10px;box-shadow:0 25px 80px #0004;padding:22px}
+        .modal h2{font:21px Georgia,serif;color:var(--ink);margin:0 0 4px}
+        .modal .sub{font-size:9px;color:#7f8a83;margin:0 0 16px}
+        .modal label{display:block;font-size:11px;font-weight:700;color:#48534c;margin-bottom:6px}
+        .modal textarea{width:100%;border:1px solid #d4dbd6;border-radius:7px;padding:11px;font:inherit;font-size:11px;min-height:90px;box-sizing:border-box;margin-bottom:14px}
+        .modal-actions{display:flex;justify-content:flex-end;gap:8px;border-top:1px solid var(--line);padding-top:13px}
+        @media(max-width:1000px){.rv-layout{grid-template-columns:1fr}.rv-sidebar{border-left:0;border-top:1px solid var(--line)}}
     </style>
 </head>
-<body>
-    <nav class="nav">
-        <a class="brand" href="/review">
-            <img class="logo" src="/assets/nicdc-mark.png" alt="NICDC">
-            <span class="product">NICDC Social Studio<small>Approval workspace</small></span>
-        </a>
-        <a href="/review" class="btn btn-ghost btn-sm" id="backBtn">Back to queue</a>
-        <div class="spacer"></div>
-        <span class="role-chip approver">Approver</span>
-        <div class="divider-v"></div>
-        <div class="user-block">
-            <span class="avatar" id="navAvatar"></span>
-            <span class="name">__USER_NAME__</span>
+<body data-role="approver" data-active="/review" data-user="__USER_NAME__">
+    <main class="workspace" id="screen">
+        <div class="detail-head">
+            <a class="back" href="/review">← Review queue</a>
+            <div>
+                <h1 id="rv-topic" style="font:25px Georgia,serif;color:var(--ink);margin:0 0 7px;"></h1>
+                <div class="submeta" id="rv-badges"></div>
+            </div>
+            <span></span>
         </div>
-        <button class="btn btn-ghost btn-sm" onclick="logout()">Sign out</button>
-    </nav>
-
     <div class="rv-layout">
         <div class="rv-canvas-col">
             <div class="rv-canvas-wrap">
-                <div class="rv-canvas-head">
-                    <h1 id="rv-topic"></h1>
-                    <span id="rv-badges" style="display:inline-flex;gap:8px;align-items:center;"></span>
-                </div>
+                
                 <div id="rv-canvas-container"></div>
                 <div class="rv-selected" id="rv-selected">
                     <span>Selected: <span class="el-name" id="rv-sel-name"></span> <span style="color:var(--muted);" id="rv-sel-type"></span></span>
-                    <button class="btn btn-ghost btn-sm" style="margin-left:auto;" onclick="clearSelection()">Clear</button>
+                    <button class="btn" style="height:25px;font-size:8px;padding:0 9px" style="margin-left:auto;" onclick="clearSelection()">Clear</button>
                 </div>
                 <p class="rv-hint" id="rv-hint-row"><span>Click any element on the design to highlight it — your next comment will be pinned to it. Elements with comments show a red badge. Click the background to switch back to a general comment.</span></p>
             </div>
@@ -131,18 +91,20 @@
             <div class="rv-input-area" id="rv-input-area">
                 <textarea id="rv-input" placeholder="Describe the issue or the change you want..."></textarea>
                 <div class="rv-attach" id="rv-attach"></div>
-                <button class="btn btn-primary btn-sm" id="rv-add-btn" onclick="addComment()">Add comment</button>
+                <button class="btn primary" style="height:25px;font-size:8px;padding:0 9px" id="rv-add-btn" onclick="addComment()">Add comment</button>
             </div>
             <div class="publish-progress" id="publish-progress"></div>
             <div class="rv-actions" id="rv-actions">
-                <button class="btn btn-warning" id="btn-request" onclick="openReturnModal()"></button>
-                <button class="btn btn-success" id="btn-approve" onclick="openApproveModal()"></button>
+                <button class="btn warningish" id="btn-request" onclick="openReturnModal()"></button>
+                <button class="btn primary" id="btn-approve" onclick="openApproveModal()"></button>
                 <div class="rv-note-row">Approving posts to the connected social accounts automatically.</div>
             </div>
         </div>
     </div>
 
     <!-- Send back to editor modal -->
+    </main>
+
     <div id="returnModal" class="modal-overlay">
         <div class="modal" onclick="event.stopPropagation()">
             <h2>Send back to editor</h2>
@@ -151,7 +113,7 @@
             <textarea id="rm-note" placeholder="e.g. Please fix these before Friday..."></textarea>
             <div class="modal-actions">
                 <button type="button" class="btn" onclick="closeReturnModal()">Cancel</button>
-                <button type="button" class="btn btn-warning" id="rm-send" onclick="requestChanges()">Send back</button>
+                <button type="button" class="btn warningish" id="rm-send" onclick="requestChanges()">Send back</button>
             </div>
         </div>
     </div>
@@ -165,7 +127,7 @@
             <textarea id="ap-caption" style="min-height:140px;"></textarea>
             <div class="modal-actions">
                 <button type="button" class="btn" onclick="closeApproveModal()">Cancel</button>
-                <button type="button" class="btn btn-success" id="ap-confirm" onclick="approveAndPublish()">Publish now</button>
+                <button type="button" class="btn primary" id="ap-confirm" onclick="approveAndPublish()">Publish now</button>
             </div>
         </div>
     </div>
@@ -183,9 +145,6 @@
         const READ_ONLY = ['approved', 'published'].indexOf(DESIGN_META.status) !== -1;
 
         /* ── Chrome ── */
-        document.getElementById('navAvatar').textContent = initials('__USER_NAME__');
-        document.getElementById('backBtn').insertAdjacentHTML('afterbegin', icon('back', 14));
-        document.getElementById('rv-hint-row').insertAdjacentHTML('afterbegin', icon('pin', 14));
         document.getElementById('btn-request').innerHTML = icon('comment', 15) + 'Send back to editor';
         document.getElementById('btn-approve').innerHTML = icon('rocket', 15) + 'Approve & publish';
         document.getElementById('rv-topic').textContent = DESIGN_META.topic;
@@ -518,7 +477,7 @@
                     : '<b style="color:var(--warning);">Approved, but some platforms failed:</b>')
                     + publishPills(data.publish_results);
                 document.getElementById('rv-actions').innerHTML =
-                    '<a class="btn btn-primary" href="/review">' + icon('back', 14) + 'Back to queue</a>';
+                    '<a class="btn primary" href="/review">' + icon('back', 14) + 'Back to queue</a>';
                 document.getElementById('rv-badges').innerHTML =
                     catBadge(DESIGN_META.category) + statusBadge(data.status);
                 toast('Design published', 'success');
@@ -542,7 +501,7 @@
                 prog.classList.add('visible');
                 prog.innerHTML = '<b>Publish results</b>' + publishPills(DESIGN_META.publish_results);
             }
-            document.getElementById('rv-actions').innerHTML = '<a class="btn btn-primary" href="/review">' + icon('back', 14) + 'Back to queue</a>';
+            document.getElementById('rv-actions').innerHTML = '<a class="btn primary" href="/review">' + icon('back', 14) + 'Back to queue</a>';
         }
 
         document.getElementById('rv-comments').addEventListener('click', function (e) {
@@ -555,6 +514,8 @@
         document.getElementById('rv-input').addEventListener('keydown', function (e) {
             if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); addComment(); }
         });
+    
+        mountShell();
     </script>
 </body>
 </html>

@@ -6,213 +6,88 @@
     <title>Review post — NICDC Social Studio</title>
     <link rel="stylesheet" href="/static/app.css">
     <link rel="icon" type="image/png" href="/assets/favicon.png">
-    <style>
-        .pr-layout { display: flex; gap: 20px; padding: 24px; align-items: flex-start; max-width: 1340px; margin: 0 auto; }
-        .pr-canvas-col { flex: 1; min-width: 0; }
-        .pr-canvas-wrap { background: var(--card); border-radius: var(--radius-lg); border: 1px solid var(--border); padding: 20px; box-shadow: var(--shadow-sm); }
-        .pr-head { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; flex-wrap: wrap; }
-        .pr-head h1 { font-size: 18px; font-weight: 800; letter-spacing: -0.02em; flex: 1; min-width: 200px; }
-        .pr-img-holder {
-            position: relative; display: inline-block; max-width: 100%;
-            border-radius: 10px; overflow: hidden; border: 1px solid var(--border-strong);
-            user-select: none; cursor: crosshair;
-        }
-        .pr-img-holder img { display: block; max-width: 100%; height: auto; pointer-events: none; }
-        .pr-region {
-            position: absolute; border: 2px solid #dc2626;
-            background: rgba(220, 38, 38, 0.12); border-radius: 4px;
-            pointer-events: none;
-        }
-        .pr-region.pending { border-color: var(--primary); background: rgba(79, 70, 229, 0.15); }
-        .pr-region .n {
-            position: absolute; top: -11px; left: -11px;
-            width: 22px; height: 22px; border-radius: 50%;
-            background: #dc2626; color: white;
-            font-size: 12px; font-weight: 700;
-            display: flex; align-items: center; justify-content: center;
-            border: 2px solid white;
-        }
-        .pr-region.hl { border-width: 3px; background: rgba(220, 38, 38, 0.24); }
-        .pr-hint { font-size: 12.5px; color: var(--muted); margin-top: 12px; line-height: 1.55; }
-        .pr-caption {
-            margin-top: 14px; padding: 13px 15px;
-            background: #fbfcfe; border: 1px solid var(--border); border-radius: 10px;
-            font-size: 13.5px; white-space: pre-wrap;
-        }
-        .pr-caption .lbl { font-size: 11px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; display: block; margin-bottom: 6px; }
-        .pr-sidebar {
-            width: 390px; flex-shrink: 0;
-            background: var(--card); border-radius: var(--radius-lg);
-            border: 1px solid var(--border); box-shadow: var(--shadow-sm);
-            display: flex; flex-direction: column;
-            max-height: calc(100vh - 110px); position: sticky; top: 84px;
-        }
-        .pr-sb-head { padding: 15px 18px; border-bottom: 1px solid var(--border); font-size: 14.5px; font-weight: 700; display: flex; align-items: center; gap: 8px; }
-        .pr-comments { flex: 1; overflow-y: auto; padding: 14px 18px; min-height: 110px; }
-        .pr-comment { padding: 11px 12px; border: 1px solid var(--border); border-radius: 11px; margin-bottom: 10px; position: relative; }
-        .pr-comment.linked { border-left: 3px solid #dc2626; cursor: pointer; }
-        .pr-comment.linked:hover { background: #fff7f7; }
-        .pr-num {
-            display: inline-flex; width: 20px; height: 20px; border-radius: 50%;
-            background: #dc2626; color: white; font-size: 11px; font-weight: 700;
-            align-items: center; justify-content: center; margin-right: 7px;
-        }
-        .pr-time { font-size: 11px; color: var(--muted); }
-        .pr-del { position: absolute; top: 7px; right: 9px; background: none; border: none; font-size: 15px; color: #c0c9d6; cursor: pointer; padding: 2px 5px; border-radius: 6px; }
-        .pr-del:hover { color: var(--danger); background: var(--danger-soft); }
-        .pr-text { font-size: 13.5px; line-height: 1.5; white-space: pre-wrap; margin-top: 5px; }
-        .pr-input-area { padding: 14px 18px; border-top: 1px solid var(--border); background: #fbfcfe; }
-        .pr-input-area textarea { width: 100%; border: 1px solid var(--border-strong); border-radius: 10px; padding: 10px 12px; font-size: 13.5px; font-family: inherit; resize: vertical; min-height: 58px; outline: none; }
-        .pr-input-area textarea:focus { border-color: var(--primary); box-shadow: var(--ring); }
-        .pr-attach { font-size: 12px; margin: 8px 0 10px; color: var(--muted); font-weight: 500; }
-        .pr-actions { padding: 15px 18px; border-top: 1px solid var(--border); display: flex; flex-direction: column; gap: 9px; }
-        .pr-actions .btn { width: 100%; }
-        .publish-progress { display: none; padding: 13px 18px; border-top: 1px solid var(--border); font-size: 13.5px; }
-        .publish-progress.visible { display: block; }
-        .platform-chips { display: inline-flex; gap: 6px; }
-        .platform-chip { font-size: 11px; font-weight: 700; padding: 3px 10px; border-radius: 9999px; background: var(--bg-subtle); border: 1px solid var(--border); color: var(--text-2); }
-        @media (max-width: 1000px) { .pr-layout { flex-direction: column; } .pr-sidebar { width: 100%; position: static; max-height: none; } }
-    </style>
 </head>
-<body>
-    <nav class="nav">
-        <a class="brand" href="/review">
-            <img class="logo" src="/assets/nicdc-mark.png" alt="NICDC">
-            <span class="product">NICDC Social Studio<small>Approval workspace</small></span>
-        </a>
-        <a href="/review" class="btn btn-ghost btn-sm" id="backBtn">Back to queue</a>
-        <div class="spacer"></div>
-        <span class="role-chip approver">Approver</span>
-        <div class="divider-v"></div>
-        <div class="user-block">
-            <span class="avatar" id="navAvatar"></span>
-            <span class="name">__USER_NAME__</span>
-        </div>
-        <button class="btn btn-ghost btn-sm" onclick="logout()">Sign out</button>
-    </nav>
-
-    <div class="pr-layout">
-        <div class="pr-canvas-col">
-            <div class="pr-canvas-wrap">
-                <div class="pr-head">
+<body data-role="approver" data-active="/review" data-user="__USER_NAME__">
+    <main class="workspace" id="screen">
+        <div id="review-view">
+            <div class="detail-head">
+                <a class="back" href="/review">← Review queue</a>
+                <div>
                     <h1 id="pr-title"></h1>
-                    <span id="pr-badges" style="display:inline-flex;gap:8px;align-items:center;"></span>
+                    <div class="submeta" id="pr-meta"></div>
                 </div>
-                <div class="pr-img-holder" id="imgHolder">
-                    <img id="postImg" draggable="false" alt="Post design">
-                </div>
-                <p class="pr-hint" id="pr-hint">Click or drag on the image to highlight the part your next comment is about. Numbered markers show existing comments.</p>
-                <div class="pr-caption" id="pr-caption"></div>
+                <span></span>
+            </div>
+            <div class="review-layout">
+                <section class="stage">
+                    <div class="review-tip" id="pr-tip">⌖ <b style="margin-left:5px">Click or drag on the design</b>&nbsp; to pin feedback to an exact region.</div>
+                    <div class="preview-bar"><span>Design preview · 1080 × 1080 px</span><span id="pr-plats"></span></div>
+                    <div class="large-art" id="imgHolder" style="cursor:crosshair;user-select:none;"><img id="postImg" draggable="false" alt="Post design"></div>
+                    <div class="caption" id="pr-caption-card"></div>
+                </section>
+                <aside class="feedback">
+                    <div class="panel-head"><div><h2>Review comments</h2><span id="pr-cmt-sub">None yet</span></div><span></span></div>
+                    <div class="comment-list" id="pr-comments"></div>
+                    <div class="compose" id="composeBox">
+                        <div class="pinned" id="pinState"><span>◉ General comment — click the design to pin</span></div>
+                        <textarea id="newComment" placeholder="Write clear, actionable feedback..." maxlength="500"></textarea>
+                        <div class="compose-foot"><span id="charCount">0 / 500</span><button onclick="addComment()" id="addBtn">Add comment</button></div>
+                    </div>
+                    <div class="decision" id="decisionBox">
+                        <span>REVIEW DECISION</span>
+                        <button class="btn sendback" onclick="openSendbackDialog()">← Send back to editor</button>
+                        <button class="btn primary" onclick="openApproveDialog()">✓ Approve &amp; publish</button>
+                    </div>
+                    <details class="history" id="pr-history-wrap" style="display:none;">
+                        <summary>◫ Revision history　<small id="pr-history-count"></small>　⌄</summary>
+                        <div id="pr-history"></div>
+                    </details>
+                </aside>
             </div>
         </div>
-
-        <div class="pr-sidebar">
-            <div class="pr-sb-head">Feedback <span class="count-pill" style="font-size:11px;font-weight:700;background:var(--bg-subtle);color:var(--text-2);border-radius:9999px;padding:2px 9px;" id="pr-count">0</span></div>
-            <div class="pr-comments" id="pr-comments"></div>
-            <div class="pr-input-area" id="pr-input-area">
-                <textarea id="pr-input" placeholder="Describe the issue or the change you want..."></textarea>
-                <div class="pr-attach" id="pr-attach"></div>
-                <div style="display:flex;gap:8px;">
-                    <button class="btn btn-primary btn-sm" id="pr-add-btn" onclick="addComment()">Add comment</button>
-                    <button class="btn btn-ghost btn-sm" id="pr-clear-btn" onclick="clearRegion()" style="display:none;">Clear highlight</button>
-                </div>
-            </div>
-            <div class="publish-progress" id="publish-progress"></div>
-            <div class="pr-actions" id="pr-actions">
-                <button class="btn btn-warning" id="btn-request" onclick="openReturnModal()"></button>
-                <button class="btn btn-success" id="btn-approve" onclick="openApproveModal()"></button>
-                <div style="font-size:12px;color:var(--muted);text-align:center;" id="pr-target-note"></div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Send back modal -->
-    <div id="returnModal" class="modal-overlay">
-        <div class="modal" onclick="event.stopPropagation()">
-            <h2>Send back to editor</h2>
-            <p class="sub">The editor sees your <b id="rm-count"></b> comment(s) with their highlighted regions, fixes the design, and re-shares it.</p>
-            <label for="rm-note">Note for the editor (optional)</label>
-            <textarea id="rm-note" placeholder="e.g. Please fix the logo and date..."></textarea>
-            <div class="modal-actions">
-                <button type="button" class="btn" onclick="closeReturnModal()">Cancel</button>
-                <button type="button" class="btn btn-warning" id="rm-send" onclick="requestChanges()">Send back</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- Approve modal -->
-    <div id="approveModal" class="modal-overlay">
-        <div class="modal" onclick="event.stopPropagation()">
-            <h2>Approve &amp; publish</h2>
-            <p class="sub" id="ap-sub"></p>
-            <label for="ap-caption">Caption</label>
-            <textarea id="ap-caption" style="min-height:140px;"></textarea>
-            <div class="modal-actions">
-                <button type="button" class="btn" onclick="closeApproveModal()">Cancel</button>
-                <button type="button" class="btn btn-success" onclick="approveAndPublish()">Publish now</button>
-            </div>
-        </div>
-    </div>
+        <div id="success-view" class="hidden"></div>
+    </main>
 
     <script src="/static/app.js"></script>
     <script>
+        mountShell();
         const POST = __POST_JSON__;
         let _comments = POST.comments || [];
-        let _pendingRegion = null;
+        let _pendingRegion = null, _drag = null, _pendingEl = null;
         const READ_ONLY = ['approved', 'published'].indexOf(POST.status) !== -1;
+        const PLATS = POST.platforms || [];
 
-        document.getElementById('navAvatar').textContent = initials('__USER_NAME__');
-        document.getElementById('backBtn').insertAdjacentHTML('afterbegin', icon('back', 14));
-        document.getElementById('btn-request').innerHTML = icon('comment', 15) + 'Send back to editor';
-        document.getElementById('btn-approve').innerHTML = icon('rocket', 15) + 'Approve & publish';
         document.getElementById('pr-title').textContent = POST.title;
-        document.getElementById('postImg').src = '/bank/' + POST.image_path;
-
-        const PLATFORM_LABELS = { linkedin: 'LinkedIn', x: 'X (Twitter)', instagram: 'Instagram' };
-        function platformChips(platforms) {
-            return '<span class="platform-chips">' + (platforms || []).map(p =>
-                '<span class="platform-chip">' + (PLATFORM_LABELS[p] || p) + '</span>').join('') + '</span>';
-        }
-
-        document.getElementById('pr-badges').innerHTML =
-            statusBadge(POST.status) +
-            '<span style="font-size:12px;color:var(--muted);font-weight:600;">Rev ' + (POST.revision || 1) + '</span> ' +
-            platformChips(POST.platforms);
-        document.getElementById('pr-caption').innerHTML =
-            '<span class="lbl">Caption</span>' + (POST.caption ? escHtml(POST.caption) : '<i style="color:var(--muted);">No caption yet — you can write one in the approve dialog.</i>');
-        document.getElementById('pr-target-note').innerHTML =
-            'Publishes to: ' + ((POST.platforms || []).map(p => PLATFORM_LABELS[p] || p).join(', ') || 'all platforms');
+        document.getElementById('postImg').src = '/bank/' + POST.image_path + '?v=' + Date.now();
+        document.getElementById('pr-plats').textContent = 'Publishes to: ' + (PLATS.map(p => PLATFORM_NAMES[p] || p).join(', ') || 'all platforms');
+        document.getElementById('pr-meta').innerHTML =
+            statusBadge(POST.status, true) +
+            '<span>Revision ' + (POST.revision || 1) + '</span>' +
+            (POST.submitted_by ? '<span>By ' + escHtml(POST.submitted_by) + '</span>' : '') +
+            (POST.submitted_at ? '<span>' + fmtTime(POST.submitted_at) + '</span>' : '');
+        document.getElementById('pr-caption-card').innerHTML =
+            '<div><b>Caption submitted by editor</b><span>' + (POST.caption || '').length + ' / 3,000</span></div>' +
+            '<p>' + (POST.caption ? escHtml(POST.caption) : '<i style="color:#9aa39d">No caption — you can write one when approving.</i>') + '</p>';
 
         /* ── Region drawing ── */
         const holder = document.getElementById('imgHolder');
-        let _drag = null;
-        let _pendingEl = null;
-
         function relPos(e) {
             const r = holder.getBoundingClientRect();
-            return {
-                x: Math.max(0, Math.min(1, (e.clientX - r.left) / r.width)),
-                y: Math.max(0, Math.min(1, (e.clientY - r.top) / r.height)),
-            };
+            return { x: Math.max(0, Math.min(1, (e.clientX - r.left) / r.width)), y: Math.max(0, Math.min(1, (e.clientY - r.top) / r.height)) };
         }
-
         holder.addEventListener('mousedown', function (e) {
             if (READ_ONLY) return;
             _drag = relPos(e);
             if (_pendingEl) { _pendingEl.remove(); _pendingEl = null; }
             e.preventDefault();
         });
-        holder.addEventListener('mousemove', function (e) {
-            if (!_drag) return;
-            const cur = relPos(e);
-            drawPending(_drag, cur);
-        });
+        holder.addEventListener('mousemove', function (e) { if (_drag) drawPending(_drag, relPos(e)); });
         window.addEventListener('mouseup', function (e) {
             if (!_drag) return;
             const cur = relPos(e);
             let x = Math.min(_drag.x, cur.x), y = Math.min(_drag.y, cur.y);
             let w = Math.abs(cur.x - _drag.x), h = Math.abs(cur.y - _drag.y);
-            if (w < 0.02 && h < 0.02) {   // click = small pin box
+            if (w < 0.02 && h < 0.02) {
                 w = 0.06; h = 0.06;
                 x = Math.max(0, Math.min(0.94, x - 0.03));
                 y = Math.max(0, Math.min(0.94, y - 0.03));
@@ -220,208 +95,214 @@
             _pendingRegion = { x: x, y: y, w: w, h: h };
             drawPending({ x: x, y: y }, { x: x + w, y: y + h });
             _drag = null;
-            updateAttachHint();
+            updatePinState();
         });
-
         function drawPending(a, b) {
             if (!_pendingEl) {
                 _pendingEl = document.createElement('div');
-                _pendingEl.className = 'pr-region pending';
+                _pendingEl.className = 'region-box pending';
                 holder.appendChild(_pendingEl);
             }
-            const x = Math.min(a.x, b.x) * 100, y = Math.min(a.y, b.y) * 100;
-            const w = Math.abs(b.x - a.x) * 100, h = Math.abs(b.y - a.y) * 100;
-            _pendingEl.style.left = x + '%';
-            _pendingEl.style.top = y + '%';
-            _pendingEl.style.width = w + '%';
-            _pendingEl.style.height = h + '%';
+            _pendingEl.style.left = Math.min(a.x, b.x) * 100 + '%';
+            _pendingEl.style.top = Math.min(a.y, b.y) * 100 + '%';
+            _pendingEl.style.width = Math.abs(b.x - a.x) * 100 + '%';
+            _pendingEl.style.height = Math.abs(b.y - a.y) * 100 + '%';
         }
-
         function clearRegion() {
             _pendingRegion = null;
             if (_pendingEl) { _pendingEl.remove(); _pendingEl = null; }
-            updateAttachHint();
+            updatePinState();
+        }
+        function updatePinState() {
+            document.getElementById('pinState').innerHTML = _pendingRegion
+                ? '<span>✓ Pinned to selected region</span><button onclick="clearRegion()">clear ×</button>'
+                : '<span>◉ General comment — click the design to pin</span>';
         }
 
-        function updateAttachHint() {
-            const hint = document.getElementById('pr-attach');
-            document.getElementById('pr-clear-btn').style.display = _pendingRegion ? '' : 'none';
-            hint.innerHTML = _pendingRegion
-                ? icon('pin', 12) + ' Pinned to the highlighted region'
-                : icon('comment', 12) + ' General comment (click or drag on the image to highlight a part)';
-        }
-
-        /* ── Comment region markers ── */
-        function renderRegions(highlightId) {
-            holder.querySelectorAll('.pr-region:not(.pending)').forEach(el => el.remove());
+        /* ── Comments ── */
+        function renderRegions(activeId) {
+            holder.querySelectorAll('.region-box:not(.pending)').forEach(el => el.remove());
             let n = 0;
             _comments.forEach(function (c) {
                 if (!c.region) return;
                 n += 1;
                 const el = document.createElement('div');
-                el.className = 'pr-region' + (c.id === highlightId ? ' hl' : '');
+                el.className = 'region-box' + (c.id === activeId ? ' hl' : '');
                 el.style.left = (c.region.x * 100) + '%';
                 el.style.top = (c.region.y * 100) + '%';
                 el.style.width = (c.region.w * 100) + '%';
                 el.style.height = (c.region.h * 100) + '%';
-                el.innerHTML = '<span class="n">' + n + '</span>';
+                el.innerHTML = '<span class="pin-n">' + n + '</span>';
                 holder.appendChild(el);
             });
         }
-
-        function renderComments(highlightId) {
+        function renderComments(activeId) {
             const list = document.getElementById('pr-comments');
-            document.getElementById('pr-count').textContent = _comments.length;
+            document.getElementById('pr-cmt-sub').textContent = _comments.length
+                ? _comments.length + ' open comment' + (_comments.length !== 1 ? 's' : '') : 'None yet';
             if (!_comments.length) {
-                list.innerHTML = '<div style="text-align:center;padding:26px 10px;color:var(--muted);font-size:13px;">' +
-                    icon('pin', 26) + '<br><b style="color:var(--text-2);">No comments yet</b><br>Highlight a part of the image, then describe the change.</div>';
+                list.innerHTML = '<div style="padding:14px;text-align:center;font-size:9px;color:#8b958e;">Highlight a part of the design, then write your first comment.</div>';
                 renderRegions();
                 return;
             }
             let n = 0;
             list.innerHTML = _comments.map(function (c) {
                 const num = c.region ? ++n : null;
-                return '<div class="pr-comment' + (c.region ? ' linked' : '') + '" data-comment-id="' + c.id + '">' +
-                    (READ_ONLY ? '' : '<button class="pr-del" data-comment-id="' + c.id + '" title="Delete">&times;</button>') +
-                    '<div>' + (num ? '<span class="pr-num">' + num + '</span>' : '') +
-                    '<span class="pr-time">' + fmtTime(c.created_at) + '</span></div>' +
-                    '<div class="pr-text">' + escHtml(c.text) + '</div>' +
-                '</div>';
+                return '<div class="comment' + (c.id === activeId ? ' active' : '') + '" data-id="' + c.id + '" data-linked="' + (c.region ? '1' : '') + '" style="position:relative;">' +
+                    '<span class="comment-num' + (num ? '' : ' general') + '">' + (num || '•') + '</span>' +
+                    '<span><b>' + escHtml(c.author || 'You') + '</b><small>' + fmtTime(c.created_at) + '</small><p>' + escHtml(c.text) + '</p>' +
+                    (READ_ONLY ? '' : '<button style="border:0;background:none;color:#a7b1aa;font-size:8px;padding:4px 0 0;cursor:pointer;" data-del="' + c.id + '">Delete comment</button>') +
+                    '</span></div>';
             }).join('');
-            renderRegions(highlightId);
+            renderRegions(activeId);
         }
-
         document.getElementById('pr-comments').addEventListener('click', function (e) {
-            const del = e.target.closest('.pr-del');
-            if (del) { deleteComment(del.dataset.commentId); return; }
-            const card = e.target.closest('.pr-comment.linked');
-            if (card) renderComments(card.dataset.commentId);
+            const del = e.target.closest('[data-del]');
+            if (del) { deleteComment(del.dataset.del); return; }
+            const c = e.target.closest('.comment');
+            if (c && c.dataset.linked) renderComments(c.dataset.id);
         });
 
-        /* ── Comments API ── */
+        const ta = document.getElementById('newComment');
+        ta.addEventListener('input', function () {
+            document.getElementById('charCount').textContent = this.value.length + ' / 500';
+        });
+        ta.addEventListener('keydown', function (e) {
+            if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); addComment(); }
+        });
+
         async function addComment() {
-            const input = document.getElementById('pr-input');
-            const text = input.value.trim();
+            const text = ta.value.trim();
             if (!text) return;
-            const btn = document.getElementById('pr-add-btn');
+            const btn = document.getElementById('addBtn');
             btn.disabled = true;
             try {
                 const resp = await fetch('/api/posts/' + POST.id + '/comments', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ region: _pendingRegion, text: text }),
                 });
                 if (!resp.ok) throw new Error((await resp.json()).detail || 'Failed');
                 _comments.push(await resp.json());
-                input.value = '';
+                ta.value = '';
+                document.getElementById('charCount').textContent = '0 / 500';
                 clearRegion();
                 renderComments();
-            } catch (e) {
-                toast('Error adding comment: ' + e.message, 'error');
-            } finally {
-                btn.disabled = false;
-            }
+                toast('Comment ' + (_pendingRegion ? 'pinned to design' : 'added'));
+            } catch (e) { toast(e.message, 'error'); }
+            btn.disabled = false;
         }
-
-        async function deleteComment(commentId) {
+        async function deleteComment(id) {
             try {
-                const resp = await fetch('/api/posts/' + POST.id + '/comments/' + commentId, { method: 'DELETE' });
+                const resp = await fetch('/api/posts/' + POST.id + '/comments/' + id, { method: 'DELETE' });
                 if (!resp.ok) throw new Error((await resp.json()).detail || 'Failed');
-                _comments = _comments.filter(c => c.id !== commentId);
+                _comments = _comments.filter(c => c.id !== id);
                 renderComments();
-            } catch (e) {
-                toast('Error deleting comment: ' + e.message, 'error');
-            }
+            } catch (e) { toast(e.message, 'error'); }
         }
 
-        /* ── Actions ── */
-        function openReturnModal() {
-            if (!_comments.length) {
-                toast('Add at least one comment first, so the editor knows what to fix.', 'error');
-                return;
-            }
-            document.getElementById('rm-count').textContent = _comments.length;
-            document.getElementById('returnModal').classList.add('open');
+        /* ── History ── */
+        const history = POST.feedback_history || [];
+        if (history.length) {
+            document.getElementById('pr-history-wrap').style.display = '';
+            document.getElementById('pr-history-count').textContent = history.length + ' round' + (history.length !== 1 ? 's' : '');
+            document.getElementById('pr-history').innerHTML = history.map(function (h) {
+                return '<div style="margin-top:9px;"><span class="eyebrow">REVISION ' + h.revision + '</span>' +
+                    (h.reviewer_note ? '<p style="font-size:8.5px;color:#59665d;margin:5px 0;">“' + escHtml(h.reviewer_note) + '”</p>' : '') +
+                    (h.comments || []).map(c => '<div class="comment"><span class="comment-num general">•</span><span><b>' + escHtml(c.author || 'Admin') + '</b><p>' + escHtml(c.text) + '</p></span></div>').join('') +
+                '</div>';
+            }).join('');
         }
-        function closeReturnModal() { document.getElementById('returnModal').classList.remove('open'); }
-        document.getElementById('returnModal').addEventListener('click', function (e) { if (e.target === this) closeReturnModal(); });
 
-        async function requestChanges() {
-            const note = document.getElementById('rm-note').value.trim();
-            const btn = document.getElementById('rm-send');
+        /* ── Send back ── */
+        function openSendbackDialog() {
+            if (!_comments.length) { toast('Add at least one comment first, so the editor knows what to fix.', 'error'); return; }
+            openDialog('◉', 'Send back to editor', 'Add a clear summary so the editor knows what to fix.',
+                '<div class="callout"><span>◉</span><div><b>' + _comments.length + ' open comment' + (_comments.length !== 1 ? 's' : '') + '</b><p>The editor will see these comments with your note.</p></div><span></span></div>' +
+                '<label class="field">Summary note<textarea id="sbNote" placeholder="e.g. Please address all pinned design comments and resubmit."></textarea></label>',
+                '<button class="btn" onclick="closeDialog()">Cancel</button><button class="btn rust" id="sbGo" onclick="sendBack()">Send back</button>');
+        }
+        async function sendBack() {
+            const btn = document.getElementById('sbGo');
             btn.disabled = true;
             try {
                 const resp = await fetch('/api/posts/' + POST.id + '/status', {
-                    method: 'PATCH',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ status: 'feedback', reviewer_note: note }),
+                    method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ status: 'feedback', reviewer_note: document.getElementById('sbNote').value.trim() }),
                 });
-                if (!resp.ok) throw new Error((await resp.json()).detail || 'Update failed');
-                window.location.href = '/review';
-            } catch (e) {
-                toast('Error: ' + e.message, 'error');
-                btn.disabled = false;
-            }
+                if (!resp.ok) throw new Error((await resp.json()).detail || 'Failed');
+                closeDialog();
+                toast('Post sent back to ' + (POST.submitted_by || 'the editor'));
+                setTimeout(() => location.href = '/review', 900);
+            } catch (e) { toast(e.message, 'error'); btn.disabled = false; }
         }
 
-        function openApproveModal() {
+        /* ── Approve & publish ── */
+        function openApproveDialog() {
             if (_comments.length && !confirm('There are ' + _comments.length + ' open comment(s). Approve anyway?')) return;
-            document.getElementById('ap-sub').innerHTML =
-                'This publishes the post to: <b>' + ((POST.platforms || []).map(p => PLATFORM_LABELS[p] || p).join(', ') || 'all platforms') + '</b>.';
-            document.getElementById('ap-caption').value = POST.caption || POST.title;
-            document.getElementById('approveModal').classList.add('open');
+            const ck = p => PLATS.length ? (PLATS.indexOf(p) !== -1 ? 'checked' : '') : 'checked';
+            openDialog('✓', 'Approve & publish', 'Confirm the final caption and publishing destinations.',
+                '<span class="eyebrow">PUBLISH TO</span>' +
+                '<div class="platform-select" style="margin-top:8px;">' +
+                    '<label><input type="checkbox" disabled ' + ck('linkedin') + '> in　LinkedIn</label>' +
+                    '<label><input type="checkbox" disabled ' + ck('x') + '> 𝕏　X</label>' +
+                    '<label><input type="checkbox" disabled ' + ck('instagram') + '> ◎　Instagram</label>' +
+                '</div>' +
+                '<label class="field">Caption<textarea id="apCaption" style="height:120px;">' + escHtml(POST.caption || POST.title) + '</textarea></label>',
+                '<button class="btn" onclick="closeDialog()">Cancel</button><button class="btn primary" id="apGo" onclick="approvePublish()">Approve &amp; publish</button>');
         }
-        function closeApproveModal() { document.getElementById('approveModal').classList.remove('open'); }
-        document.getElementById('approveModal').addEventListener('click', function (e) { if (e.target === this) closeApproveModal(); });
-
-        async function approveAndPublish() {
-            closeApproveModal();
-            const caption = document.getElementById('ap-caption').value.trim();
-            const progress = document.getElementById('publish-progress');
-            document.getElementById('btn-approve').disabled = true;
-            document.getElementById('btn-request').disabled = true;
-            progress.classList.add('visible');
-            progress.innerHTML = '<span class="spinner dark"></span> Publishing...';
+        async function approvePublish() {
+            const btn = document.getElementById('apGo');
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner"></span> Publishing...';
             try {
                 const resp = await fetch('/api/posts/' + POST.id + '/approve', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ caption: caption }),
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ caption: document.getElementById('apCaption').value.trim() }),
                 });
                 const data = await resp.json();
                 if (!resp.ok) throw new Error(data.detail || 'Publish failed');
-                progress.innerHTML = (data.status === 'published'
-                    ? '<b style="color:var(--success);">' + icon('check', 14) + ' Published!</b>'
-                    : '<b style="color:var(--warning);">Approved, with issues:</b>')
-                    + publishPills(data.publish_results);
-                document.getElementById('pr-actions').innerHTML =
-                    '<a class="btn btn-primary" href="/review">' + icon('back', 14) + 'Back to queue</a>';
-                document.getElementById('pr-badges').innerHTML = statusBadge(data.status) + ' ' + platformChips(POST.platforms);
-                toast('Post published', 'success');
+                closeDialog();
+                showSuccess(data);
             } catch (e) {
-                progress.innerHTML = '<b style="color:var(--danger);">Error: ' + escHtml(e.message) + '</b>';
-                document.getElementById('btn-approve').disabled = false;
-                document.getElementById('btn-request').disabled = false;
+                toast(e.message, 'error');
+                btn.disabled = false;
+                btn.textContent = 'Approve & publish';
             }
         }
 
-        /* ── Init ── */
-        document.getElementById('postImg').addEventListener('load', function () { renderComments(); });
-        renderComments();
-        updateAttachHint();
-        if (READ_ONLY) {
-            document.getElementById('pr-input-area').style.display = 'none';
-            document.getElementById('pr-hint').style.display = 'none';
-            const prog = document.getElementById('publish-progress');
-            if (POST.publish_results) {
-                prog.classList.add('visible');
-                prog.innerHTML = '<b>Publish results</b>' + publishPills(POST.publish_results);
-            }
-            document.getElementById('pr-actions').innerHTML = '<a class="btn btn-primary" href="/review">' + icon('back', 14) + 'Back to queue</a>';
+        function showSuccess(data) {
+            document.getElementById('review-view').classList.add('hidden');
+            const v = document.getElementById('success-view');
+            v.classList.remove('hidden');
+            const platCount = PLATS.length || 3;
+            v.innerHTML =
+                '<div class="success-page">' +
+                    '<div class="success-check">✓</div>' +
+                    '<span class="eyebrow">PUBLISHING COMPLETE</span>' +
+                    '<h1>' + (data.status === 'published' ? 'Your post is live' : 'Approved, with issues') + '</h1>' +
+                    '<p>“' + escHtml(POST.title) + '” was approved' + (data.status === 'published' ? ' and published successfully.' : ' — check the platform results below.') + '</p>' +
+                    '<div class="success-box">' +
+                        '<img src="/bank/' + escHtml(POST.image_path) + '" alt="">' +
+                        '<div><h3>Published to ' + platCount + ' platform' + (platCount !== 1 ? 's' : '') + '</h3>' +
+                        '<p>' + fmtTime(new Date().toISOString()) + ' · Revision ' + (POST.revision || 1) + '</p>' +
+                        publishResults(data.publish_results) + '</div>' +
+                    '</div>' +
+                    '<a class="btn" href="/review">Back to review queue</a>' +
+                '</div>';
+            window.scrollTo(0, 0);
         }
-        document.getElementById('pr-input').addEventListener('keydown', function (e) {
-            if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); addComment(); }
-        });
+
+        /* ── Init / read-only ── */
+        document.getElementById('postImg').addEventListener('load', () => renderComments());
+        renderComments();
+        updatePinState();
+        if (READ_ONLY) {
+            document.getElementById('composeBox').style.display = 'none';
+            document.getElementById('pr-tip').style.display = 'none';
+            holder.style.cursor = 'default';
+            document.getElementById('decisionBox').innerHTML =
+                '<span>PUBLISHED</span>' + publishResults(POST.publish_results);
+        }
     </script>
 </body>
 </html>

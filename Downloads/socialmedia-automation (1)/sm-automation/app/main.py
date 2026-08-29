@@ -290,12 +290,18 @@ async def feedback_page_redirect(design_id: str = Query("")):
 
 @app.get("/static/app.css")
 async def static_css():
-    return FileResponse(os.path.join(PAGES_DIR, "shared.css"), media_type="text/css")
+    return FileResponse(
+        os.path.join(PAGES_DIR, "shared.css"), media_type="text/css",
+        headers={"Cache-Control": "no-cache"},
+    )
 
 
 @app.get("/static/app.js")
 async def static_js():
-    return FileResponse(os.path.join(PAGES_DIR, "shared.js"), media_type="application/javascript")
+    return FileResponse(
+        os.path.join(PAGES_DIR, "shared.js"), media_type="application/javascript",
+        headers={"Cache-Control": "no-cache"},
+    )
 
 
 # ── Auth API ──────────────────────────────────────────

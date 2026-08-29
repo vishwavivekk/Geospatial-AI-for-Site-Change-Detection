@@ -3,356 +3,299 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Review queue — NICDC Social Studio</title>
+    <title>Approval workspace — NICDC Social Studio</title>
     <script src="https://unpkg.com/konva@9/konva.min.js"></script>
     <link rel="stylesheet" href="/static/app.css">
     <link rel="icon" type="image/png" href="/assets/favicon.png">
 </head>
-<body>
-    <nav class="nav">
-        <a class="brand" href="/review">
-            <img class="logo" src="/assets/nicdc-mark.png" alt="NICDC">
-            <span class="product">NICDC Social Studio<small>Approval workspace</small></span>
-        </a>
-        <div class="spacer"></div>
-        <span class="role-chip approver">Approver</span>
-        <div class="divider-v"></div>
-        <div class="user-block">
-            <span class="avatar" id="navAvatar"></span>
-            <span class="name">__USER_NAME__</span>
-        </div>
-        <button class="btn btn-ghost btn-sm" onclick="logout()" id="logoutBtn">Sign out</button>
-    </nav>
-
-    <div class="container">
-        <div class="page-head">
-            <div class="titles">
-                <h1>Review queue</h1>
-                <p>Review submitted designs, leave feedback, and approve for automatic publishing.</p>
-            </div>
-        </div>
-
+<body data-role="approver" data-active="/review" data-user="__USER_NAME__">
+    <main class="workspace" id="screen">
+        <div id="page-head-slot"></div>
         <div class="stats" id="statsRow"></div>
-
-        <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;">
-            <div class="tabs" id="sourceTabs">
-                <button class="tab active" data-source="posts">Posts</button>
-                <button class="tab" data-source="designs">Story designs</button>
-                <button class="tab" data-source="team">Team</button>
-            </div>
-            <div class="tabs" id="filterTabs">
-                <button class="tab active" data-filter="pending">Needs review <span class="count" id="cnt-pending">0</span></button>
-                <button class="tab" data-filter="feedback">With editor <span class="count" id="cnt-feedback">0</span></button>
-                <button class="tab" data-filter="published">Published <span class="count" id="cnt-published">0</span></button>
-                <button class="tab" data-filter="all">All</button>
-            </div>
+        <div class="tabs" id="mainTabs">
+            <button class="tab active" data-tab="posts">Posts <em id="postCount">0</em></button>
+            <button class="tab" data-tab="designs">Story designs <em id="designCount">0</em></button>
+            <button class="tab" data-tab="team">Team <em id="teamCount">0</em></button>
         </div>
 
-        <div id="designs-list"></div>
-    </div>
-
-    <!-- Create account modal -->
-    <div id="userModal" class="modal-overlay">
-        <div class="modal" onclick="event.stopPropagation()">
-            <h2>Create account</h2>
-            <p class="sub">The new user signs in with these credentials on the login page.</p>
-            <div id="userFeedback" class="feedback-msg"></div>
-            <form id="userForm">
-                <label for="uUsername">Username</label>
-                <input id="uUsername" type="text" required placeholder="e.g. priya.editor" autocomplete="off">
-                <label for="uName">Display name</label>
-                <input id="uName" type="text" placeholder="e.g. Priya Sharma" autocomplete="off">
-                <label for="uPassword">Password (min 6 characters)</label>
-                <input id="uPassword" type="text" required minlength="6" autocomplete="new-password">
-                <label>Role</label>
-                <div class="radio-group">
-                    <label><input type="radio" name="uRole" value="editor" checked onchange="toggleCanvaRow()"> Editor</label>
-                    <label><input type="radio" name="uRole" value="approver" onchange="toggleCanvaRow()"> Approver / Admin</label>
-                </div>
-                <div id="canvaAccessRow" class="radio-group" style="margin-top:2px;">
-                    <label style="flex:1;"><input type="checkbox" id="uCanva"> Allow this editor to design in Canva</label>
-                </div>
-                <div class="modal-actions">
-                    <button type="button" class="btn" onclick="closeUserModal()">Cancel</button>
-                    <button type="submit" class="btn btn-primary" id="userSubmitBtn">Create account</button>
-                </div>
-            </form>
+        <div id="pane-posts">
+            <div class="filters">
+                <div class="chips" id="postChips"></div>
+                <label class="search">⌕<input id="postSearch" placeholder="Search posts..."></label>
+            </div>
+            <div id="queue-callout"></div>
+            <div class="grid" id="posts-grid"></div>
         </div>
-    </div>
+
+        <div id="pane-designs" class="hidden">
+            <div class="grid" id="designs-grid"></div>
+        </div>
+
+        <div id="pane-team" class="hidden">
+            <div class="team-top">
+                <div class="team-count"><b id="teamSummary">—</b><small id="teamBreakdown"></small></div>
+                <button class="btn primary" onclick="openAccountDialog()">♙ Create account</button>
+            </div>
+            <div class="table" id="teamTable"></div>
+        </div>
+    </main>
 
     <script src="/static/app.js"></script>
     <script>
-        let _allDesigns = null;
-        let _allPosts = null;
-        let _source = 'posts';
+        mountShell();
+        const USER = '__USER_NAME__';
+        let _posts = null, _designs = null, _users = null;
+        let _postFilter = 'All', _postSearch = '';
 
-        document.getElementById('navAvatar').textContent = initials('__USER_NAME__');
-        document.getElementById('logoutBtn').insertAdjacentHTML('afterbegin', icon('logout', 14));
+        document.getElementById('page-head-slot').innerHTML = pageHead(
+            'APPROVAL WORKSPACE', 'Review queue',
+            'Review submitted content and keep NICDC’s publishing calendar moving.', '');
 
-        document.getElementById('sourceTabs').addEventListener('click', function (e) {
+        /* ── Tabs ── */
+        document.getElementById('mainTabs').addEventListener('click', function (e) {
             const tab = e.target.closest('.tab');
             if (!tab) return;
-            document.querySelectorAll('#sourceTabs .tab').forEach(t => t.classList.remove('active'));
-            tab.classList.add('active');
-            _source = tab.dataset.source;
-            updateCounts();
-            renderCurrent();
+            selectTab(tab.dataset.tab);
         });
-
-        document.getElementById('filterTabs').addEventListener('click', function (e) {
-            const tab = e.target.closest('.tab');
-            if (!tab) return;
-            document.querySelectorAll('#filterTabs .tab').forEach(t => t.classList.remove('active'));
-            tab.classList.add('active');
-            renderCurrent();
-        });
-
-        function activeFilter() {
-            const t = document.querySelector('#filterTabs .tab.active');
-            return t ? t.dataset.filter : 'pending';
+        function selectTab(name) {
+            document.querySelectorAll('#mainTabs .tab').forEach(t => t.classList.toggle('active', t.dataset.tab === name));
+            ['posts', 'designs', 'team'].forEach(p =>
+                document.getElementById('pane-' + p).classList.toggle('hidden', p !== name));
+            if (name === 'designs') loadDesigns();
+            if (name === 'team') loadTeam();
         }
 
-        function renderCurrent() {
-            document.getElementById('filterTabs').style.display = _source === 'team' ? 'none' : '';
-            if (_source === 'team') renderTeam();
-            else if (_source === 'posts') renderPosts(activeFilter());
-            else renderDesigns(activeFilter());
+        /* ── Stats ── */
+        function renderStats() {
+            const posts = _posts || [], designs = _designs || [];
+            const all = posts.concat(designs);
+            const count = st => all.filter(x => x.status === st).length;
+            document.getElementById('statsRow').innerHTML =
+                statCard('⏱', count('pending'), 'Needs review', count('pending') ? 'Waiting now' : 'All clear') +
+                statCard('↩', count('feedback'), 'With editor', 'Updated now') +
+                statCard('✓', count('published') + count('approved'), 'Published', 'Updated now') +
+                statCard('▧', all.length, 'Total posts', 'Updated now');
         }
 
-        /* ── Team management ── */
-        let _users = null;
+        /* ── Posts queue ── */
+        const FILTERS = ['All', 'Needs review', 'With editor', 'Published'];
+        const FMAP = { 'Needs review': 'pending', 'With editor': 'feedback' };
+        function renderChips() {
+            document.getElementById('postChips').innerHTML = FILTERS.map(f =>
+                '<button class="chip ' + (_postFilter === f ? 'active' : '') + '" data-f="' + f + '">' + f + '</button>').join('');
+        }
+        document.getElementById('postChips').addEventListener('click', function (e) {
+            const c = e.target.closest('.chip');
+            if (!c) return;
+            _postFilter = c.dataset.f;
+            renderChips();
+            renderPosts();
+        });
+        document.getElementById('postSearch').addEventListener('input', function () {
+            _postSearch = this.value.trim().toLowerCase();
+            renderPosts();
+        });
 
-        async function renderTeam() {
-            const list = document.getElementById('designs-list');
-            list.innerHTML = skeletonCards(1);
+        async function loadPosts() {
+            const grid = document.getElementById('posts-grid');
+            grid.innerHTML = skeletonGrid(3);
+            try {
+                const resp = await fetch('/api/posts');
+                _posts = await resp.json();
+                document.getElementById('postCount').textContent = _posts.length;
+                renderPosts();
+                renderStats();
+            } catch (e) {
+                grid.innerHTML = emptyState('!', 'Could not load queue', escHtml(e.message));
+            }
+        }
+
+        function renderPosts() {
+            const grid = document.getElementById('posts-grid');
+            if (!_posts) return;
+            let posts = _posts;
+            if (_postFilter !== 'All') posts = posts.filter(p =>
+                _postFilter === 'Published' ? (p.status === 'published' || p.status === 'approved') : p.status === FMAP[_postFilter]);
+            if (_postSearch) posts = posts.filter(p => p.title.toLowerCase().includes(_postSearch));
+
+            const pending = _posts.filter(p => p.status === 'pending');
+            document.getElementById('queue-callout').innerHTML = pending.length
+                ? '<div class="callout"><span>⚡</span><div><b>' + pending.length + ' post' + (pending.length > 1 ? 's are' : ' is') + ' waiting for review</b>' +
+                  '<p>Review “' + escHtml(pending[0].title) + '”' + (pending.length > 1 ? ' and more to keep publishing on schedule.' : ' to keep publishing on schedule.') + '</p></div>' +
+                  '<a class="btn ghost" href="/review-post/' + pending[0].id + '">Review first →</a></div>'
+                : '';
+
+            grid.innerHTML = posts.length
+                ? posts.map(function (p) {
+                    const comments = p.comments || [];
+                    return '<article class="post-card">' +
+                        '<a class="thumb" href="/review-post/' + p.id + '" style="display:block;">' +
+                            '<img src="/bank/' + escHtml(p.image_path) + '" loading="lazy" alt="">' +
+                            '<span class="version">v' + (p.revision || 1) + '</span>' +
+                        '</a>' +
+                        '<div class="card-info">' +
+                            '<div class="card-meta">' + statusBadge(p.status, true) + '<span class="date">' + fmtTime(p.submitted_at || p.created_at).split(',')[0] + '</span></div>' +
+                            '<h3>' + escHtml(p.title) + '</h3>' +
+                            (p.submitted_by ? '<p style="font-size:8px;color:#7e8981;margin:0 0 7px">Submitted by <b>' + escHtml(p.submitted_by) + '</b></p>' : '') +
+                            (p.caption ? '<p style="font-size:8px;color:#657168;margin:0 0 7px;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;">' + escHtml(p.caption) + '</p>' : '') +
+                            '<div class="card-bottom">' + platformChips(p.platforms) +
+                                '<span class="comments">◉ ' + comments.length + '</span>' +
+                                '<a class="open-card" href="/review-post/' + p.id + '">' + (p.status === 'pending' ? 'Review post →' : 'Open →') + '</a>' +
+                            '</div>' +
+                        '</div>' +
+                    '</article>';
+                }).join('')
+                : emptyState('✓', _postFilter === 'All' ? 'No posts submitted yet' : 'You’re all caught up',
+                    _postFilter === 'Needs review' ? 'There are no posts waiting for review right now.' : 'Nothing here.');
+        }
+
+        /* ── Story designs ── */
+        async function loadDesigns() {
+            const grid = document.getElementById('designs-grid');
+            grid.innerHTML = skeletonGrid(3);
+            try {
+                const resp = await fetch('/api/designs');
+                _designs = await resp.json();
+                document.getElementById('designCount').textContent = _designs.length;
+                renderStats();
+                if (!_designs.length) {
+                    grid.innerHTML = emptyState('✦', 'No story designs', 'AI canvas designs submitted by editors appear here.');
+                    return;
+                }
+                const sorted = _designs.slice().reverse();
+                grid.innerHTML = sorted.map(function (d) {
+                    return '<article class="post-card">' +
+                        '<a class="thumb" href="/review/' + d.id + '" style="display:block;">' +
+                            '<span id="aprev-' + d.id + '" style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;"></span>' +
+                            '<span class="version">v' + (d.revision || 1) + '</span>' +
+                        '</a>' +
+                        '<div class="card-info">' +
+                            '<div class="card-meta">' + statusBadge(d.status, true) + '<span class="date">' + fmtTime(d.submitted_at).split(',')[0] + '</span></div>' +
+                            '<h3>' + escHtml(d.topic) + '</h3>' +
+                            '<div class="card-bottom"><span class="comments">◉ ' + (d.comments || []).length + '</span>' +
+                                '<a class="open-card" href="/review/' + d.id + '">' + (d.status === 'pending' ? 'Review →' : 'Open →') + '</a></div>' +
+                        '</div>' +
+                    '</article>';
+                }).join('');
+                sorted.forEach(d => renderMiniPreview('aprev-' + d.id, d.design_state, 230));
+            } catch (e) {
+                grid.innerHTML = emptyState('!', 'Could not load designs', escHtml(e.message));
+            }
+        }
+
+        /* ── Team ── */
+        async function loadTeam() {
+            const table = document.getElementById('teamTable');
+            table.innerHTML = '<div style="padding:20px;"><div class="skeleton line"></div><div class="skeleton line short"></div></div>';
             try {
                 const resp = await fetch('/api/users');
                 if (!resp.ok) throw new Error(await resp.text());
                 _users = await resp.json();
-            } catch (e) {
-                list.innerHTML = '<div class="error-box">Error loading team: ' + escHtml(e.message) + '</div>';
-                return;
-            }
-            const ME = '__USER_NAME__';
-            list.innerHTML = '<div class="card" style="padding:0;overflow:hidden;">' +
-                '<div style="display:flex;align-items:center;gap:10px;padding:16px 20px;border-bottom:1px solid var(--border);">' +
-                    '<div style="font-size:15px;font-weight:800;flex:1;">Accounts (' + _users.length + ')</div>' +
-                    '<button class="btn btn-primary btn-sm" onclick="openUserModal()">' + icon('plus', 14) + 'Create account</button>' +
-                '</div>' +
-                _users.map(function (u) {
-                    const isMe = u.display_name === ME;
-                    return '<div style="display:flex;align-items:center;gap:12px;padding:13px 20px;border-bottom:1px solid var(--border);">' +
-                        '<span class="avatar">' + escHtml(initials(u.display_name)) + '</span>' +
-                        '<div style="flex:1;min-width:0;">' +
-                            '<div style="font-size:14px;font-weight:700;">' + escHtml(u.display_name) + (isMe ? ' <span style="font-size:11px;color:var(--muted);font-weight:600;">(you)</span>' : '') + '</div>' +
-                            '<div style="font-size:12px;color:var(--muted);">@' + escHtml(u.username) + (u.created_by ? ' &middot; added by ' + escHtml(u.created_by) : '') + '</div>' +
-                        '</div>' +
-                        '<span class="role-chip ' + (u.role === 'approver' ? 'approver' : 'editor') + '">' + (u.role === 'approver' ? 'Admin / Approver' : 'Editor') + '</span>' +
-                        (u.role === 'editor'
-                            ? '<label style="display:inline-flex;align-items:center;gap:6px;font-size:12.5px;font-weight:600;color:var(--text-2);cursor:pointer;">' +
-                                '<input type="checkbox" style="accent-color:var(--primary);" ' + (u.can_use_canva ? 'checked' : '') + ' onchange="toggleUserCanva(\'' + escHtml(u.username) + '\', this)"> Canva</label>'
-                            : '<span style="width:74px;"></span>') +
-                        '<button class="btn btn-danger-ghost btn-sm" onclick="removeUser(\'' + escHtml(u.username) + '\')"' + (isMe ? ' disabled title="You cannot delete yourself"' : '') + '>' + icon('trash', 13) + '</button>' +
-                    '</div>';
-                }).join('') +
-            '</div>';
-        }
-
-        async function toggleUserCanva(username, checkbox) {
-            try {
-                const resp = await fetch('/api/users/' + encodeURIComponent(username), {
-                    method: 'PATCH',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ can_use_canva: checkbox.checked }),
-                });
-                if (!resp.ok) throw new Error((await resp.json()).detail || 'Failed');
-                toast('Canva access ' + (checkbox.checked ? 'enabled' : 'disabled') + ' for ' + username, 'success');
-            } catch (e) {
-                checkbox.checked = !checkbox.checked;
-                toast('Error: ' + e.message, 'error');
-            }
-        }
-
-        async function removeUser(username) {
-            if (!confirm('Delete the account "' + username + '"? They will no longer be able to sign in.')) return;
-            try {
-                const resp = await fetch('/api/users/' + encodeURIComponent(username), { method: 'DELETE' });
-                if (!resp.ok) throw new Error((await resp.json()).detail || 'Failed');
-                toast('Account deleted', 'success');
                 renderTeam();
             } catch (e) {
-                toast('Error: ' + e.message, 'error');
+                table.innerHTML = '<div style="padding:16px;font-size:9px;color:var(--rust);">Could not load team: ' + escHtml(e.message) + '</div>';
             }
         }
 
-        function openUserModal() {
-            document.getElementById('userModal').classList.add('open');
-            document.getElementById('userFeedback').className = 'feedback-msg';
-            document.getElementById('userForm').reset();
-            toggleCanvaRow();
-            setTimeout(() => document.getElementById('uUsername').focus(), 60);
+        function renderTeam() {
+            const editors = _users.filter(u => u.role === 'editor').length;
+            const admins = _users.length - editors;
+            document.getElementById('teamCount').textContent = _users.length;
+            document.getElementById('teamSummary').textContent = _users.length + ' active account' + (_users.length !== 1 ? 's' : '');
+            document.getElementById('teamBreakdown').textContent = editors + ' editor' + (editors !== 1 ? 's' : '') + ' · ' + admins + ' approver' + (admins !== 1 ? 's' : '');
+            document.getElementById('teamTable').innerHTML =
+                '<div class="tr head"><span>Team member</span><span>Username</span><span>Role</span><span>Canva access</span><span>Added by</span><span></span></div>' +
+                _users.map(function (u) {
+                    const isMe = u.display_name === USER;
+                    return '<div class="tr row">' +
+                        '<span class="member"><i class="avatar">' + escHtml(initials(u.display_name)) + '</i><span><b>' + escHtml(u.display_name) + (isMe ? ' (you)' : '') + '</b><small>' + (u.role === 'editor' ? 'Content team' : 'Communications lead') + '</small></span></span>' +
+                        '<span>@' + escHtml(u.username) + '</span>' +
+                        '<span><em class="role ' + (u.role === 'editor' ? 'editor' : 'admin') + '">' + (u.role === 'editor' ? 'Editor' : 'Approver · Admin') + '</em></span>' +
+                        '<span>' + (u.role === 'editor'
+                            ? '<button class="toggle ' + (u.can_use_canva ? 'on' : '') + '" data-user="' + escHtml(u.username) + '" title="Toggle Canva access"></button>'
+                            : 'Not applicable') + '</span>' +
+                        '<span>' + escHtml(u.created_by || '—') + '</span>' +
+                        '<span><button class="row-del" data-del="' + escHtml(u.username) + '"' + (isMe ? ' disabled title="You cannot delete yourself"' : '') + '>✕</button></span>' +
+                    '</div>';
+                }).join('');
         }
-        function closeUserModal() { document.getElementById('userModal').classList.remove('open'); }
-        function toggleCanvaRow() {
-            const role = document.querySelector('input[name=uRole]:checked').value;
-            document.getElementById('canvaAccessRow').style.display = role === 'editor' ? '' : 'none';
-        }
-        document.getElementById('userModal').addEventListener('click', function (e) { if (e.target === this) closeUserModal(); });
 
-        document.getElementById('userForm').addEventListener('submit', async function (e) {
-            e.preventDefault();
-            const fb = document.getElementById('userFeedback');
-            const btn = document.getElementById('userSubmitBtn');
+        document.getElementById('teamTable').addEventListener('click', async function (e) {
+            const tog = e.target.closest('.toggle');
+            if (tog) {
+                const on = !tog.classList.contains('on');
+                try {
+                    const resp = await fetch('/api/users/' + encodeURIComponent(tog.dataset.user), {
+                        method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ can_use_canva: on }),
+                    });
+                    if (!resp.ok) throw new Error((await resp.json()).detail || 'Failed');
+                    tog.classList.toggle('on', on);
+                    toast('Canva access ' + (on ? 'enabled' : 'disabled') + ' for ' + tog.dataset.user);
+                } catch (err) { toast(err.message, 'error'); }
+                return;
+            }
+            const del = e.target.closest('.row-del');
+            if (del && !del.disabled) {
+                if (!confirm('Delete the account “' + del.dataset.del + '”? They will no longer be able to sign in.')) return;
+                try {
+                    const resp = await fetch('/api/users/' + encodeURIComponent(del.dataset.del), { method: 'DELETE' });
+                    if (!resp.ok) throw new Error((await resp.json()).detail || 'Failed');
+                    toast('Account deleted');
+                    loadTeam();
+                } catch (err) { toast(err.message, 'error'); }
+            }
+        });
+
+        function openAccountDialog() {
+            openDialog('♙', 'Create team account', 'Set up secure access and workspace permissions.',
+                '<div class="feedback-msg" id="acErr"></div>' +
+                '<div style="display:grid;grid-template-columns:1fr 1fr;gap:9px">' +
+                    '<label class="field">Username<input id="acUser" placeholder="e.g. arun.kumar" autocomplete="off"></label>' +
+                    '<label class="field">Display name<input id="acName" placeholder="Full name" autocomplete="off"></label>' +
+                '</div>' +
+                '<label class="field">Temporary password<input id="acPass" type="text" placeholder="Minimum 6 characters" autocomplete="new-password"></label>' +
+                '<span class="eyebrow">ROLE</span>' +
+                '<div class="account-roles" style="margin-top:8px;">' +
+                    '<label class="role-choice"><input type="radio" name="acRole" value="editor" checked onchange="document.getElementById(\'canvaRow\').style.display=\'\'"><span><b>Editor</b><small>Creates and revises posts</small></span></label>' +
+                    '<label class="role-choice"><input type="radio" name="acRole" value="approver" onchange="document.getElementById(\'canvaRow\').style.display=\'none\'"><span><b>Approver · Admin</b><small>Reviews, publishes and manages accounts</small></span></label>' +
+                '</div>' +
+                '<p id="canvaRow" style="font-size:10px;"><label style="display:flex;gap:7px;align-items:center;"><input type="checkbox" id="acCanva" checked> Allow this editor to design in Canva</label></p>',
+                '<button class="btn" onclick="closeDialog()">Cancel</button><button class="btn primary" id="acGo" onclick="createAccount()">Create account</button>');
+        }
+        async function createAccount() {
+            const err = document.getElementById('acErr');
+            const btn = document.getElementById('acGo');
             btn.disabled = true;
             try {
                 const resp = await fetch('/api/users', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
-                        username: document.getElementById('uUsername').value.trim(),
-                        display_name: document.getElementById('uName').value.trim(),
-                        password: document.getElementById('uPassword').value,
-                        role: document.querySelector('input[name=uRole]:checked').value,
-                        can_use_canva: document.getElementById('uCanva').checked,
+                        username: document.getElementById('acUser').value.trim(),
+                        display_name: document.getElementById('acName').value.trim(),
+                        password: document.getElementById('acPass').value,
+                        role: document.querySelector('input[name=acRole]:checked').value,
+                        can_use_canva: document.getElementById('acCanva').checked,
                     }),
                 });
                 const data = await resp.json();
                 if (!resp.ok) throw new Error(data.detail || 'Failed');
-                closeUserModal();
-                toast('Account created — they can sign in now', 'success');
-                renderTeam();
-            } catch (ex) {
-                fb.className = 'feedback-msg error';
-                fb.textContent = 'Error: ' + ex.message;
-            } finally {
+                closeDialog();
+                toast('Team account created');
+                loadTeam();
+            } catch (e) {
+                err.className = 'feedback-msg error';
+                err.textContent = e.message;
                 btn.disabled = false;
             }
-        });
-
-        async function loadDesigns() {
-            const list = document.getElementById('designs-list');
-            list.innerHTML = skeletonCards(2);
-            try {
-                const [dResp, pResp] = await Promise.all([fetch('/api/designs'), fetch('/api/posts')]);
-                if (!dResp.ok) throw new Error(await dResp.text());
-                _allDesigns = await dResp.json();
-                _allPosts = pResp.ok ? await pResp.json() : [];
-                updateCounts();
-                renderCurrent();
-            } catch (e) {
-                list.innerHTML = '<div class="error-box">Error loading queue: ' + escHtml(e.message) + '</div>';
-            }
         }
 
-        function updateCounts() {
-            const items = _source === 'posts' ? (_allPosts || []) : (_allDesigns || []);
-            const count = st => items.filter(d => d.status === st).length;
-            document.getElementById('cnt-pending').textContent = count('pending');
-            document.getElementById('cnt-feedback').textContent = count('feedback');
-            document.getElementById('cnt-published').textContent = count('published') + count('approved');
-            const posts = _allPosts || [], designs = _allDesigns || [];
-            const all = posts.concat(designs);
-            const cAll = st => all.filter(d => d.status === st).length;
-            document.getElementById('statsRow').innerHTML =
-                '<div class="stat tone-pending"><span class="k">' + cAll('pending') + '</span><span class="l">' + icon('inbox', 13) + ' Needs review</span></div>' +
-                '<div class="stat tone-feedback"><span class="k">' + cAll('feedback') + '</span><span class="l">' + icon('comment', 13) + ' With editor</span></div>' +
-                '<div class="stat tone-published"><span class="k">' + (cAll('published') + cAll('approved')) + '</span><span class="l">' + icon('rocket', 13) + ' Published</span></div>' +
-                '<div class="stat tone-plain"><span class="k">' + all.length + '</span><span class="l">' + icon('layers', 13) + ' Total items</span></div>';
-        }
-
-        const PLATFORM_LABELS = { linkedin: 'LinkedIn', x: 'X', instagram: 'Instagram' };
-
-        function renderPosts(filter) {
-            const list = document.getElementById('designs-list');
-            if (!_allPosts) return;
-            let filtered;
-            if (filter === 'all') filtered = _allPosts;
-            else if (filter === 'published') filtered = _allPosts.filter(p => p.status === 'published' || p.status === 'approved');
-            else filtered = _allPosts.filter(p => p.status === filter);
-
-            if (!filtered.length) {
-                list.innerHTML = emptyState('inbox',
-                    filter === 'pending' ? 'All caught up' : 'Nothing here',
-                    filter === 'pending' ? 'No posts are waiting for your review.' : '');
-                return;
-            }
-            list.innerHTML = filtered.map(function (p) {
-                const comments = p.comments || [];
-                const plats = (p.platforms || []).map(x => PLATFORM_LABELS[x] || x).join(', ');
-                return '<div class="card hoverable">' +
-                    '<div class="design-row">' +
-                        '<div class="preview-frame" style="background:#f1f3f8 url(\'/bank/' + escHtml(p.image_path) + '\') center/cover;"></div>' +
-                        '<div class="design-info">' +
-                            '<h3>' + escHtml(p.title) + '</h3>' +
-                            '<div class="card-meta">' +
-                                statusBadge(p.status) +
-                                '<span>Revision ' + (p.revision || 1) + '</span>' +
-                                (p.submitted_by ? '<span>&middot; by ' + escHtml(p.submitted_by) + '</span>' : '') +
-                                (plats ? '<span>&middot; ' + escHtml(plats) + '</span>' : '') +
-                            '</div>' +
-                            (p.caption ? '<div class="story-text collapsed" style="margin-bottom:8px;">' + escHtml(p.caption) + '</div>' : '') +
-                            (comments.length ? '<div class="card-meta">' + icon('comment', 13) + ' ' + comments.length + ' comment' + (comments.length !== 1 ? 's' : '') + ' on this revision</div>' : '') +
-                            (p.status === 'published' && p.publish_results ? publishPills(p.publish_results) : '') +
-                            '<div class="card-actions">' +
-                                '<a class="btn ' + (p.status === 'pending' ? 'btn-primary' : '') + ' btn-sm" href="/review-post/' + p.id + '">' +
-                                    icon('eye', 14) + (p.status === 'pending' ? 'Review post' : 'Open') + '</a>' +
-                            '</div>' +
-                        '</div>' +
-                    '</div>' +
-                '</div>';
-            }).join('');
-        }
-
-        function renderDesigns(filter) {
-            const list = document.getElementById('designs-list');
-            if (!_allDesigns) return;
-            let filtered;
-            if (filter === 'all') filtered = _allDesigns;
-            else if (filter === 'published') filtered = _allDesigns.filter(d => d.status === 'published' || d.status === 'approved');
-            else filtered = _allDesigns.filter(d => d.status === filter);
-
-            if (!filtered.length) {
-                const empties = {
-                    pending: ['inbox', 'All caught up', 'Nothing is waiting for your review.'],
-                    feedback: ['comment', 'Nothing with the editor', 'Designs you send back will appear here.'],
-                    published: ['rocket', 'Nothing published yet', 'Approved designs are published automatically.'],
-                    all: ['layers', 'No designs submitted yet', 'Designs sent by editors will appear here.'],
-                };
-                const em = empties[filter] || empties.all;
-                list.innerHTML = emptyState(em[0], em[1], em[2]);
-                return;
-            }
-            const sorted = [...filtered].reverse();
-            list.innerHTML = sorted.map(function (d) {
-                const comments = d.comments || [];
-                return '<div class="card hoverable">' +
-                    '<div class="design-row">' +
-                        '<div class="preview-frame" id="preview-' + d.id + '"></div>' +
-                        '<div class="design-info">' +
-                            '<h3>' + escHtml(d.topic) + '</h3>' +
-                            '<div class="card-meta">' +
-                                catBadge(d.category) +
-                                statusBadge(d.status) +
-                                '<span>Revision ' + (d.revision || 1) + '</span>' +
-                                (d.submitted_by ? '<span>&middot; by ' + escHtml(d.submitted_by) + '</span>' : '') +
-                                '<span>&middot; ' + fmtTime(d.submitted_at) + '</span>' +
-                            '</div>' +
-                            (comments.length
-                                ? '<div class="card-meta">' + icon('comment', 13) + ' ' + comments.length + ' comment' + (comments.length !== 1 ? 's' : '') + ' on this revision</div>'
-                                : '') +
-                            (d.status === 'published' && d.publish_results ? publishPills(d.publish_results) : '') +
-                            '<div class="card-actions">' +
-                                '<a class="btn ' + (d.status === 'pending' ? 'btn-primary' : '') + ' btn-sm" href="/review/' + d.id + '">' +
-                                    icon('eye', 14) + (d.status === 'pending' ? 'Review design' : 'Open') + '</a>' +
-                            '</div>' +
-                        '</div>' +
-                    '</div>' +
-                '</div>';
-            }).join('');
-            sorted.forEach(d => renderMiniPreview('preview-' + d.id, d.design_state));
-        }
-
-        loadDesigns();
+        /* ── Init ── */
+        renderChips();
+        loadPosts();
+        fetch('/api/designs').then(r => r.json()).then(d => { _designs = d; document.getElementById('designCount').textContent = d.length; renderStats(); }).catch(() => {});
+        fetch('/api/users').then(r => r.ok ? r.json() : []).then(u => { if (u.length) { _users = u; document.getElementById('teamCount').textContent = u.length; } }).catch(() => {});
+        if (new URLSearchParams(location.search).get('tab') === 'team') selectTab('team');
     </script>
 </body>
 </html>

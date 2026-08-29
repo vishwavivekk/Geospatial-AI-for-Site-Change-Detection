@@ -1,4 +1,4 @@
-/* ═══ NICDC Social Studio — shared helpers ═══ */
+/* ═══ NICDC Social Studio — shared helpers (mockup design system) ═══ */
 
 function escHtml(s) {
     if (typeof s !== 'string') return String(s);
@@ -16,150 +16,182 @@ async function logout() {
     window.location.href = '/login';
 }
 
-/* ── Inline SVG icons (stroke style, Lucide-like) ── */
-const ICONS = {
-    check: '<path d="M20 6 9 17l-5-5"/>',
-    x: '<path d="M18 6 6 18M6 6l12 12"/>',
-    plus: '<path d="M12 5v14M5 12h14"/>',
-    search: '<circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/>',
-    send: '<path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/>',
-    sparkles: '<path d="m12 3 1.9 5.7a2 2 0 0 0 1.3 1.3L21 12l-5.8 1.9a2 2 0 0 0-1.3 1.3L12 21l-1.9-5.8a2 2 0 0 0-1.3-1.3L3 12l5.8-1.9a2 2 0 0 0 1.3-1.3Z"/>',
-    undo: '<path d="M3 7v6h6"/><path d="M21 17a9 9 0 0 0-15-6.7L3 13"/>',
-    redo: '<path d="M21 7v6h-6"/><path d="M3 17a9 9 0 0 1 15-6.7L21 13"/>',
-    trash: '<path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>',
-    download: '<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5"/><path d="M12 15V3"/>',
-    comment: '<path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>',
-    pin: '<path d="M12 17v5"/><path d="M9 10.8V5a3 3 0 1 1 6 0v5.8l2.7 2.7a1 1 0 0 1-.7 1.7H7a1 1 0 0 1-.7-1.7Z"/>',
-    back: '<path d="m12 19-7-7 7-7"/><path d="M19 12H5"/>',
-    eye: '<path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/>',
-    edit: '<path d="M17 3a2.8 2.8 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/>',
-    layers: '<path d="m12 2 9 4.9-9 4.9-9-4.9Z"/><path d="m3 11.9 9 4.9 9-4.9"/><path d="m3 16.9 9 4.9 9-4.9"/>',
-    inbox: '<path d="M22 12h-6l-2 3h-4l-2-3H2"/><path d="M5.5 5.1 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.5-6.9A2 2 0 0 0 16.7 4H7.3a2 2 0 0 0-1.8 1.1Z"/>',
-    file: '<path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/>',
-    image: '<rect width="18" height="18" x="3" y="3" rx="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.1-3.1a2 2 0 0 0-2.8 0L6 21"/>',
-    rocket: '<path d="M4.5 16.5c-1.5 1.3-2 5-2 5s3.7-.5 5-2c.7-.8.7-2 0-2.8a2 2 0 0 0-3-.2Z"/><path d="m12 15-3-3a22 22 0 0 1 2-3.9A12.9 12.9 0 0 1 22 2c0 2.7-.9 7.4-6 11a22 22 0 0 1-4 2Z"/><path d="M9 12H4s.5-3.9 2-5c1.7-1.2 5 0 5 0"/><path d="M12 15v5s3.9-.5 5-2c1.2-1.7 0-5 0-5"/>',
-    alert: '<path d="m21.7 18-8-14a2 2 0 0 0-3.5 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.7-3Z"/><path d="M12 9v4"/><path d="M12 17h.01"/>',
-    clock: '<circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/>',
-    user: '<path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>',
-    logout: '<path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="m16 17 5-5-5-5"/><path d="M21 12H9"/>',
-};
-
-function icon(name, size) {
-    const path = ICONS[name] || '';
-    const s = size || 16;
-    return '<svg class="ic" style="width:' + s + 'px;height:' + s + 'px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' + path + '</svg>';
-}
-
-/* ── Toasts ── */
-function toast(msg, type) {
-    type = type || 'info';
-    let root = document.getElementById('toast-root');
-    if (!root) {
-        root = document.createElement('div');
-        root.id = 'toast-root';
-        document.body.appendChild(root);
-    }
-    const el = document.createElement('div');
-    el.className = 'toast ' + type;
-    el.innerHTML = icon(type === 'success' ? 'check' : type === 'error' ? 'alert' : 'sparkles', 17) + '<span>' + escHtml(msg) + '</span>';
-    root.appendChild(el);
-    setTimeout(function () {
-        el.style.transition = 'opacity 0.3s, transform 0.3s';
-        el.style.opacity = '0';
-        el.style.transform = 'translateY(6px)';
-        setTimeout(function () { el.remove(); }, 320);
-    }, 3800);
-}
-
-/* ── Status / formatting helpers ── */
-function statusBadge(status) {
-    const labels = {
-        pending: 'Waiting for review',
-        feedback: 'Changes requested',
-        approved: 'Approved',
-        published: 'Published',
-        rejected: 'Rejected',
-    };
-    return '<span class="badge st-' + status + '"><span class="dot"></span>' + (labels[status] || status) + '</span>';
-}
-
-function catBadge(category) {
-    return '<span class="badge cat-' + escHtml(category) + '">' + escHtml(category) + '</span>';
+function initials(name) {
+    return String(name || '?').split(/\s+/).map(w => w[0]).join('').slice(0, 2).toUpperCase();
 }
 
 function fmtTime(iso) {
     if (!iso) return '';
     try {
         const d = new Date(iso);
-        return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) + ', ' +
-               d.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
+        return d.toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' }) +
+            ', ' + d.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
     } catch (e) { return iso; }
 }
 
-function initials(name) {
-    return String(name || '?').split(/\s+/).map(w => w[0]).join('').slice(0, 2).toUpperCase();
+/* ── Application shell (sidebar + topbar) ── */
+function mountShell() {
+    const b = document.body;
+    const role = b.dataset.role || 'editor';
+    const active = b.dataset.active || '';
+    const userName = b.dataset.user || '';
+    const roleLabel = role === 'approver' ? 'Admin' : 'Editor';
+    const subtitle = role === 'approver' ? 'Approver · Admin' : 'Content Editor';
+    const links = role === 'approver'
+        ? [['/review', '▦', 'Approval workspace'], ['/review?tab=team', '♙', 'Team management']]
+        : [['/', '▦', 'Content workspace'], ['/html-editor', '&lt;/&gt;', 'HTML designer'], ['/?tab=stories', '✦', 'Canvas / AI designer']];
+
+    const screen = document.getElementById('screen');
+    const app = document.createElement('section');
+    app.id = 'app';
+    app.innerHTML =
+        '<aside class="sidebar" id="sidebar">' +
+            '<div class="side-logo"><div class="logo"><img src="/assets/nicdc-wide.png" alt="NICDC logo"><div class="logo-copy"><b>Social Studio</b><span>Approval &amp; publishing</span></div></div></div>' +
+            '<div class="workspace-name">' + roleLabel.toUpperCase() + ' WORKSPACE</div>' +
+            '<nav class="nav">' + links.map(function (l) {
+                const isActive = l[0] === active;
+                return '<a href="' + l[0] + '" class="' + (isActive ? 'active' : '') + '"><span>' + l[1] + '</span>' + l[2] +
+                    '<span class="nav-arrow">' + (isActive ? '›' : '') + '</span></a>';
+            }).join('') + '</nav>' +
+            '<div class="profile"><div class="user"><i class="avatar">' + escHtml(initials(userName)) + '</i><span><b>' + escHtml(userName) + '</b><small>' + subtitle + '</small></span><span></span></div>' +
+            '<button class="signout" onclick="logout()">↪ Sign out</button></div>' +
+        '</aside>' +
+        '<div class="main">' +
+            '<header class="topbar">' +
+                '<button class="menu" onclick="document.getElementById(\'sidebar\').classList.toggle(\'open\')">☰</button>' +
+                '<div class="crumb"><span>NICDC Social Studio</span><b>›</b><b>' + roleLabel + '</b></div>' +
+                '<div class="top-actions"><button class="bell" title="Notifications">♢</button><i class="avatar top-avatar">' + escHtml(initials(userName)) + '</i></div>' +
+            '</header>' +
+        '</div>';
+    b.insertBefore(app, screen);
+    app.querySelector('.main').appendChild(screen);
 }
 
-function publishPills(results) {
-    if (!results) return '';
-    const names = { instagram: 'Instagram', x: 'X (Twitter)', linkedin: 'LinkedIn' };
-    let pills = '';
+/* ── Legacy compat shims ── */
+function icon() { return ''; }
+function catBadge(category) {
+    return '<span class="role editor" style="font-size:8px;">' + escHtml(category) + '</span>';
+}
+function publishPills(results) { return publishResults(results); }
+function skeletonCards(n) { return skeletonGrid(n); }
 
+/* ── Component helpers ── */
+const STATUS_META = {
+    draft:     ['draft', 'Draft'],
+    pending:   ['review', 'Waiting for review'],
+    feedback:  ['changes', 'Changes requested'],
+    approved:  ['approved', 'Approved'],
+    published: ['published', 'Published'],
+    rejected:  ['rejected', 'Rejected'],
+};
+
+function statusBadge(status, adminView) {
+    const m = STATUS_META[status] || ['draft', status];
+    let label = m[1];
+    if (adminView && status === 'pending') label = 'Needs review';
+    return '<span class="badge ' + m[0] + '">' + label + '</span>';
+}
+
+const PLATFORM_META = { linkedin: ['in', 'in'], x: ['', 'X'], instagram: ['ig', 'ig'] };
+function platformChips(arr) {
+    return '<div class="platforms">' + (arr || []).map(function (p) {
+        const m = PLATFORM_META[p] || ['', p];
+        return '<span class="platform ' + m[0] + '">' + m[1] + '</span>';
+    }).join('') + '</div>';
+}
+
+function pageHead(eyebrow, title, copy, actions) {
+    return '<div class="page-head"><div><span class="eyebrow">' + eyebrow + '</span><h1>' + title + '</h1><p>' + copy + '</p></div>' +
+        '<div class="page-actions">' + (actions || '') + '</div></div>';
+}
+
+function statCard(icon, value, label, note) {
+    return '<article class="stat"><span class="stat-icon">' + icon + '</span><div><strong>' + value + '</strong><label>' + label + '</label></div><small>' + (note || '') + '</small></article>';
+}
+
+function emptyState(icon, title, sub, actionHtml) {
+    return '<div class="empty"><i class="empty-icon">' + icon + '</i><h3>' + title + '</h3><p>' + (sub || '') + '</p>' + (actionHtml || '') + '</div>';
+}
+
+function skeletonGrid(n) {
+    let html = '<div class="skeletons">';
+    for (let i = 0; i < (n || 3); i++) {
+        html += '<div><div class="skeleton img"></div><div class="skeleton line"></div><div class="skeleton line short"></div></div>';
+    }
+    return html + '</div>';
+}
+
+/* ── Toast (mockup style) ── */
+function toast(msg, type) {
+    let t = document.getElementById('toast');
+    if (!t) {
+        t = document.createElement('div');
+        t.id = 'toast';
+        document.body.appendChild(t);
+    }
+    t.textContent = msg;
+    t.className = 'toast' + (type === 'error' ? ' error' : '');
+    clearTimeout(t._timer);
+    t._timer = setTimeout(function () { t.className = 'hidden'; }, 3200);
+}
+
+/* ── Publish results (mockup .results rows) ── */
+const PLATFORM_NAMES = { linkedin: 'LinkedIn', x: 'X', instagram: 'Instagram' };
+
+function publishResults(results) {
+    if (!results) return '';
+    let rows = '';
     if (results.mode === 'real') {
-        // Real posting via Zernio: linkable platform posts
         const urls = results.post_urls || {};
         (results.platforms || []).forEach(function (p) {
             const platform = p.platform || 'unknown';
-            const label = names[platform] || platform;
+            const label = PLATFORM_NAMES[platform] || platform;
             const url = urls[platform];
-            if (url) {
-                pills += '<a class="pub-pill" href="' + escHtml(url) + '" target="_blank" rel="noopener">' + icon('check', 13) + label + ' <span class="pid">view post</span></a>';
-            } else {
-                pills += '<span class="pub-pill">' + icon('check', 13) + label + ' &middot; ' + escHtml(p.status || results.status || 'posted') + '</span>';
-            }
+            rows += '<div class="result"><span>' + escHtml(label) + '</span><span class="ok">✓ Published</span>' +
+                (url ? '<a href="' + escHtml(url) + '" target="_blank" rel="noopener">↗</a>' : '<span></span>') + '</div>';
         });
-        if (!pills && results.post_id) {
-            pills = '<span class="pub-pill">' + icon('check', 13) + 'Posted &middot; ' + escHtml(results.post_id) + '</span>';
+        if (!rows && results.post_id) {
+            rows = '<div class="result"><span>Posted</span><span class="ok">✓ ' + escHtml(results.post_id) + '</span><span></span></div>';
         }
     } else {
-        // Mock platform APIs: per-platform result records
         Object.keys(results).forEach(function (k) {
             const r = results[k];
             if (!r || typeof r !== 'object' || !r.status) return;
-            const label = names[k] || k;
-            if (r.status === 'published') {
-                pills += '<span class="pub-pill">' + icon('check', 13) + label + ' <span class="pid">' + escHtml(r.post_id || '') + '</span></span>';
-            } else {
-                pills += '<span class="pub-pill failed">' + icon('x', 13) + label + ' failed</span>';
-            }
+            const label = PLATFORM_NAMES[k] || k;
+            rows += '<div class="result"><span>' + escHtml(label) + '</span>' +
+                (r.status === 'published'
+                    ? '<span class="ok">✓ Published · ' + escHtml(r.post_id || '') + '</span>'
+                    : '<span class="fail">× Failed</span>') + '<span></span></div>';
         });
-        if (results.note) {
-            pills += '<span class="pub-pill" style="background:var(--warning-soft);color:var(--warning);border-color:var(--warning-border);">' + icon('alert', 13) + 'mock mode</span>';
-        }
     }
-    return pills ? '<div class="pub-results">' + pills + '</div>' : '';
+    if (!rows) return '';
+    const mock = (results.mode !== 'real' || results.note)
+        ? '<div class="mock">⚡ Mock mode — no real posts were published.</div>' : '';
+    return '<div class="results">' + rows + mock + '</div>';
 }
 
-function emptyState(iconName, title, sub) {
-    return '<div class="empty">' + icon(iconName, 40) +
-        '<div class="t">' + title + '</div>' +
-        '<div>' + (sub || '') + '</div></div>';
-}
-
-function skeletonCards(n) {
-    let html = '';
-    for (let i = 0; i < (n || 2); i++) {
-        html += '<div class="sk-card">' +
-            '<div class="sk" style="width:45%;height:18px;margin-bottom:12px;"></div>' +
-            '<div class="sk" style="width:28%;height:12px;margin-bottom:16px;"></div>' +
-            '<div class="sk" style="width:100%;height:12px;margin-bottom:8px;"></div>' +
-            '<div class="sk" style="width:80%;height:12px;"></div>' +
-        '</div>';
+/* ── Dialog helper (mockup .dialog) ── */
+function openDialog(symbol, title, sub, bodyHtml, footHtml) {
+    let root = document.getElementById('modal');
+    if (!root) {
+        root = document.createElement('div');
+        root.id = 'modal';
+        document.body.appendChild(root);
     }
-    return html;
+    root.innerHTML =
+        '<div class="dialog-overlay" onclick="if(event.target===this)closeDialog()"><div class="dialog">' +
+        '<div class="dialog-head"><span class="dialog-symbol">' + symbol + '</span><div><h2>' + title + '</h2><p>' + sub + '</p></div>' +
+        '<button class="dialog-close" onclick="closeDialog()">×</button></div>' +
+        '<div class="dialog-body">' + bodyHtml + '</div>' +
+        (footHtml ? '<div class="dialog-foot">' + footHtml + '</div>' : '') +
+        '</div></div>';
+}
+function closeDialog() {
+    const root = document.getElementById('modal');
+    if (root) root.innerHTML = '';
 }
 
-/* ── Read-only Konva mini preview ── */
+/* ── Read-only Konva mini preview (templates / story designs) ── */
 function createReadOnlyNode(el) {
     const a = el.attrs || {};
     const config = {};
@@ -192,7 +224,7 @@ function createReadOnlyNode(el) {
 function renderMiniPreview(containerId, designState, size) {
     const container = document.getElementById(containerId);
     if (!container || !designState) return;
-    size = size || 224;
+    size = size || 200;
     const cw = designState.canvas ? designState.canvas.width || 1080 : 1080;
     const ch = designState.canvas ? designState.canvas.height || 1080 : 1080;
     const scale = Math.min(size / cw, size / ch);
@@ -216,6 +248,6 @@ function renderMiniPreview(containerId, designState, size) {
             }
         }
     });
-    miniLayer.batchDraw();
+    miniLayer.draw();
     requestAnimationFrame(function () { miniLayer.batchDraw(); });
 }

@@ -3,841 +3,435 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Stories — NICDC Social Studio</title>
+    <title>Content workspace — NICDC Social Studio</title>
     <script src="https://unpkg.com/konva@9/konva.min.js"></script>
     <link rel="stylesheet" href="/static/app.css">
     <link rel="icon" type="image/png" href="/assets/favicon.png">
 </head>
-<body>
-    <nav class="nav">
-        <a class="brand" href="/">
-            <img class="logo" src="/assets/nicdc-mark.png" alt="NICDC">
-            <span class="product">NICDC Social Studio<small>Editor workspace</small></span>
-        </a>
-        <div class="spacer"></div>
-        <span class="role-chip editor">Editor</span>
-        <div class="divider-v"></div>
-        <div class="user-block">
-            <span class="avatar" id="navAvatar"></span>
-            <span class="name">__USER_NAME__</span>
-        </div>
-        <button class="btn btn-ghost btn-sm" onclick="logout()" id="logoutBtn">Sign out</button>
-    </nav>
-
-    <div class="container">
-        <div class="page-head">
-            <div class="titles">
-                <h1>Content workspace</h1>
-                <p>Add stories, design posts, and track their approval status.</p>
-            </div>
-            <button class="btn btn-primary" onclick="openStoryModal()" id="addStoryBtn">Add story</button>
-        </div>
-
+<body data-role="editor" data-active="/" data-user="__USER_NAME__">
+    <main class="workspace" id="screen">
+        <div id="page-head-slot"></div>
         <div class="stats" id="statsRow"></div>
-
         <div class="tabs" id="mainTabs">
-            <button class="tab active" data-tab="bank">Post bank <span class="count" id="bankCount">0</span></button>
-            <button class="tab" data-tab="stories">Stories</button>
-            <button class="tab" data-tab="designs">Story designs <span class="count" id="designCount">0</span></button>
+            <button class="tab active" data-tab="bank">Post bank <em id="bankCount">0</em></button>
+            <button class="tab" data-tab="stories">Stories <em id="storyCount">0</em></button>
+            <button class="tab" data-tab="designs">Story designs <em id="designCount">0</em></button>
         </div>
 
         <div id="pane-bank">
-            <div style="display:flex;align-items:center;gap:10px;margin-bottom:20px;flex-wrap:wrap;">
-                <div class="tabs" style="margin-bottom:0;" id="bankFilterTabs">
-                    <button class="tab active" data-bfilter="all">All</button>
-                    <button class="tab" data-bfilter="draft">Drafts</button>
-                    <button class="tab" data-bfilter="pending">In review</button>
-                    <button class="tab" data-bfilter="feedback">Changes requested</button>
-                    <button class="tab" data-bfilter="published">Published</button>
-                </div>
-                <div style="flex:1;"></div>
-                <button class="btn" onclick="openUploadModal()" id="uploadBtn">Upload design</button>
-                <button class="btn btn-primary" onclick="openCreateChooser()" id="createBtn">Create design</button>
+            <div class="filters">
+                <div class="chips" id="bankChips"></div>
+                <label class="search">⌕<input id="bankSearch" placeholder="Search posts..."></label>
             </div>
-            <div id="bank-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:16px;"></div>
+            <div id="bank-callout"></div>
+            <div class="grid" id="bank-grid"></div>
         </div>
 
-        <div id="pane-stories" style="display:none">
-            <div style="display:flex;align-items:center;gap:12px;margin-bottom:20px;flex-wrap:wrap;">
-                <div class="tabs" style="margin-bottom:0;" id="categoryTabs"></div>
-                <button class="btn btn-ghost btn-sm" onclick="openCategoriesModal()" id="manageCatsBtn">Categories</button>
-                <div style="flex:1;"></div>
-                <div class="search-box">
-                    <input id="storySearch" type="text" placeholder="Search stories...">
-                </div>
+        <div id="pane-stories" class="hidden">
+            <div class="filters">
+                <div class="chips" id="storyChips"></div>
+                <div class="page-actions"><button class="btn primary" onclick="openStoryDialog()">＋ Add story</button></div>
             </div>
             <div id="stories-list"></div>
         </div>
 
-        <div id="pane-designs" style="display:none;">
-            <div id="designs-list"></div>
+        <div id="pane-designs" class="hidden">
+            <div class="grid" id="designs-grid"></div>
         </div>
-    </div>
+    </main>
 
-    <!-- Add story modal -->
-    <div id="storyModal" class="modal-overlay">
-        <div class="modal" onclick="event.stopPropagation()">
-            <h2>Add a story</h2>
-            <p class="sub">Stories are the source material for your social media posts.</p>
-            <div id="storyFeedback" class="feedback-msg"></div>
-            <form id="storyForm">
-                <label for="storyTopic">Topic</label>
-                <input id="storyTopic" name="topic" type="text" required placeholder="e.g. PM Modi Kurnool Visit">
-                <label for="storyInfo">Information</label>
-                <textarea id="storyInfo" name="information" required placeholder="Full text content of the story..."></textarea>
-                <label>Category</label>
-                <div class="radio-group" id="storyCategoryGroup"></div>
-                <label for="storyImages">Images (optional)</label>
-                <input id="storyImages" name="images" type="file" multiple accept=".jpg,.jpeg,.png,.webp,.gif">
-                <div class="modal-actions">
-                    <button type="button" class="btn" onclick="closeStoryModal()">Cancel</button>
-                    <button type="submit" id="storySubmitBtn" class="btn btn-primary">
-                        <span class="spinner" style="display:none;"></span>
-                        <span class="btn-text">Add story</span>
-                    </button>
-                </div>
-            </form>
-        </div>
-    </div>
-
-    <!-- Edit story modal -->
-    <div id="editStoryModal" class="modal-overlay">
-        <div class="modal" onclick="event.stopPropagation()">
-            <h2>Edit story</h2>
-            <p class="sub">Changes apply to future designs generated from this story.</p>
-            <div id="editFeedback" class="feedback-msg"></div>
-            <form id="editForm">
-                <label for="editTopic">Topic</label>
-                <input id="editTopic" name="new_topic" type="text" required>
-                <label for="editInfo">Information</label>
-                <textarea id="editInfo" name="information" required></textarea>
-                <label>Category</label>
-                <div class="radio-group" id="editCategoryGroup"></div>
-                <label>Existing images</label>
-                <div id="editImagesContainer" class="thumbs" style="margin-bottom:16px;"></div>
-                <label for="editImages">Add new images (optional)</label>
-                <input id="editImages" name="images" type="file" multiple accept=".jpg,.jpeg,.png,.webp,.gif">
-                <div class="modal-actions">
-                    <button type="button" class="btn" onclick="closeEditStoryModal()">Cancel</button>
-                    <button type="submit" id="editSubmitBtn" class="btn btn-primary">
-                        <span class="spinner" style="display:none;"></span>
-                        <span class="btn-text">Save changes</span>
-                    </button>
-                </div>
-            </form>
-        </div>
-    </div>
-
-    <!-- Upload design modal -->
-    <div id="uploadModal" class="modal-overlay">
-        <div class="modal" onclick="event.stopPropagation()">
-            <h2>Upload a design</h2>
-            <p class="sub">Add a finished design from Canva, Photoshop or anywhere else to your post bank.</p>
-            <div id="uploadFeedback" class="feedback-msg"></div>
-            <form id="uploadForm">
-                <label for="upTitle">Title</label>
-                <input id="upTitle" name="title" type="text" required placeholder="e.g. BHAVYA milestone announcement">
-                <label for="upDesc">Notes for the caption AI (optional)</label>
-                <textarea id="upDesc" name="description" style="min-height:70px;" placeholder="What does this post show? Key facts, dates, numbers..."></textarea>
-                <label for="upImage">Design image (PNG / JPG / WEBP)</label>
-                <input id="upImage" name="image" type="file" required accept=".png,.jpg,.jpeg,.webp">
-                <img id="uploadPreview" style="display:none;max-width:100%;border-radius:10px;border:1px solid var(--border);margin-bottom:14px;" alt="preview">
-                <div class="modal-actions">
-                    <button type="button" class="btn" onclick="closeUploadModal()">Cancel</button>
-                    <button type="submit" id="uploadSubmitBtn" class="btn btn-primary">
-                        <span class="spinner" style="display:none;"></span>
-                        <span class="btn-text">Add to post bank</span>
-                    </button>
-                </div>
-            </form>
-        </div>
-    </div>
-
-    <!-- Create design chooser -->
-    <div id="createChooser" class="modal-overlay">
-        <div class="modal" style="max-width:560px;" onclick="event.stopPropagation()">
-            <h2>Create a design</h2>
-            <p class="sub">Choose how you want to design this post.</p>
-            <div style="display:flex;gap:14px;" id="chooserOptions">
-                <button id="canvaChooserCard" onclick="showCanvaForm()" style="flex:1;text-align:left;font-family:inherit;cursor:pointer;background:var(--primary-soft);border:1.5px solid var(--primary);border-radius:14px;padding:20px 18px;transition:box-shadow 0.15s;" onmouseover="this.style.boxShadow='var(--shadow-md)'" onmouseout="this.style.boxShadow='none'">
-                    <div style="font-size:15px;font-weight:800;margin-bottom:6px;">Canva <span style="font-size:10px;font-weight:700;background:var(--primary);color:white;border-radius:9999px;padding:2px 8px;vertical-align:2px;">Recommended</span></div>
-                    <div style="font-size:12.5px;color:var(--text-2);line-height:1.5;">Design in Canva itself — when you finish, the design comes straight back into the portal to send for approval.</div>
-                </button>
-                <a href="/html-editor" style="flex:1;text-decoration:none;color:inherit;border:1px solid var(--border-strong);border-radius:14px;padding:20px 18px;display:block;transition:border-color 0.15s, background 0.15s;" onmouseover="this.style.borderColor='var(--primary)'" onmouseout="this.style.borderColor='var(--border-strong)'">
-                    <div style="font-size:15px;font-weight:800;margin-bottom:6px;">HTML designer</div>
-                    <div style="font-size:12.5px;color:var(--muted);line-height:1.5;">Write HTML/CSS on a 1080×1080 canvas with live preview; saved straight to the post bank.</div>
-                </a>
-                <button onclick="closeCreateChooser();document.querySelector('#mainTabs .tab[data-tab=stories]').click();toast('Pick a story and click Design post — AI designs are submitted from the canvas editor.','info')" style="flex:1;text-align:left;font-family:inherit;cursor:pointer;background:white;border:1px solid var(--border-strong);border-radius:14px;padding:20px 18px;transition:border-color 0.15s;" onmouseover="this.style.borderColor='var(--primary)'" onmouseout="this.style.borderColor='var(--border-strong)'">
-                    <div style="font-size:15px;font-weight:800;margin-bottom:6px;">Canvas / AI designer</div>
-                    <div style="font-size:12.5px;color:var(--muted);line-height:1.5;">Generate branded layouts from a story with AI and fine-tune them on the canvas.</div>
-                </button>
-            </div>
-            <div id="canvaNewForm" style="display:none;">
-                <label for="canvaTitle">Post title</label>
-                <input id="canvaTitle" type="text" placeholder="e.g. BHAVYA milestone announcement" style="width:100%;padding:10px 13px;border:1px solid var(--border-strong);border-radius:9px;font-size:14px;font-family:inherit;margin-bottom:16px;outline:none;">
-                <div style="font-size:12.5px;color:var(--muted);margin-bottom:6px;">A blank 1080×1080 design opens in Canva. When you're done, open the post and click <b>Pull latest from Canva</b>.</div>
-            </div>
-            <div class="modal-actions" style="margin-top:18px;">
-                <button type="button" class="btn" onclick="closeCreateChooser()">Cancel</button>
-                <button type="button" class="btn btn-primary" id="canvaCreateBtn" style="display:none;" onclick="canvaCreate()">Create &amp; open Canva</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- Manage categories modal -->
-    <div id="categoriesModal" class="modal-overlay">
-        <div class="modal" style="max-width:620px;" onclick="event.stopPropagation()">
-            <h2>Categories</h2>
-            <p class="sub">Each category carries its own brand palette and layout style, used by AI generation.</p>
-            <div id="catList" style="margin-bottom:20px;"></div>
-            <div style="border-top:1px solid var(--border);padding-top:18px;">
-                <h2 style="font-size:15px;">Add a category</h2>
-                <div id="catFeedback" class="feedback-msg" style="margin-top:10px;"></div>
-                <form id="categoryForm" style="margin-top:12px;">
-                    <label for="catName">Name</label>
-                    <input id="catName" type="text" required placeholder="e.g. Milestones">
-                    <label for="catTemplate">Brand template</label>
-                    <select id="catTemplate" onchange="updateTemplatePreview()" style="width:100%;padding:10px 13px;border:1px solid var(--border-strong);border-radius:9px;font-size:14px;font-family:inherit;margin-bottom:10px;"></select>
-                    <div id="templatePreview" style="display:flex;gap:6px;margin-bottom:14px;"></div>
-                    <label for="catInstructions">Layout instructions (optional)</label>
-                    <textarea id="catInstructions" style="min-height:70px;" placeholder="e.g. Bold headline, generous whitespace, feature the date prominently..."></textarea>
-                    <div class="modal-actions">
-                        <button type="button" class="btn" onclick="closeCategoriesModal()">Close</button>
-                        <button type="submit" class="btn btn-primary">Add category</button>
-                    </div>
-                </form>
-            </div>
-        </div>
-    </div>
-
-    <div id="lightbox" class="lightbox">
-        <button class="lightbox-close">&times;</button>
-        <img id="lightbox-img" src="" alt="">
-    </div>
+    <div id="lightbox" class="lightbox"><img id="lightbox-img" alt=""></div>
+    <input type="file" id="uploadFile" accept=".png,.jpg,.jpeg,.webp" class="hidden">
+    <input type="file" id="storyImagesFile" accept=".jpg,.jpeg,.png,.webp,.gif" multiple class="hidden">
 
     <script src="/static/app.js"></script>
     <script>
-        let _allStories = null;
-        let _allDesigns = null;
-        let _designTopics = {};
-        let _searchTerm = '';
-        let _categories = [];
-        let _templates = [];
+        mountShell();
+        const USER = '__USER_NAME__';
+        let _posts = null, _stories = null, _designs = null, _designTopics = {};
+        let _bankFilter = 'All', _bankSearch = '', _storyFilter = 'All', _canUseCanva = true;
 
-        document.getElementById('navAvatar').textContent = initials('__USER_NAME__');
+        /* ── Page head ── */
+        const hour = new Date().getHours();
+        const greeting = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening';
+        document.getElementById('page-head-slot').innerHTML = pageHead(
+            'CONTENT WORKSPACE',
+            greeting + ', ' + escHtml(USER.split(' ')[0]),
+            'Create, refine and track every NICDC story from one place.',
+            '<button class="btn" onclick="openUploadDialog()">⇧ Upload design</button>' +
+            '<button class="btn primary" onclick="openCreateDialog()">＋ Create design</button>'
+        );
 
-        /* ── Categories ── */
-        async function loadCategories() {
-            try {
-                const resp = await fetch('/api/categories');
-                if (!resp.ok) throw new Error(await resp.text());
-                _categories = await resp.json();
-            } catch (e) {
-                _categories = [];
-            }
-            renderCategoryTabs();
-            renderCategoryRadios('storyCategoryGroup', 'category');
-            renderCategoryRadios('editCategoryGroup', 'editCategory');
-        }
-
-        function renderCategoryTabs() {
-            const tabs = document.getElementById('categoryTabs');
-            if (!_categories.length) {
-                tabs.innerHTML = '<span style="padding:8px 14px;font-size:13px;color:var(--muted);">No categories yet</span>';
-                return;
-            }
-            const prev = document.querySelector('#categoryTabs .tab.active');
-            let current = prev ? prev.dataset.category : '';
-            if (!current || !_categories.some(c => c.name === current)) {
-                current = _categories.some(c => c.name === 'News') ? 'News' : _categories[0].name;
-            }
-            tabs.innerHTML = _categories.map(function (c) {
-                return '<button class="tab' + (c.name === current ? ' active' : '') + '" data-category="' + escHtml(c.name) + '">' + escHtml(c.name) + '</button>';
-            }).join('');
-        }
-
-        function renderCategoryRadios(containerId, radioName) {
-            const el = document.getElementById(containerId);
-            if (!el) return;
-            el.innerHTML = _categories.map(function (c, i) {
-                return '<label><input type="radio" name="' + radioName + '" value="' + escHtml(c.name) + '"' + (i === 0 ? ' checked' : '') + '> ' + escHtml(c.name) + '</label>';
-            }).join('');
-        }
-
-        function swatches(palette) {
-            return ['primary', 'accent', 'highlight', 'background'].map(function (k) {
-                const col = (palette || {})[k] || '#ccc';
-                return '<span title="' + k + '" style="width:20px;height:20px;border-radius:6px;border:1px solid var(--border);display:inline-block;background:' + escHtml(col) + ';"></span>';
-            }).join('');
-        }
-
-        async function openCategoriesModal() {
-            document.getElementById('categoriesModal').classList.add('open');
-            document.getElementById('catFeedback').className = 'feedback-msg';
-            renderCatList();
-            if (!_templates.length) {
-                try {
-                    const resp = await fetch('/api/categories/templates');
-                    if (resp.ok) _templates = await resp.json();
-                } catch (e) {}
-            }
-            const sel = document.getElementById('catTemplate');
-            sel.innerHTML = _templates.map(function (t) {
-                return '<option value="' + escHtml(t.id) + '">' + escHtml(t.id) + ' — ' + escHtml(t.tone) + '</option>';
-            }).join('');
-            updateTemplatePreview();
-        }
-        function closeCategoriesModal() { document.getElementById('categoriesModal').classList.remove('open'); }
-
-        function renderCatList() {
-            document.getElementById('catList').innerHTML = _categories.map(function (c) {
-                return '<div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--border);">' +
-                    '<b style="min-width:100px;font-size:14px;">' + escHtml(c.name) + '</b>' +
-                    '<span style="display:inline-flex;gap:4px;">' + swatches(c.palette) + '</span>' +
-                    '<span style="flex:1;font-size:12px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + escHtml(c.tone || '') + '</span>' +
-                    '<button class="btn btn-danger-ghost btn-sm" onclick="deleteCategory(\'' + escHtml(c.slug) + '\')">Delete</button>' +
-                '</div>';
-            }).join('') || '<div style="color:var(--muted);font-size:13px;">No categories.</div>';
-        }
-
-        function updateTemplatePreview() {
-            const sel = document.getElementById('catTemplate');
-            const t = _templates.find(x => x.id === sel.value);
-            document.getElementById('templatePreview').innerHTML = t ? swatches(t.palette) : '';
-        }
-
-        document.getElementById('categoryForm').addEventListener('submit', async function (e) {
-            e.preventDefault();
-            const fb = document.getElementById('catFeedback');
-            try {
-                const resp = await fetch('/api/categories', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        name: document.getElementById('catName').value.trim(),
-                        template: document.getElementById('catTemplate').value,
-                        layout_instructions: document.getElementById('catInstructions').value.trim(),
-                    }),
-                });
-                const data = await resp.json();
-                if (!resp.ok) throw new Error(data.detail || 'Failed');
-                document.getElementById('catName').value = '';
-                document.getElementById('catInstructions').value = '';
-                toast('Category added', 'success');
-                await loadCategories();
-                renderCatList();
-            } catch (ex) {
-                fb.className = 'feedback-msg error';
-                fb.textContent = 'Error: ' + ex.message;
-            }
-        });
-
-        async function deleteCategory(slug) {
-            if (!confirm('Delete this category? Stories keep their label, but AI generation for it will stop working.')) return;
-            try {
-                const resp = await fetch('/api/categories/' + encodeURIComponent(slug), { method: 'DELETE' });
-                if (!resp.ok) throw new Error((await resp.json()).detail || 'Failed');
-                toast('Category deleted', 'success');
-                await loadCategories();
-                renderCatList();
-                renderStories(getActiveCategory());
-            } catch (e) {
-                toast('Error: ' + e.message, 'error');
-            }
-        }
-        document.getElementById('categoriesModal').addEventListener('click', function (e) {
-            if (e.target === e.currentTarget) closeCategoriesModal();
-        });
-        document.getElementById('addStoryBtn').insertAdjacentHTML('afterbegin', icon('plus', 15));
-        document.getElementById('logoutBtn').insertAdjacentHTML('afterbegin', icon('logout', 14));
-        document.querySelector('#storySearch').closest('.search-box').insertAdjacentHTML('afterbegin', icon('search', 15));
-
-        /* ── Stats (bank posts + story designs combined) ── */
+        /* ── Stats ── */
         function renderStats() {
-            const designs = _allDesigns || [];
-            const posts = _bankPosts || [];
-            const count = st => designs.filter(d => d.status === st).length + posts.filter(p => p.status === st).length;
+            const posts = _posts || [], designs = _designs || [];
+            const count = st => posts.filter(p => p.status === st).length + designs.filter(d => d.status === st).length;
             document.getElementById('statsRow').innerHTML =
-                '<div class="stat tone-plain"><span class="k">' + posts.length + '</span><span class="l">' + icon('image', 13) + ' Posts in bank</span></div>' +
-                '<div class="stat tone-pending"><span class="k">' + count('pending') + '</span><span class="l">' + icon('clock', 13) + ' Waiting for review</span></div>' +
-                '<div class="stat tone-feedback"><span class="k">' + count('feedback') + '</span><span class="l">' + icon('comment', 13) + ' Changes requested</span></div>' +
-                '<div class="stat tone-published"><span class="k">' + count('published') + '</span><span class="l">' + icon('rocket', 13) + ' Published</span></div>';
+                statCard('▧', posts.length, 'Posts in bank', 'Updated now') +
+                statCard('⏱', count('pending'), 'Waiting for review', 'Updated now') +
+                statCard('◉', count('feedback'), 'Changes requested', 'Updated now') +
+                statCard('✓', count('published'), 'Published', 'Updated now');
         }
 
         /* ── Tabs ── */
         document.getElementById('mainTabs').addEventListener('click', function (e) {
             const tab = e.target.closest('.tab');
             if (!tab) return;
-            document.querySelectorAll('#mainTabs .tab').forEach(t => t.classList.remove('active'));
-            tab.classList.add('active');
-            document.getElementById('pane-bank').style.display = tab.dataset.tab === 'bank' ? '' : 'none';
-            document.getElementById('pane-stories').style.display = tab.dataset.tab === 'stories' ? '' : 'none';
-            document.getElementById('pane-designs').style.display = tab.dataset.tab === 'designs' ? '' : 'none';
-            if (tab.dataset.tab === 'designs') loadDesigns();
-            if (tab.dataset.tab === 'bank') loadBank();
+            selectTab(tab.dataset.tab);
         });
+        function selectTab(name) {
+            document.querySelectorAll('#mainTabs .tab').forEach(t => t.classList.toggle('active', t.dataset.tab === name));
+            ['bank', 'stories', 'designs'].forEach(p =>
+                document.getElementById('pane-' + p).classList.toggle('hidden', p !== name));
+            if (name === 'stories' && _stories === null) loadStories();
+            if (name === 'designs') loadDesigns();
+        }
 
         /* ── Post bank ── */
-        let _bankPosts = null;
-        let _bankFilter = 'all';
+        const BANK_FILTERS = ['All', 'Drafts', 'In review', 'Changes requested', 'Published'];
+        const FILTER_MAP = { 'Drafts': 'draft', 'In review': 'pending', 'Changes requested': 'feedback', 'Published': 'published' };
 
-        document.getElementById('bankFilterTabs').addEventListener('click', function (e) {
-            const tab = e.target.closest('.tab');
-            if (!tab) return;
-            document.querySelectorAll('#bankFilterTabs .tab').forEach(t => t.classList.remove('active'));
-            tab.classList.add('active');
-            _bankFilter = tab.dataset.bfilter;
+        function renderBankChips() {
+            document.getElementById('bankChips').innerHTML = BANK_FILTERS.map(f =>
+                '<button class="chip ' + (_bankFilter === f ? 'active' : '') + '" data-f="' + f + '">' + f + '</button>').join('');
+        }
+        document.getElementById('bankChips').addEventListener('click', function (e) {
+            const c = e.target.closest('.chip');
+            if (!c) return;
+            _bankFilter = c.dataset.f;
+            renderBankChips();
+            renderBank();
+        });
+        document.getElementById('bankSearch').addEventListener('input', function () {
+            _bankSearch = this.value.trim().toLowerCase();
             renderBank();
         });
 
         async function loadBank(silent) {
             const grid = document.getElementById('bank-grid');
-            if (!silent) grid.innerHTML = '<div style="grid-column:1/-1;">' + skeletonCards(1) + '</div>';
+            if (!silent) grid.innerHTML = skeletonGrid(3);
             try {
                 const resp = await fetch('/api/posts');
                 if (!resp.ok) throw new Error(await resp.text());
-                _bankPosts = await resp.json();
-                document.getElementById('bankCount').textContent = _bankPosts.length;
+                _posts = await resp.json();
+                document.getElementById('bankCount').textContent = _posts.length;
                 renderBank();
                 renderStats();
             } catch (e) {
-                grid.innerHTML = '<div class="error-box" style="grid-column:1/-1;">Error loading posts: ' + escHtml(e.message) + '</div>';
+                grid.innerHTML = emptyState('!', 'Could not load posts', escHtml(e.message));
             }
         }
 
-        const KIND_LABELS = { upload: 'Uploaded', html: 'HTML', canvas: 'Canvas' };
-        const PLATFORM_SHORT = { linkedin: 'in', x: 'X', instagram: 'IG' };
+        function postCard(p) {
+            const comments = p.comments || [];
+            const st = p.status === 'approved' ? 'published' : p.status;
+            return '<article class="post-card">' +
+                '<a class="thumb" href="/post/' + p.id + '" style="display:block;">' +
+                    '<img src="/bank/' + escHtml(p.image_path) + '" loading="lazy" alt="">' +
+                    '<span class="version">v' + (p.revision || 1) + '</span>' +
+                '</a>' +
+                '<div class="card-info">' +
+                    '<div class="card-meta">' + statusBadge(st) + '<span class="date">' + fmtTime(p.created_at).split(',')[0] + '</span></div>' +
+                    '<h3>' + escHtml(p.title) + '</h3>' +
+                    '<div class="card-bottom">' + platformChips(p.platforms) +
+                        '<span class="comments">◉ ' + comments.length + '</span>' +
+                        '<a class="open-card" href="/post/' + p.id + '">Open →</a>' +
+                    '</div>' +
+                '</div>' +
+            '</article>';
+        }
 
         function renderBank() {
             const grid = document.getElementById('bank-grid');
-            if (!_bankPosts) return;
-            let posts = _bankPosts;
-            if (_bankFilter !== 'all') {
-                posts = posts.filter(p => _bankFilter === 'published'
-                    ? (p.status === 'published' || p.status === 'approved')
-                    : p.status === _bankFilter);
-            }
-            if (!posts.length) {
-                grid.innerHTML = '<div style="grid-column:1/-1;">' + emptyState('image',
-                    _bankFilter === 'all' ? 'Your post bank is empty' : 'Nothing here',
-                    'Upload a finished design (Canva, Photoshop...) or create one with the HTML designer.') + '</div>';
-                return;
-            }
-            grid.innerHTML = posts.map(function (p) {
-                const comments = p.comments || [];
-                const plats = (p.platforms || []).map(x => '<span style="font-size:10px;font-weight:700;background:var(--bg-subtle);border:1px solid var(--border);border-radius:9999px;padding:1px 7px;color:var(--text-2);">' + (PLATFORM_SHORT[x] || x) + '</span>').join(' ');
-                return '<a href="/post/' + p.id + '" class="card hoverable" style="padding:0;overflow:hidden;text-decoration:none;color:inherit;margin:0;display:block;">' +
-                    '<div style="aspect-ratio:1;background:#f1f3f8 url(\'/bank/' + escHtml(p.image_path) + '\') center/cover;"></div>' +
-                    '<div style="padding:12px 14px;">' +
-                        '<div style="font-size:13.5px;font-weight:700;margin-bottom:6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + escHtml(p.title) + '</div>' +
-                        '<div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;">' +
-                            (p.status === 'draft'
-                                ? '<span class="badge" style="background:var(--bg-subtle);color:var(--text-2);border-color:var(--border);"><span class="dot"></span>Draft</span>'
-                                : statusBadge(p.status)) +
-                            plats +
-                            (comments.length ? '<span style="font-size:11px;color:var(--danger);font-weight:700;">' + comments.length + ' 💬</span>' : '') +
-                        '</div>' +
-                    '</div>' +
-                '</a>';
-            }).join('');
-        }
+            if (!_posts) return;
+            let posts = _posts;
+            if (_bankFilter !== 'All') posts = posts.filter(p =>
+                _bankFilter === 'Published' ? (p.status === 'published' || p.status === 'approved') : p.status === FILTER_MAP[_bankFilter]);
+            if (_bankSearch) posts = posts.filter(p =>
+                p.title.toLowerCase().includes(_bankSearch) || (p.caption || '').toLowerCase().includes(_bankSearch));
 
-        function openUploadModal() {
-            document.getElementById('uploadModal').classList.add('open');
-            document.getElementById('uploadFeedback').className = 'feedback-msg';
-            document.getElementById('uploadForm').reset();
-            document.getElementById('uploadPreview').style.display = 'none';
-        }
-        function closeUploadModal() { document.getElementById('uploadModal').classList.remove('open'); }
-        function openCreateChooser() {
-            document.getElementById('chooserOptions').style.display = '';
-            document.getElementById('canvaNewForm').style.display = 'none';
-            document.getElementById('canvaCreateBtn').style.display = 'none';
-            document.getElementById('createChooser').classList.add('open');
-        }
-        function closeCreateChooser() { document.getElementById('createChooser').classList.remove('open'); }
+            const feedbackPosts = _posts.filter(p => p.status === 'feedback');
+            document.getElementById('bank-callout').innerHTML = feedbackPosts.length
+                ? '<div class="callout"><span>◉</span><div><b>' + feedbackPosts.length + ' post' + (feedbackPosts.length > 1 ? 's need' : ' needs') + ' your changes</b>' +
+                  '<p>The admin has requested changes on “' + escHtml(feedbackPosts[0].title) + '”' + (feedbackPosts.length > 1 ? ' and more.' : '.') + '</p></div>' +
+                  '<a class="btn ghost" href="/post/' + feedbackPosts[0].id + '">Fix first →</a></div>'
+                : '';
 
-        function showCanvaForm() {
-            document.getElementById('chooserOptions').style.display = 'none';
-            document.getElementById('canvaNewForm').style.display = '';
-            document.getElementById('canvaCreateBtn').style.display = '';
-            setTimeout(() => document.getElementById('canvaTitle').focus(), 60);
-        }
-
-        async function canvaCreate() {
-            const title = document.getElementById('canvaTitle').value.trim();
-            if (!title) { toast('Give the post a title first.', 'error'); return; }
-            const btn = document.getElementById('canvaCreateBtn');
-            btn.disabled = true;
-            try {
-                const resp = await fetch('/api/canva/new-design', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ title: title }),
-                });
-                const data = await resp.json();
-                if (resp.status === 409) {
-                    closeCreateChooser();
-                    toast('Connect your Canva account first — opening the connect page...', 'info');
-                    setTimeout(() => { window.location.href = '/canva/connect'; }, 1200);
-                    return;
-                }
-                if (resp.status === 501) { toast('Canva is not configured on this server yet — ask the admin to add the Canva integration keys.', 'error'); return; }
-                if (!resp.ok) throw new Error(data.detail || 'Failed');
-                closeCreateChooser();
-                window.open(data.edit_url, '_blank');
-                toast('Design created — Canva opened in a new tab', 'success');
-                loadBank(true);
-            } catch (e) {
-                toast('Error: ' + e.message, 'error');
-            } finally {
-                btn.disabled = false;
-            }
-        }
-
-        document.getElementById('categoryTabs').addEventListener('click', function (e) {
-            const tab = e.target.closest('.tab');
-            if (!tab) return;
-            document.querySelectorAll('#categoryTabs .tab').forEach(t => t.classList.remove('active'));
-            tab.classList.add('active');
-            renderStories(tab.dataset.category);
-        });
-
-        document.getElementById('storySearch').addEventListener('input', function () {
-            _searchTerm = this.value.trim().toLowerCase();
-            renderStories(getActiveCategory());
-        });
-
-        function getActiveCategory() {
-            const active = document.querySelector('#categoryTabs .tab.active');
-            if (active) return active.dataset.category;
-            return _categories.length ? _categories[0].name : 'News';
+            grid.innerHTML = posts.length
+                ? posts.map(postCard).join('')
+                : emptyState('▧', _bankSearch || _bankFilter !== 'All' ? 'Nothing here' : 'Your post bank is ready',
+                    _bankSearch ? 'No posts match your search.' : 'Upload a finished design or create your first NICDC post.',
+                    '<button class="btn primary" onclick="openCreateDialog()">＋ Create first post</button>');
         }
 
         /* ── Stories ── */
-        async function loadStories(force) {
-            if (_allStories !== null && !force) { renderStories(getActiveCategory()); return; }
+        async function loadStories() {
             const list = document.getElementById('stories-list');
-            list.innerHTML = skeletonCards(2);
+            list.innerHTML = skeletonGrid(2);
             try {
-                const resp = await fetch('/api/stories');
-                if (!resp.ok) throw new Error(await resp.text());
-                _allStories = await resp.json();
-                const topics = _allStories.map(s => s.topic).join(',');
+                const [sResp, cResp] = await Promise.all([fetch('/api/stories'), fetch('/api/categories')]);
+                _stories = await sResp.json();
+                const cats = cResp.ok ? await cResp.json() : [];
+                document.getElementById('storyCount').textContent = _stories.length;
+                const names = ['All'].concat(cats.map(c => c.name));
+                document.getElementById('storyChips').innerHTML = names.map(n =>
+                    '<button class="chip ' + (_storyFilter === n ? 'active' : '') + '" data-f="' + escHtml(n) + '">' + escHtml(n) + '</button>').join('');
+                const topics = _stories.map(s => s.topic).join(',');
                 if (topics) {
                     const dr = await fetch('/api/designs/check?topics=' + encodeURIComponent(topics));
                     if (dr.ok) _designTopics = await dr.json();
                 }
-                renderStories(getActiveCategory());
-                renderStats();
+                renderStories();
             } catch (e) {
-                list.innerHTML = '<div class="error-box">Error loading stories: ' + escHtml(e.message) + '</div>';
+                list.innerHTML = emptyState('!', 'Could not load stories', escHtml(e.message));
             }
         }
+        document.getElementById('storyChips').addEventListener('click', function (e) {
+            const c = e.target.closest('.chip');
+            if (!c) return;
+            _storyFilter = c.dataset.f;
+            this.querySelectorAll('.chip').forEach(x => x.classList.toggle('active', x.dataset.f === _storyFilter));
+            renderStories();
+        });
 
-        function renderStories(category) {
+        function renderStories() {
             const list = document.getElementById('stories-list');
-            let filtered = (_allStories || []).filter(s => s.category === category);
-            if (_searchTerm) {
-                filtered = filtered.filter(s =>
-                    s.topic.toLowerCase().includes(_searchTerm) || s.text.toLowerCase().includes(_searchTerm));
-            }
-            if (!filtered.length) {
-                list.innerHTML = _searchTerm
-                    ? emptyState('search', 'No matches', 'No ' + escHtml(category) + ' stories match "' + escHtml(_searchTerm) + '".')
-                    : emptyState('file', 'No ' + escHtml(category) + ' stories yet', 'Click <b>Add story</b> to create your first one.');
+            let data = _stories || [];
+            if (_storyFilter !== 'All') data = data.filter(s => s.category === _storyFilter);
+            if (!data.length) {
+                list.innerHTML = emptyState('▤', 'No stories yet', 'Add source stories to design AI-assisted posts from them.',
+                    '<button class="btn primary" onclick="openStoryDialog()">＋ Add story</button>');
                 return;
             }
-            list.innerHTML = filtered.map(function (s) {
-                const isLong = s.text.length > 260;
-                const imgs = (s.images || []).map(f =>
-                    '<img src="/images/' + f + '" data-img-src="/images/' + f + '" loading="lazy">'
-                ).join('');
+            list.innerHTML = data.map(function (s) {
                 const info = _designTopics[s.topic];
-                return '<div class="card hoverable">' +
-                    '<h3>' + escHtml(s.topic) + '</h3>' +
-                    '<div class="card-meta">' +
-                        catBadge(s.category) +
-                        (info ? statusBadge(info.status) : '') +
-                        '<span>' + escHtml(s.date || '') + '</span>' +
+                const isLong = s.text.length > 280;
+                const imgs = (s.images || []).map(f => '<img src="/images/' + f + '" data-src="/images/' + f + '" loading="lazy" alt="">').join('');
+                return '<div class="story-block">' +
+                    '<div style="display:flex;align-items:center;gap:9px;justify-content:space-between;flex-wrap:wrap;">' +
+                        '<h3>' + escHtml(s.topic) + '</h3>' +
+                        '<div style="display:flex;gap:7px;align-items:center;">' +
+                            (info ? statusBadge(info.status) : '') +
+                            '<span class="date">' + escHtml(s.date || '') + ' · ' + escHtml(s.category || '') + '</span>' +
+                        '</div>' +
                     '</div>' +
-                    (imgs ? '<div class="thumbs">' + imgs + '</div>' : '') +
-                    '<div class="story-text' + (isLong ? ' collapsed' : '') + '" id="stext-' + escId(s.topic) + '">' + escHtml(s.text) + '</div>' +
-                    (isLong ? '<button class="toggle-text" data-text-id="' + escId(s.topic) + '">Show more</button>' : '') +
-                    '<div class="card-actions">' +
-                        '<button class="btn btn-primary btn-sm btn-open-editor" data-topic="' + escHtml(s.topic) + '" data-category="' + escHtml(s.category) + '">' +
-                            icon(info ? 'edit' : 'sparkles', 14) + (info ? 'Open design' : 'Design post') + '</button>' +
-                        '<button class="btn btn-sm btn-edit-story" data-topic="' + escHtml(s.topic) + '">Edit story</button>' +
-                        '<button class="btn btn-danger-ghost btn-sm btn-delete-story" data-topic="' + escHtml(s.topic) + '">' + icon('trash', 13) + 'Delete</button>' +
+                    (imgs ? '<div class="thumb-imgs">' + imgs + '</div>' : '') +
+                    '<div class="story-text' + (isLong ? ' collapsed' : '') + '" id="st-' + escId(s.topic) + '">' + escHtml(s.text) + '</div>' +
+                    (isLong ? '<button class="toggle-text" data-t="' + escId(s.topic) + '">Show more</button>' : '') +
+                    '<div style="display:flex;gap:7px;margin-top:11px;">' +
+                        '<a class="btn primary" style="height:32px;font-size:9px;" href="/create?topic=' + encodeURIComponent(s.topic) + '&category=' + encodeURIComponent(s.category || 'News') + '">✦ ' + (info ? 'Open design' : 'Design post') + '</a>' +
+                        '<button class="btn" style="height:32px;font-size:9px;" onclick="deleteStory(\'' + escHtml(s.topic).replace(/'/g, "\\'") + '\')">Delete</button>' +
                     '</div>' +
                 '</div>';
             }).join('');
         }
 
         document.getElementById('stories-list').addEventListener('click', function (e) {
-            const img = e.target.closest('img[data-img-src]');
-            if (img) { openLightbox(img.dataset.imgSrc); return; }
-            const toggle = e.target.closest('.toggle-text');
-            if (toggle) {
-                const el = document.getElementById('stext-' + toggle.dataset.textId);
-                if (el) {
-                    el.classList.toggle('collapsed');
-                    toggle.textContent = el.classList.contains('collapsed') ? 'Show more' : 'Show less';
-                }
+            const img = e.target.closest('img[data-src]');
+            if (img) {
+                document.getElementById('lightbox-img').src = img.dataset.src;
+                document.getElementById('lightbox').classList.add('open');
                 return;
             }
-            const open = e.target.closest('.btn-open-editor');
-            if (open) {
-                window.location.href = '/create?topic=' + encodeURIComponent(open.dataset.topic) + '&category=' + encodeURIComponent(open.dataset.category || 'News');
-                return;
-            }
-            const edit = e.target.closest('.btn-edit-story');
-            if (edit) { openEditStoryModal(edit.dataset.topic); return; }
-            const del = e.target.closest('.btn-delete-story');
-            if (del) deleteStory(del.dataset.topic);
-        });
-
-        /* ── My designs ── */
-        async function loadDesigns(silent) {
-            const list = document.getElementById('designs-list');
-            if (!silent) list.innerHTML = skeletonCards(2);
-            try {
-                const resp = await fetch('/api/designs');
-                if (!resp.ok) throw new Error(await resp.text());
-                _allDesigns = await resp.json();
-                document.getElementById('designCount').textContent = _allDesigns.length;
-                renderDesigns();
-                renderStats();
-            } catch (e) {
-                list.innerHTML = '<div class="error-box">Error loading designs: ' + escHtml(e.message) + '</div>';
-            }
-        }
-
-        function renderDesigns() {
-            const list = document.getElementById('designs-list');
-            if (!_allDesigns || !_allDesigns.length) {
-                list.innerHTML = emptyState('layers', 'No designs yet', 'Open a story and click <b>Design post</b> to get started.');
-                return;
-            }
-            const sorted = [..._allDesigns].reverse();
-            list.innerHTML = sorted.map(function (d) {
-                const comments = d.comments || [];
-                const needsFix = d.status === 'feedback';
-                return '<div class="card hoverable">' +
-                    '<div class="design-row">' +
-                        '<div class="preview-frame" id="preview-' + d.id + '"></div>' +
-                        '<div class="design-info">' +
-                            '<h3>' + escHtml(d.topic) + '</h3>' +
-                            '<div class="card-meta">' +
-                                catBadge(d.category) +
-                                statusBadge(d.status) +
-                                '<span>Revision ' + (d.revision || 1) + '</span>' +
-                                '<span>&middot; ' + fmtTime(d.submitted_at) + '</span>' +
-                            '</div>' +
-                            (needsFix
-                                ? '<div class="error-box" style="margin-bottom:12px;">' +
-                                    '<b>' + comments.length + ' comment' + (comments.length !== 1 ? 's' : '') + ' from the approver.</b>' +
-                                    (d.reviewer_note ? '<br>Note: ' + escHtml(d.reviewer_note) : '') +
-                                  '</div>'
-                                : '') +
-                            (d.status === 'published' && d.publish_results ? publishPills(d.publish_results) : '') +
-                            '<div class="card-actions">' +
-                                '<button class="btn ' + (needsFix ? 'btn-warning' : 'btn-primary') + ' btn-sm btn-open-editor" data-topic="' + escHtml(d.topic) + '" data-category="' + escHtml(d.category) + '">' +
-                                    icon('edit', 14) + (needsFix ? 'Fix design' : 'Open in editor') + '</button>' +
-                            '</div>' +
-                        '</div>' +
-                    '</div>' +
-                '</div>';
-            }).join('');
-            sorted.forEach(d => renderMiniPreview('preview-' + d.id, d.design_state));
-        }
-
-        document.getElementById('designs-list').addEventListener('click', function (e) {
-            const open = e.target.closest('.btn-open-editor');
-            if (open) {
-                window.location.href = '/create?topic=' + encodeURIComponent(open.dataset.topic) + '&category=' + encodeURIComponent(open.dataset.category || 'News');
+            const t = e.target.closest('.toggle-text');
+            if (t) {
+                const el = document.getElementById('st-' + t.dataset.t);
+                el.classList.toggle('collapsed');
+                t.textContent = el.classList.contains('collapsed') ? 'Show more' : 'Show less';
             }
         });
-
-        /* ── Story modal ── */
-        function openStoryModal() {
-            document.getElementById('storyModal').classList.add('open');
-            document.getElementById('storyFeedback').className = 'feedback-msg';
-            document.getElementById('storyForm').reset();
-            setTimeout(() => document.getElementById('storyTopic').focus(), 60);
-        }
-        function closeStoryModal() { document.getElementById('storyModal').classList.remove('open'); }
-
-        document.getElementById('storyForm').addEventListener('submit', async function (e) {
-            e.preventDefault();
-            const fb = document.getElementById('storyFeedback');
-            const btn = document.getElementById('storySubmitBtn');
-            btn.disabled = true;
-            btn.querySelector('.spinner').style.display = '';
-            const fd = new FormData(document.getElementById('storyForm'));
-            if (!document.getElementById('storyImages').files.length) fd.delete('images');
-            try {
-                const resp = await fetch('/ingest/story', { method: 'POST', body: fd });
-                const data = await resp.json();
-                if (!resp.ok) throw new Error(data.detail || 'Upload failed');
-                closeStoryModal();
-                toast('Story added', 'success');
-                loadStories(true);
-            } catch (ex) {
-                fb.className = 'feedback-msg error';
-                fb.textContent = 'Error: ' + ex.message;
-            } finally {
-                btn.disabled = false;
-                btn.querySelector('.spinner').style.display = 'none';
-            }
-        });
-
-        /* ── Edit story modal ── */
-        let _editOriginalTopic = '';
-        let _editKeepImages = [];
-
-        async function openEditStoryModal(topic) {
-            const modal = document.getElementById('editStoryModal');
-            const fb = document.getElementById('editFeedback');
-            fb.className = 'feedback-msg';
-            modal.classList.add('open');
-            _editOriginalTopic = topic;
-            try {
-                const resp = await fetch('/api/stories/' + encodeURIComponent(topic));
-                if (!resp.ok) throw new Error('Story not found');
-                const story = await resp.json();
-                document.getElementById('editTopic').value = story.topic;
-                document.getElementById('editInfo').value = story.text;
-                document.querySelectorAll('#editCategoryGroup input').forEach(r => { r.checked = r.value === story.category; });
-                _editKeepImages = story.images || [];
-                renderEditImages(_editKeepImages);
-            } catch (ex) {
-                fb.className = 'feedback-msg error';
-                fb.textContent = 'Error: ' + ex.message;
-            }
-        }
-        function closeEditStoryModal() { document.getElementById('editStoryModal').classList.remove('open'); }
-
-        function renderEditImages(filenames) {
-            const container = document.getElementById('editImagesContainer');
-            if (!filenames.length) {
-                container.innerHTML = '<span style="font-size:13px;color:var(--muted);">None</span>';
-                return;
-            }
-            container.innerHTML = filenames.map(f =>
-                '<div style="position:relative;" id="editImg-' + f + '">' +
-                    '<img src="/images/' + f + '" style="cursor:default;">' +
-                    '<button type="button" class="remove-img" data-img="' + f + '" style="position:absolute;top:-7px;right:-7px;width:22px;height:22px;border-radius:50%;background:var(--danger);color:white;border:2px solid white;font-size:12px;cursor:pointer;line-height:1;">&times;</button>' +
-                '</div>'
-            ).join('');
-        }
-
-        document.getElementById('editImagesContainer').addEventListener('click', function (e) {
-            const btn = e.target.closest('.remove-img');
-            if (!btn) return;
-            const el = document.getElementById('editImg-' + btn.dataset.img);
-            if (el) el.style.display = 'none';
-            _editKeepImages = _editKeepImages.filter(f => f !== btn.dataset.img);
-        });
-
-        document.getElementById('editForm').addEventListener('submit', async function (e) {
-            e.preventDefault();
-            const fb = document.getElementById('editFeedback');
-            const btn = document.getElementById('editSubmitBtn');
-            btn.disabled = true;
-            btn.querySelector('.spinner').style.display = '';
-            try {
-                const fd = new FormData(document.getElementById('editForm'));
-                fd.delete('editCategory');
-                fd.append('category', document.querySelector('#editCategoryGroup input:checked').value);
-                fd.append('keep_images', JSON.stringify(_editKeepImages));
-                if (!document.getElementById('editImages').files.length) fd.delete('images');
-                const resp = await fetch('/api/stories/' + encodeURIComponent(_editOriginalTopic), { method: 'PUT', body: fd });
-                const data = await resp.json();
-                if (!resp.ok) throw new Error(data.detail || 'Update failed');
-                closeEditStoryModal();
-                toast('Story updated', 'success');
-                loadStories(true);
-            } catch (ex) {
-                fb.className = 'feedback-msg error';
-                fb.textContent = 'Error: ' + ex.message;
-            } finally {
-                btn.disabled = false;
-                btn.querySelector('.spinner').style.display = 'none';
-            }
-        });
+        document.getElementById('lightbox').addEventListener('click', function () { this.classList.remove('open'); });
 
         async function deleteStory(topic) {
-            if (!confirm('Delete story "' + topic + '" and its images?')) return;
+            if (!confirm('Delete story “' + topic + '” and its images?')) return;
             try {
                 const resp = await fetch('/api/stories/' + encodeURIComponent(topic), { method: 'DELETE' });
                 if (!resp.ok) throw new Error((await resp.json()).detail || 'Delete failed');
-                toast('Story deleted', 'success');
-                loadStories(true);
-            } catch (e) {
-                toast('Error deleting story: ' + e.message, 'error');
-            }
+                toast('Story deleted');
+                _stories = null;
+                loadStories();
+            } catch (e) { toast(e.message, 'error'); }
         }
 
-        /* ── Lightbox / overlays ── */
-        function openLightbox(src) {
-            document.getElementById('lightbox-img').src = src;
-            document.getElementById('lightbox').classList.add('open');
-        }
-        document.getElementById('lightbox').addEventListener('click', function (e) {
-            if (e.target === e.currentTarget || e.target.classList.contains('lightbox-close')) {
-                e.currentTarget.classList.remove('open');
-            }
-        });
-        document.querySelectorAll('.modal-overlay').forEach(function (m) {
-            m.addEventListener('click', function (e) {
-                if (e.target === m) m.classList.remove('open');
-            });
-        });
-
-        /* ── Upload design ── */
-        document.getElementById('upImage').addEventListener('change', function () {
-            const prev = document.getElementById('uploadPreview');
-            if (this.files.length) {
-                prev.src = URL.createObjectURL(this.files[0]);
-                prev.style.display = '';
-            } else prev.style.display = 'none';
-        });
-
-        document.getElementById('uploadForm').addEventListener('submit', async function (e) {
-            e.preventDefault();
-            const fb = document.getElementById('uploadFeedback');
-            const btn = document.getElementById('uploadSubmitBtn');
-            btn.disabled = true;
-            btn.querySelector('.spinner').style.display = '';
+        /* ── Story designs ── */
+        async function loadDesigns() {
+            const grid = document.getElementById('designs-grid');
+            grid.innerHTML = skeletonGrid(3);
             try {
-                const fd = new FormData(this);
+                const resp = await fetch('/api/designs');
+                _designs = await resp.json();
+                document.getElementById('designCount').textContent = _designs.length;
+                renderStats();
+                if (!_designs.length) {
+                    grid.innerHTML = emptyState('✦', 'No story designs yet', 'Open a story and design a post with AI on the canvas.');
+                    return;
+                }
+                grid.innerHTML = _designs.slice().reverse().map(function (d) {
+                    return '<article class="post-card">' +
+                        '<a class="thumb" href="/create?topic=' + encodeURIComponent(d.topic) + '&category=' + encodeURIComponent(d.category || 'News') + '" style="display:block;">' +
+                            '<span class="tpl-mini" id="dprev-' + d.id + '" style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;"></span>' +
+                            '<span class="version">v' + (d.revision || 1) + '</span>' +
+                        '</a>' +
+                        '<div class="card-info">' +
+                            '<div class="card-meta">' + statusBadge(d.status) + '<span class="date">' + fmtTime(d.submitted_at).split(',')[0] + '</span></div>' +
+                            '<h3>' + escHtml(d.topic) + '</h3>' +
+                            '<div class="card-bottom"><span class="comments">◉ ' + (d.comments || []).length + '</span>' +
+                                '<a class="open-card" href="/create?topic=' + encodeURIComponent(d.topic) + '&category=' + encodeURIComponent(d.category || 'News') + '">Open →</a></div>' +
+                        '</div>' +
+                    '</article>';
+                }).join('');
+                _designs.slice().reverse().forEach(d => renderMiniPreview('dprev-' + d.id, d.design_state, 230));
+            } catch (e) {
+                grid.innerHTML = emptyState('!', 'Could not load designs', escHtml(e.message));
+            }
+        }
+
+        /* ── Upload dialog ── */
+        function openUploadDialog() {
+            openDialog('⇧', 'Upload a finished design', 'Add a 1080 × 1080 image created in Canva, Photoshop or another design tool.',
+                '<div class="feedback-msg" id="upErr"></div>' +
+                '<div class="drop" id="dropZone" onclick="document.getElementById(\'uploadFile\').click()"><span>▧</span><b>Drop your design here</b><p>or <u>browse from computer</u> · PNG or JPG · max 15 MB</p></div>' +
+                '<label class="field">Post title<input id="upTitle" placeholder="Give this post a clear working title"></label>' +
+                '<label class="field">Notes for your team<textarea id="upNotes" placeholder="Add context, source links or design notes..."></textarea></label>',
+                '<button class="btn" onclick="closeDialog()">Cancel</button><button class="btn primary" id="upGo" onclick="submitUpload()">Add to post bank</button>');
+            const dz = document.getElementById('dropZone');
+            dz.addEventListener('dragover', e => { e.preventDefault(); dz.style.borderColor = 'var(--green)'; });
+            dz.addEventListener('drop', e => {
+                e.preventDefault();
+                if (e.dataTransfer.files.length) { document.getElementById('uploadFile').files = e.dataTransfer.files; showDropPreview(); }
+            });
+        }
+        document.getElementById('uploadFile').addEventListener('change', showDropPreview);
+        function showDropPreview() {
+            const f = document.getElementById('uploadFile').files[0];
+            const dz = document.getElementById('dropZone');
+            if (f && dz) dz.innerHTML = '<img src="' + URL.createObjectURL(f) + '" alt=""><p style="margin-top:7px;">' + escHtml(f.name) + ' · <u>change</u></p>';
+        }
+        async function submitUpload() {
+            const f = document.getElementById('uploadFile').files[0];
+            const title = document.getElementById('upTitle').value.trim();
+            const err = document.getElementById('upErr');
+            if (!f) { err.className = 'feedback-msg error'; err.textContent = 'Choose or drop a design image first.'; return; }
+            if (!title) { err.className = 'feedback-msg error'; err.textContent = 'Give the post a title.'; return; }
+            const btn = document.getElementById('upGo');
+            btn.disabled = true;
+            try {
+                const fd = new FormData();
+                fd.append('title', title);
+                fd.append('description', document.getElementById('upNotes').value.trim());
+                fd.append('image', f);
                 const resp = await fetch('/api/posts/upload', { method: 'POST', body: fd });
                 const data = await resp.json();
                 if (!resp.ok) throw new Error(data.detail || 'Upload failed');
-                closeUploadModal();
-                toast('Design added to your post bank', 'success');
+                closeDialog();
+                document.getElementById('uploadFile').value = '';
+                toast('Design added to post bank');
                 window.location.href = '/post/' + data.id;
-            } catch (ex) {
-                fb.className = 'feedback-msg error';
-                fb.textContent = 'Error: ' + ex.message;
-            } finally {
+            } catch (e) {
+                err.className = 'feedback-msg error';
+                err.textContent = e.message;
                 btn.disabled = false;
-                btn.querySelector('.spinner').style.display = 'none';
             }
-        });
+        }
 
-        renderStats();
-        loadBank();
-        loadCategories().then(function () { loadStories(); });
-        loadDesigns(true);
-        // hide the Canva option for editors without Canva access
-        fetch('/api/me').then(r => r.json()).then(function (me) {
-            if (me && me.can_use_canva === false) {
-                const card = document.getElementById('canvaChooserCard');
-                if (card) card.style.display = 'none';
+        /* ── Create dialog ── */
+        function openCreateDialog() {
+            const canvaCard = _canUseCanva
+                ? '<button class="choice recommended" onclick="canvaStep()"><span class="choice-icon">C</span><div><em>RECOMMENDED</em><b>Create in Canva</b><p>Use NICDC brand templates in the familiar Canva editor.</p></div></button>'
+                : '';
+            openDialog('✦', 'How would you like to create?', 'Choose the workflow that best fits this post.',
+                '<div class="choice-grid"' + (_canUseCanva ? '' : ' style="grid-template-columns:1fr 1fr;"') + '>' + canvaCard +
+                '<button class="choice" onclick="closeDialog();window.location.href=\'/html-editor\'"><span class="choice-icon">&lt;/&gt;</span><div><b>HTML designer</b><p>Code a precise 1080 × 1080 design with live preview.</p></div></button>' +
+                '<button class="choice" onclick="closeDialog();selectTab(\'stories\');toast(\'Pick a story and click Design post\')"><span class="choice-icon">✦</span><div><b>Canvas / AI designer</b><p>Build visually with templates and conversational AI edits.</p></div></button></div>',
+                '<button class="btn" onclick="closeDialog()">Cancel</button>');
+        }
+
+        function canvaStep() {
+            openDialog('C', 'Create in Canva', 'A blank 1080 × 1080 design opens in Canva, linked to a new bank post.',
+                '<div class="feedback-msg" id="cvErr"></div>' +
+                '<label class="field">Post title<input id="cvTitle" placeholder="e.g. BHAVYA milestone announcement"></label>' +
+                '<p style="font-size:9px;color:#7c8780;">When you finish designing, open the post and click <b>Import from Canva</b>.</p>',
+                '<button class="btn" onclick="openCreateDialog()">Back</button><button class="btn primary" id="cvGo" onclick="canvaCreate()">Create &amp; open Canva</button>');
+            setTimeout(() => document.getElementById('cvTitle').focus(), 60);
+        }
+        async function canvaCreate() {
+            const title = document.getElementById('cvTitle').value.trim();
+            const err = document.getElementById('cvErr');
+            if (!title) { err.className = 'feedback-msg error'; err.textContent = 'Give the post a title first.'; return; }
+            const btn = document.getElementById('cvGo');
+            btn.disabled = true;
+            try {
+                const resp = await fetch('/api/canva/new-design', {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ title: title }),
+                });
+                const data = await resp.json();
+                if (resp.status === 409) { closeDialog(); toast('Connect your Canva account first — opening the connect page'); setTimeout(() => location.href = '/canva/connect', 1100); return; }
+                if (resp.status === 501) { err.className = 'feedback-msg error'; err.textContent = 'Canva is not configured on this server yet — ask the admin to add the integration keys.'; btn.disabled = false; return; }
+                if (!resp.ok) throw new Error(data.detail || 'Failed');
+                closeDialog();
+                window.open(data.edit_url, '_blank');
+                toast('Design created — Canva opened in a new tab');
+                loadBank(true);
+            } catch (e) {
+                err.className = 'feedback-msg error';
+                err.textContent = e.message;
+                btn.disabled = false;
             }
-        }).catch(function () {});
+        }
+
+        /* ── Add story dialog ── */
+        async function openStoryDialog() {
+            let cats = [];
+            try { cats = await (await fetch('/api/categories')).json(); } catch (e) {}
+            openDialog('▤', 'Add a story', 'Stories are the source material for AI-designed posts.',
+                '<div class="feedback-msg" id="styErr"></div>' +
+                '<label class="field">Topic<input id="styTopic" placeholder="e.g. PM Modi Kurnool Visit"></label>' +
+                '<label class="field">Information<textarea id="styInfo" placeholder="Full text content of the story..."></textarea></label>' +
+                '<label class="field">Category<select id="styCat">' + cats.map(c => '<option>' + escHtml(c.name) + '</option>').join('') + '</select></label>' +
+                '<label class="field">Images (optional)<input type="button" value="Choose images..." onclick="document.getElementById(\'storyImagesFile\').click()" style="text-align:left;color:#748078;"></label>' +
+                '<p id="styFiles" style="font-size:9px;color:#7c8780;margin:-8px 0 0;"></p>',
+                '<button class="btn" onclick="closeDialog()">Cancel</button><button class="btn primary" id="styGo" onclick="submitStory()">Add story</button>');
+        }
+        document.getElementById('storyImagesFile').addEventListener('change', function () {
+            const el = document.getElementById('styFiles');
+            if (el) el.textContent = Array.from(this.files).map(f => f.name).join(', ');
+        });
+        async function submitStory() {
+            const err = document.getElementById('styErr');
+            const topic = document.getElementById('styTopic').value.trim();
+            const info = document.getElementById('styInfo').value.trim();
+            if (!topic || !info) { err.className = 'feedback-msg error'; err.textContent = 'Topic and information are required.'; return; }
+            const btn = document.getElementById('styGo');
+            btn.disabled = true;
+            try {
+                const fd = new FormData();
+                fd.append('topic', topic);
+                fd.append('information', info);
+                fd.append('category', document.getElementById('styCat').value || 'News');
+                Array.from(document.getElementById('storyImagesFile').files).forEach(f => fd.append('images', f));
+                const resp = await fetch('/ingest/story', { method: 'POST', body: fd });
+                const data = await resp.json();
+                if (!resp.ok) throw new Error(data.detail || 'Failed');
+                closeDialog();
+                document.getElementById('storyImagesFile').value = '';
+                toast('Story added');
+                _stories = null;
+                loadStories();
+            } catch (e) {
+                err.className = 'feedback-msg error';
+                err.textContent = e.message;
+                btn.disabled = false;
+            }
+        }
+
+        /* ── Init ── */
+        renderBankChips();
+        loadBank();
+        fetch('/api/me').then(r => r.json()).then(me => { if (me && me.can_use_canva === false) _canUseCanva = false; }).catch(() => {});
+        fetch('/api/stories').then(r => r.json()).then(s => { document.getElementById('storyCount').textContent = s.length; }).catch(() => {});
+        fetch('/api/designs').then(r => r.json()).then(d => { _designs = d; document.getElementById('designCount').textContent = d.length; renderStats(); }).catch(() => {});
+        if (new URLSearchParams(location.search).get('tab') === 'stories') selectTab('stories');
     </script>
 </body>
 </html>

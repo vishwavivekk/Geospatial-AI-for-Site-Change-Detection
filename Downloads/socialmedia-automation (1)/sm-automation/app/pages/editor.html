@@ -8,280 +8,125 @@
     <link rel="stylesheet" href="/static/app.css">
     <link rel="icon" type="image/png" href="/assets/favicon.png">
     <style>
-        body { height: 100vh; overflow: hidden; }
-        .app { display: flex; flex-direction: column; height: 100vh; }
-        .toolbar {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            padding: 8px 16px;
-            background: var(--card);
-            border-bottom: 1px solid var(--border);
-            flex-shrink: 0;
-            flex-wrap: wrap;
-        }
-        .toolbar .divider { width: 1px; height: 24px; background: var(--border); margin: 0 4px; }
-        .toolbar select {
-            padding: 7px 10px;
-            border: 1px solid var(--border);
-            border-radius: 8px;
-            font-size: 13px;
-            font-weight: 600;
-            font-family: inherit;
-            color: var(--text);
-            background: white;
-            cursor: pointer;
-            outline: none;
-        }
-        .topic-label { font-size: 13px; color: var(--muted); font-weight: 600; }
-        .main { display: flex; flex: 1; overflow: hidden; }
-        .canvas-area {
-            flex: 1;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            background: #1e2433 radial-gradient(circle, #2d3547 1px, transparent 1px);
-            background-size: 22px 22px;
-            overflow: hidden;
-            position: relative;
-        }
-        #canvas-container { background: white; border-radius: 4px; box-shadow: 0 4px 24px rgba(0,0,0,0.4); }
-        .feedback-banner {
-            display: none;
-            align-items: center;
-            gap: 10px;
-            padding: 10px 16px;
-            background: #fff4e5;
-            border-bottom: 1px solid #fbd9a5;
-            color: #9a5b00;
-            font-size: 13.5px;
-            flex-shrink: 0;
-        }
-        .feedback-banner.visible { display: flex; }
-        .feedback-banner b { color: #7c4a00; }
-        .sidebar {
-            width: 310px;
-            background: var(--card);
-            border-left: 1px solid var(--border);
-            display: flex;
-            flex-direction: column;
-            flex-shrink: 0;
-            overflow-y: auto;
-        }
-        .panel { padding: 14px 16px; border-bottom: 1px solid var(--border); }
-        .panel h3 {
-            font-size: 11.5px;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            color: var(--muted);
-            margin-bottom: 10px;
-        }
-        .prop-row { display: flex; align-items: center; gap: 8px; margin-bottom: 7px; }
-        .prop-row label { font-size: 12px; color: var(--muted); width: 56px; flex-shrink: 0; }
-        .prop-row input, .prop-row select, .prop-row textarea {
-            flex: 1;
-            padding: 5px 8px;
-            border: 1px solid var(--border);
-            border-radius: 6px;
-            background: white;
-            color: var(--text);
-            font-size: 13px;
-            font-family: inherit;
-            outline: none;
-            min-width: 0;
-        }
-        .prop-row input:focus, .prop-row select:focus, .prop-row textarea:focus { border-color: var(--primary); }
-        .prop-row input[type="color"] { padding: 0; width: 34px; height: 26px; flex: none; cursor: pointer; }
-        .prop-row input[type="range"] { padding: 0; }
-        .prop-row textarea { min-height: 56px; resize: vertical; }
-        .no-select { text-align: center; padding: 16px; color: var(--muted); font-size: 13px; }
-        .layers-list { list-style: none; }
-        .layers-list li {
-            display: flex; align-items: center; gap: 8px;
-            padding: 6px 8px; border-radius: 6px;
-            cursor: pointer; font-size: 13px;
-        }
-        .layers-list li:hover { background: #f1f4f9; }
-        .layers-list li.selected { background: var(--primary); color: white; }
-        .layers-list li .layer-type {
-            font-size: 10px; text-transform: uppercase;
-            color: var(--muted); background: #eef1f6;
-            padding: 1px 6px; border-radius: 4px;
-        }
-        .layers-list li.selected .layer-type { background: rgba(255,255,255,0.25); color: white; }
-        .layers-list li .layer-del { margin-left: auto; opacity: 0.45; font-size: 15px; }
-        .layers-list li .layer-del:hover { opacity: 1; }
-        .editor-comments-list { max-height: 260px; overflow-y: auto; }
-        .editor-comment-card {
-            padding: 10px; margin-bottom: 8px;
-            background: #f8fafd; border: 1px solid var(--border);
-            border-radius: 8px; cursor: pointer;
-        }
-        .editor-comment-card:hover { background: #f1f5fb; }
-        .editor-comment-card.linked { border-left: 3px solid var(--primary); }
-        .editor-comment-tag {
-            display: inline-block; font-size: 10px; padding: 2px 7px;
-            border-radius: 4px; background: var(--primary); color: white; margin-bottom: 4px;
-        }
-        .editor-comment-tag.general { background: #dde3ec; color: var(--muted); }
-        .editor-comment-text { font-size: 12.5px; line-height: 1.45; margin-top: 3px; }
-        .editor-comment-time { font-size: 10px; color: var(--muted); margin-left: 6px; }
-        .btn-send-agent {
-            display: inline-block; margin-top: 6px;
-            padding: 3px 10px; border: none; border-radius: 5px;
-            background: var(--primary); color: white;
-            font-size: 11px; font-weight: 600; cursor: pointer; font-family: inherit;
-        }
-        .btn-send-agent:hover { background: var(--primary-dark); }
-        .panel-tabs { display: flex; gap: 4px; margin-bottom: 10px; }
-        .panel-tab {
-            flex: 1; padding: 6px 10px;
-            border: none; border-radius: 6px;
-            font-size: 12px; font-weight: 600; font-family: inherit;
-            cursor: pointer; background: #eef1f6; color: var(--muted);
-        }
-        .panel-tab:hover { color: var(--text); }
-        .panel-tab.active { background: var(--primary); color: white; }
-        .chat-messages { max-height: 300px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; margin-bottom: 10px; }
-        .chat-msg { padding: 8px 12px; border-radius: 10px; font-size: 13px; line-height: 1.45; max-width: 95%; word-wrap: break-word; }
-        .chat-msg.user { background: var(--primary); color: white; align-self: flex-end; border-bottom-right-radius: 2px; }
-        .chat-msg.assistant { background: #f1f4f9; color: var(--text); align-self: flex-start; border-bottom-left-radius: 2px; }
-        .chat-msg.assistant .design-badge {
-            display: inline-block; font-size: 10px; font-weight: 700;
-            padding: 1px 6px; border-radius: 4px;
-            background: var(--success); color: white; margin-top: 4px;
-        }
-        .chat-input-row { display: flex; gap: 6px; align-items: flex-end; }
-        .chat-input-row textarea {
-            flex: 1; padding: 7px 9px;
-            border: 1px solid var(--border); border-radius: 7px;
-            background: white; color: var(--text);
-            font-size: 13px; font-family: inherit;
-            outline: none; resize: none; min-height: 36px; max-height: 80px;
-        }
-        .chat-input-row textarea:focus { border-color: var(--primary); }
-        .chat-thinking { font-size: 12px; color: var(--muted); font-style: italic; }
-        .status-bar {
-            padding: 6px 16px;
-            background: var(--card);
-            border-top: 1px solid var(--border);
-            font-size: 12px; color: var(--muted);
-            flex-shrink: 0;
-        }
-        .loading-overlay {
-            display: none; position: fixed; inset: 0;
-            background: rgba(15, 23, 42, 0.55);
-            z-index: 1000; justify-content: center; align-items: center;
-            flex-direction: column; gap: 14px; color: white; font-size: 14px;
-        }
-        .loading-overlay.open { display: flex; }
-        .loading-overlay .big-spinner {
-            width: 40px; height: 40px;
-            border: 4px solid rgba(255,255,255,0.25);
-            border-top-color: white; border-radius: 50%;
-            animation: spin 0.7s linear infinite;
-        }
+        /* page-specific: canvas designer inside mockup shell */
+        .change-banner{display:none}.change-banner.visible{display:grid}
+        #canvas-container{background:#fff;box-shadow:0 9px 30px #1e342522;outline:1px solid var(--green)}
+        #templatesModal .modal-actions{display:none}
+        .rightpanel .ai{overflow:auto}
+        #propertiesContent .prop-row{display:flex;align-items:center;gap:7px;margin-bottom:6px}
+        #propertiesContent .prop-row label{font-size:8px;color:#87928b;width:52px;flex-shrink:0;font-weight:750}
+        #propertiesContent .prop-row input,#propertiesContent .prop-row select,#propertiesContent .prop-row textarea{flex:1;min-width:0;height:26px;border:1px solid var(--line);border-radius:5px;padding:0 7px;font-size:9px;background:#fff;color:var(--ink)}
+        #propertiesContent .prop-row textarea{height:52px;padding:6px;resize:vertical}
+        #propertiesContent .prop-row input[type=color]{padding:1px;width:32px;flex:none}
+        #propertiesContent .no-select{font-size:9px;color:#8b958e;text-align:center;padding:14px 4px}
+        #layersList li{display:flex;align-items:center;gap:7px;padding:7px 8px;border-radius:5px;cursor:pointer;font-size:9px;color:#59665d}
+        #layersList li:hover{background:#f5f7f5}
+        #layersList li.selected{background:var(--green-soft);color:var(--green-dark)}
+        #layersList li .layer-type{font-size:7px;text-transform:uppercase;background:#eef1ef;border-radius:3px;padding:1px 5px;color:#87928b}
+        #layersList li .layer-del{margin-left:auto;opacity:.45;font-size:12px}
+        #layersList li .layer-del:hover{opacity:1;color:var(--rust)}
+        .chat-msg{border-radius:8px;padding:8px 9px;font-size:8.5px;line-height:1.5;margin:6px 0;max-width:95%;word-wrap:break-word}
+        .chat-msg.user{background:var(--green-soft);color:var(--ink);margin-left:auto}
+        .chat-msg.assistant{background:#fff6f1;border:1px solid #f0ded5;color:#59665d}
+        .chat-msg .design-badge{display:inline-block;font-size:7px;font-weight:850;background:var(--green);color:#fff;border-radius:4px;padding:1px 5px;margin-top:4px}
+        .chat-thinking{font-style:italic;color:#8b958e}
+        .editor-comment-card{border:1px solid var(--line);border-radius:6px;padding:8px;margin-bottom:6px;font-size:8.5px;color:#59665d;cursor:pointer;background:#fff}
+        .editor-comment-card.linked{border-left:3px solid #d8473b}
+        .editor-comment-card:hover{background:#f8faf8}
+        .editor-comment-tag{display:inline-block;font-size:7px;font-weight:850;background:#fdeeec;color:#ad3d27;border-radius:4px;padding:1px 5px}
+        .editor-comment-tag.general{background:#eef1ef;color:#68746c}
+        .editor-comment-text{margin-top:4px;line-height:1.5}
+        .editor-comment-time{font-size:7px;color:#929c95;margin-left:5px}
+        .btn-send-agent{margin-top:6px;height:23px;border:0;border-radius:4px;background:var(--green);color:#fff;font-size:7.5px;font-weight:750;padding:0 8px}
+        .template .tpl-name{display:block;padding:2px 3px 4px;font-size:8px}
     </style>
 </head>
-<body>
-    <div class="app">
-        <nav class="nav" style="height:54px;">
-            <a class="brand" href="/">
-                <img class="logo" src="/assets/nicdc-mark.png" alt="NICDC">
-                <span class="product">NICDC Social Studio<small>Design editor</small></span>
-            </a>
-            <a href="/" class="btn btn-ghost btn-sm" id="backBtn">Stories</a>
-            <div class="spacer"></div>
-            <span class="topic-label" id="topicLabel">Topic: __TOPIC__</span>
-            <span id="categoryData" style="display:none">__CATEGORY__</span>
-            <div class="divider-v"></div>
-            <span class="role-chip editor">Editor</span>
-            <div class="user-block">
-                <span class="avatar" id="navAvatar"></span>
-            </div>
-            <button class="btn btn-ghost btn-sm" onclick="logout()">Sign out</button>
-        </nav>
-        <div class="feedback-banner" id="feedbackBanner">
-            <span id="feedbackBannerText"></span>
-            <button class="btn btn-warning btn-sm" onclick="switchPanel('feedback')" style="margin-left:auto;flex-shrink:0;">View comments</button>
-        </div>
-        <div class="toolbar">
-            <button class="btn btn-primary btn-sm" id="templatesBtn" onclick="openTemplatesModal()">Templates</button>
-            <button class="btn btn-sm" id="generateBtn" onclick="generateLayout()">Generate with AI</button>
-            <select id="addSelect" onchange="addElement(this.value);this.value=this.options[0].value">
-                <option value="">+ Add element</option>
-                <option value="text">Text</option>
-                <option value="rect">Rectangle</option>
-                <option value="circle">Circle</option>
-                <option value="ellipse">Ellipse</option>
-                <option value="line">Line</option>
-                <option value="star">Star</option>
-                <option value="ring">Ring</option>
-                <option value="polygon">Polygon</option>
-            </select>
-            <div class="divider"></div>
-            <button class="btn btn-sm" id="undoBtn" onclick="undo()" disabled>Undo</button>
-            <button class="btn btn-sm" id="redoBtn" onclick="redo()" disabled>Redo</button>
-            <button class="btn btn-danger-ghost btn-sm" id="deleteBtn" onclick="deleteSelected()" disabled>Delete</button>
-            <div class="divider"></div>
-            <button class="btn btn-sm" id="exportBtn" onclick="exportPNG()">Export PNG</button>
-            <div class="tabs" id="variantTabs" style="display:none;margin:0 0 0 8px;">
-                <button class="tab active" id="variantTab0" onclick="switchVariation(0)">Variation 1</button>
-                <button class="tab" id="variantTab1" onclick="switchVariation(1)">Variation 2</button>
-            </div>
-            <div style="flex:1;"></div>
-            <button class="btn btn-success btn-sm" id="approvalBtn" onclick="sendForApproval()">Send for approval</button>
-        </div>
-        <div class="main">
-            <div class="canvas-area" id="canvasArea">
-                <div id="canvas-container"></div>
-            </div>
-            <div class="sidebar" id="sidebar">
-                <div class="panel" id="propertiesPanel">
-                    <h3>Properties</h3>
-                    <div id="propertiesContent" class="no-select">Select an element</div>
-                </div>
-                <div class="panel">
-                    <h3>Layers</h3>
-                    <ul id="layersList" class="layers-list"></ul>
-                </div>
-                <div class="panel" id="chatFeedbackPanel">
-                    <div class="panel-tabs">
-                        <button class="panel-tab active" id="panelTabChat" onclick="switchPanel('chat')">AI Chat</button>
-                        <button class="panel-tab" id="panelTabFeedback" onclick="switchPanel('feedback')">Feedback <span id="editorCommentsCount"></span></button>
+<body data-role="editor" data-active="/?tab=stories" data-user="__USER_NAME__">
+    <main class="workspace" id="screen">
+        <div class="designer">
+            <div class="designer-bar">
+                <a class="back" href="/">← Post bank</a>
+                <label class="title-field"><small>CANVAS / AI DESIGNER</small><input id="topicField" readonly value="__TOPIC__"></label>
+                <div class="designer-actions">
+                    <div class="chips" id="variantTabs" style="display:none;">
+                        <button class="chip active" id="variantTab0" onclick="switchVariation(0)">Variation 1</button>
+                        <button class="chip" id="variantTab1" onclick="switchVariation(1)">Variation 2</button>
                     </div>
-                    <div id="chatPanel">
-                        <div id="chatMessages" class="chat-messages"></div>
-                        <div class="chat-input-row">
-                            <textarea id="chatInput" placeholder="Describe your changes..." rows="1" onkeydown="chatKeydown(event)"></textarea>
-                            <button class="btn btn-primary btn-sm" id="chatSendBtn" onclick="sendChatMessage()">Send</button>
+                    <button class="btn" id="undoBtn" onclick="undo()" disabled title="Undo">↶</button>
+                    <button class="btn" id="redoBtn" onclick="redo()" disabled title="Redo">↷</button>
+                    <button class="btn" id="deleteBtn" onclick="deleteSelected()" disabled title="Delete selected">✕</button>
+                    <button class="btn" id="exportBtn" onclick="exportPNG()">⇩ Export</button>
+                    <button class="btn primary" id="approvalBtn" onclick="sendForApproval()">↗ Send for approval</button>
+                </div>
+            </div>
+            <div class="change-banner" id="feedbackBanner" style="margin:12px 19px 0;">
+                <span>◉</span><div><b id="feedbackBannerText"></b></div>
+                <button class="btn" style="height:29px;font-size:8px;" onclick="switchPanel('feedback')">View comments</button>
+            </div>
+            <span id="topicLabel" class="hidden">Topic: __TOPIC__</span>
+            <span id="categoryData" class="hidden">__CATEGORY__</span>
+            <div class="canvas-layout">
+                <aside class="toolrail">
+                    <button class="active" id="rail-templates" onclick="assetsTab('templates')">▦<span>Templates</span></button>
+                    <button id="rail-elements" onclick="assetsTab('elements')">＋<span>Elements</span></button>
+                    <button onclick="generateLayout()">✦<span>AI create</span></button>
+                </aside>
+                <section class="assets">
+                    <div id="assets-templates">
+                        <h3>Official templates</h3>
+                        <p>NICDC approved formats</p>
+                        <div id="templatesModal"><div id="templatesGrid" class="template-grid"></div><div class="modal-actions"><button onclick="closeTemplatesModal()"></button></div></div>
+                    </div>
+                    <div id="assets-elements" class="hidden">
+                        <h3>Elements</h3>
+                        <p>Add building blocks to the canvas</p>
+                        <div style="display:grid;grid-template-columns:1fr 1fr;gap:7px;">
+                            <button class="btn" style="height:32px;font-size:9px;" onclick="addElement('text')">T Text</button>
+                            <button class="btn" style="height:32px;font-size:9px;" onclick="addElement('rect')">▭ Rect</button>
+                            <button class="btn" style="height:32px;font-size:9px;" onclick="addElement('circle')">◯ Circle</button>
+                            <button class="btn" style="height:32px;font-size:9px;" onclick="addElement('ellipse')">⬭ Ellipse</button>
+                            <button class="btn" style="height:32px;font-size:9px;" onclick="addElement('line')">╱ Line</button>
+                            <button class="btn" style="height:32px;font-size:9px;" onclick="addElement('star')">★ Star</button>
+                            <button class="btn" style="height:32px;font-size:9px;" onclick="addElement('ring')">◎ Ring</button>
+                            <button class="btn" style="height:32px;font-size:9px;" onclick="addElement('polygon')">⬠ Polygon</button>
                         </div>
                     </div>
-                    <div id="feedbackPanelContent" style="display:none">
-                        <div id="editorCommentsList" class="editor-comments-list"></div>
+                </section>
+                <section class="canvas-stage">
+                    <div class="canvas-top"><span id="statusBar">Ready</span><span>1080 × 1080 px</span></div>
+                    <div class="editable" id="canvasArea"><div id="canvas-container"></div></div>
+                    <div class="canvas-bottom"><span>Page 1 of 1</span><span>⌖ Click an element to edit · double-click text to type</span></div>
+                </section>
+                <aside class="rightpanel">
+                    <div class="right-tabs">
+                        <button class="active" id="panelTabChat" onclick="switchPanel('chat')">✦ AI</button>
+                        <button id="panelTabProps" onclick="switchPanel('props')">Properties</button>
+                        <button id="panelTabLayers" onclick="switchPanel('layers')">Layers</button>
+                        <button id="panelTabFeedback" onclick="switchPanel('feedback')">Feedback <span id="editorCommentsCount"></span></button>
                     </div>
-                </div>
+                    <div class="ai" id="chatPanel">
+                        <div class="ai-intro"><span class="ai-orb">✦</span><h3>Design with AI</h3><p>Tell me what to change. I’ll keep it within NICDC brand rules.</p></div>
+                        <div id="chatMessages" style="flex:1;overflow:auto;margin:10px 0;min-height:120px;"></div>
+                        <div class="chat"><input id="chatInput" placeholder="Describe an edit..." onkeydown="chatKeydown(event)"><button id="chatSendBtn" onclick="sendChatMessage()">→</button></div>
+                    </div>
+                    <div class="ai hidden" id="propsPane">
+                        <h3 style="font-size:11px;color:var(--ink);margin:0 0 9px;">Properties</h3>
+                        <div id="propertiesContent" class="no-select">Select an element</div>
+                    </div>
+                    <div class="ai hidden" id="layersPane">
+                        <h3 style="font-size:11px;color:var(--ink);margin:0 0 9px;">Layers</h3>
+                        <ul id="layersList" style="list-style:none;padding:0;margin:0;"></ul>
+                    </div>
+                    <div class="ai hidden" id="feedbackPanelContent">
+                        <h3 style="font-size:11px;color:var(--ink);margin:0 0 9px;">Approver feedback</h3>
+                        <div id="editorCommentsList"></div>
+                    </div>
+                </aside>
             </div>
         </div>
-        <div class="status-bar" id="statusBar">Ready</div>
-    </div>
+    </main>
 
-    <div class="loading-overlay" id="loadingOverlay">
-        <div class="big-spinner"></div>
-        <span id="loadingText">Working...</span>
-    </div>
-
-    <!-- Templates modal -->
-    <div id="templatesModal" class="modal-overlay">
-        <div class="modal" style="max-width:860px;" onclick="event.stopPropagation()">
-            <h2>Start from a template</h2>
-            <p class="sub">Official ICLP post designs — pick one, then edit the text on the canvas.</p>
-            <div id="templatesGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:14px;max-height:60vh;overflow-y:auto;padding:2px;"></div>
-            <div class="modal-actions" style="margin-top:16px;">
-                <button type="button" class="btn" onclick="closeTemplatesModal()">Cancel</button>
-            </div>
-        </div>
-    </div>
+    <div class="loading-overlay" id="loadingOverlay"><div><div class="big-spinner"></div><span id="loadingText">Working...</span></div></div>
 
     <script src="/static/app.js"></script>
     <script>
@@ -405,21 +250,12 @@
         /* ── Chat Panel ── */
         function switchPanel(mode) {
             _chatMode = mode;
-            const chatContent = document.getElementById('chatPanel');
-            const feedbackContent = document.getElementById('feedbackPanelContent');
-            const chatTab = document.getElementById('panelTabChat');
-            const feedbackTab = document.getElementById('panelTabFeedback');
-            if (mode === 'chat') {
-                chatContent.style.display = '';
-                feedbackContent.style.display = 'none';
-                chatTab.classList.add('active');
-                feedbackTab.classList.remove('active');
-            } else {
-                chatContent.style.display = 'none';
-                feedbackContent.style.display = '';
-                chatTab.classList.remove('active');
-                feedbackTab.classList.add('active');
-            }
+            const panes = { chat: 'chatPanel', props: 'propsPane', layers: 'layersPane', feedback: 'feedbackPanelContent' };
+            const tabs = { chat: 'panelTabChat', props: 'panelTabProps', layers: 'panelTabLayers', feedback: 'panelTabFeedback' };
+            Object.keys(panes).forEach(function (k) {
+                document.getElementById(panes[k]).classList.toggle('hidden', k !== mode);
+                document.getElementById(tabs[k]).classList.toggle('active', k === mode);
+            });
         }
 
         function renderChatMessage(role, text, hasDesign) {
@@ -512,15 +348,6 @@
         /* ── Init ── */
         const TOPIC = document.getElementById('topicLabel').textContent.replace('Topic: ', '');
 
-        document.getElementById('navAvatar').textContent = initials('__USER_NAME__');
-        document.getElementById('backBtn').insertAdjacentHTML('afterbegin', icon('back', 13));
-        document.getElementById('templatesBtn').insertAdjacentHTML('afterbegin', icon('layers', 14));
-        document.getElementById('generateBtn').insertAdjacentHTML('afterbegin', icon('sparkles', 14));
-        document.getElementById('undoBtn').insertAdjacentHTML('afterbegin', icon('undo', 13));
-        document.getElementById('redoBtn').insertAdjacentHTML('afterbegin', icon('redo', 13));
-        document.getElementById('deleteBtn').insertAdjacentHTML('afterbegin', icon('trash', 13));
-        document.getElementById('exportBtn').insertAdjacentHTML('afterbegin', icon('download', 13));
-        document.getElementById('approvalBtn').insertAdjacentHTML('afterbegin', icon('send', 13));
 
         function initStage() {
             const container = document.getElementById('canvas-container');
@@ -1527,6 +1354,16 @@
                 }
             });
         });
+    
+        /* Mockup shell integration */
+        mountShell();
+        function assetsTab(name) {
+            document.getElementById('assets-templates').classList.toggle('hidden', name !== 'templates');
+            document.getElementById('assets-elements').classList.toggle('hidden', name !== 'elements');
+            document.getElementById('rail-templates').classList.toggle('active', name === 'templates');
+            document.getElementById('rail-elements').classList.toggle('active', name === 'elements');
+        }
+        openTemplatesModal();   // templates render inline in the assets panel
     </script>
 </body>
 </html>
